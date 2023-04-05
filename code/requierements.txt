@@ -1,0 +1,7 @@
+numpy
+tensorflow
+transformers
+datasets
+evaluate
+aspell-python-py3==1.15
+sentencepiece

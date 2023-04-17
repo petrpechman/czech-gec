@@ -17,7 +17,6 @@ import json
 from m2scorer.scripts.util import paragraphs
 from m2scorer.scripts.util import smart_open
 from m2scorer.scripts.levenshtein import batch_multi_pre_rec_f1
-from m2scorer.scripts.m2scorer import load_annotation
 
 # %%
 with open('config.json') as json_file:
@@ -202,6 +201,49 @@ dev_gold = config['evaluation_gold']
 fin = smart_open(dev_input, 'r')
 dev_input_sentences = [line.strip() for line in fin.readlines()]
 fin.close()
+
+def load_annotation(gold_file):
+    source_sentences = []
+    gold_edits = []
+    fgold = smart_open(gold_file, 'r')
+    puffer = fgold.read()
+    fgold.close()
+    # puffer = puffer.decode('utf8')
+    for item in paragraphs(puffer.splitlines(True)):
+        item = item.splitlines(False)
+        sentence = [line[2:].strip() for line in item if line.startswith('S ')]
+        assert sentence != []
+        annotations = {}
+        for line in item[1:]:
+            if line.startswith('I ') or line.startswith('S '):
+                continue
+            assert line.startswith('A ')
+            line = line[2:]
+            fields = line.split('|||')
+            start_offset = int(fields[0].split()[0])
+            end_offset = int(fields[0].split()[1])
+            etype = fields[1]
+            if etype == 'noop':
+                start_offset = -1
+                end_offset = -1
+            corrections =  [c.strip() if c != '-NONE-' else '' for c in fields[2].split('||')]
+            # NOTE: start and end are *token* offsets
+            original = ' '.join(' '.join(sentence).split()[start_offset:end_offset])
+            annotator = int(fields[5])
+            if annotator not in list(annotations.keys()):
+                annotations[annotator] = []
+            annotations[annotator].append((start_offset, end_offset, original, corrections))
+        tok_offset = 0
+        for this_sentence in sentence:
+            tok_offset += len(this_sentence.split())
+            source_sentences.append(this_sentence)
+            this_edits = {}
+            for annotator, annotation in annotations.items():
+                this_edits[annotator] = [edit for edit in annotation if edit[0] <= tok_offset and edit[1] <= tok_offset and edit[0] >= 0 and edit[1] >= 0]
+            if len(this_edits) == 0:
+                this_edits[0] = []
+            gold_edits.append(this_edits)
+    return (source_sentences, gold_edits)
 
 dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
 

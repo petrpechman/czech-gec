@@ -1,8 +1,9 @@
+# %%
 import sys
-import os
 sys.path.append('..')
 
 # %%
+import os
 import tensorflow as tf
 from create_errors import introduce_errors
 import aspell
@@ -12,6 +13,11 @@ from transformers import TFEncoderDecoderModel, BertTokenizer
 from transformers import AutoTokenizer, AutoConfig
 
 import json
+
+from m2scorer.scripts.util import paragraphs
+from m2scorer.scripts.util import smart_open
+from m2scorer.scripts.levenshtein import batch_multi_pre_rec_f1
+from m2scorer.scripts.m2scorer import load_annotation
 
 # %%
 with open('config.json') as json_file:
@@ -25,6 +31,7 @@ BATCH_SIZE_PER_REPLICE = config['batch_size_per_replica']
 MAX_LENGTH = config['max_length']
 STEPS_PER_EPOCH = config['steps_per_epoch']
 EPOCHS = config['epochs']
+SHUFFLE_BUFFER = config['shuffle_buffer']
 
 # %%
 print(f"Batch size per replica: {BATCH_SIZE_PER_REPLICE}")
@@ -67,7 +74,7 @@ with strategy.scope():
 with strategy.scope(): 
     loss = None   
     if config['loss'] == "SCC":
-        loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        loss = tf.keras.losses.SparseCategoricalCrossentropy()
 
 # %%
 lang = config['lang']
@@ -160,7 +167,7 @@ dataset = dataset.map(create_error_line, num_parallel_calls=tf.data.experimental
 dataset = dataset.map(ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 dataset = dataset.ignore_errors()
-dataset = dataset.shuffle(500)
+dataset = dataset.shuffle(SHUFFLE_BUFFER)
 dataset = dataset.batch(BATCH_SIZE)
 dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
@@ -177,33 +184,57 @@ with strategy.scope():
     else:
         model.compile(optimizer=optimizer)
 
-model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    filepath=os.path.join(config['log_file'], 'ckpt-{epoch}'),
-    save_weights_only=True)
+# %% [markdown]
+# ---
+# ### Evaluation
+
+# %%
+max_unchanged_words=2
+beta = 0.5
+ignore_whitespace_casing= False
+verbose = False
+very_verbose = False
+
+dev_input = config['evaluation_input']
+dev_gold = config['evaluation_gold']
+
+# load source sentences and gold edits
+fin = smart_open(dev_input, 'r')
+dev_input_sentences = [line.strip() for line in fin.readlines()]
+fin.close()
+
+dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
 
 # %%
 class Evaluation(tf.keras.callbacks.Callback):
-    def __init__(self, tokenizer, nth):
+    def __init__(self, tokenizer, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
+                 dev_input_sentences, dev_source_sentences, dev_gold_edits):
         self.tokenzer = tokenizer
         self.nth = nth
+        self.max_unchanged_words = max_unchanged_words
+        self.beta = beta
+        self.ignore_whitespace_casing = ignore_whitespace_casing
+        self.verbose = verbose
+        self.very_verbose = very_verbose
+        self.dev_input_sentences = dev_input_sentences
+        self.dev_source_sentences = dev_source_sentences
+        self.dev_gold_edits = dev_gold_edits
 
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.nth == 0:
             try:
-                sentences = [
-                    "Mam rad svoju mamkinku .",
-                    "Moj pseik je moc roztomilý .",
-                    "Nejim zelneou zeleninu .",
-                    "Temé čelo mu se pokrylo potem .",
-                    "Vypadalo to , že každou omdlí .",
-                    "Bože , dEe , ty vypadáš bječně ! "
-                ]
-                print()
-                for sentence in sentences: 
+                predicted_sentences = []
+                for sentence in self.dev_input_sentences: 
                     tokenized_sentence = tokenizer(sentence, max_length=MAX_LENGTH, padding='max_length', truncation=True, return_tensors="tf")
                     output = model.generate(tokenized_sentence['input_ids'])
-                    print(tokenizer.decode(output[0]))
-                    print()
+                    predicted_sentence =  tokenizer.decode(output[0])
+                    predicted_sentences.append(predicted_sentence)
+                
+                p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
+                                                  self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
+                print("Precision   : %.4f" % p)
+                print("Recall      : %.4f" % r)
+                print("F_%.1f       : %.4f" % (self.beta, f1))
             except:
                 print("No predictions...")
 
@@ -213,33 +244,14 @@ callbacks = [
     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
 ]
 
+# %% [markdown]
+# ---
+
 # %%
-
-
-
-# %%
-
-
-# if STEPS_PER_EPOCH:
-#     model.fit(dataset, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH, callbacks=[model_checkpoint])
-# else:
-#     model.fit(dataset, epochs=EPOCHS, callbacks=[model_checkpoint])
-
 if STEPS_PER_EPOCH:
     model.fit(dataset, callbacks=callbacks, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
 else:
     model.fit(dataset, callbacks=callbacks, epochs=EPOCHS)
-
-
-# tf.keras.utils.SidecarEvaluator(
-#     model=model,
-#     data=dataset,
-#     # dir for training-saved checkpoint
-#     checkpoint_dir=config['log_file'],
-#     steps=None,  # Eval until dataset is exhausted
-#     max_evaluations=None,  # The evaluation needs to be stopped manually
-#     callbacks=callbacks
-# ).start()
 
 # %% [markdown]
 # ---
@@ -251,7 +263,5 @@ else:
 
 # %% [markdown]
 # ---
-
-
 
 

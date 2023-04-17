@@ -1,0 +1,30 @@
+{
+    "model": "google/mt5-small",
+    "pretrained": true,
+    "data_paths": ["../data/news-2018-cs.txt"],
+    "num_parallel": 16,
+    "batch_size_per_replica": 16,
+    "max_length": 128,
+    "steps_per_epoch": 500,
+    "epochs": 1000,
+    "optimizer":{
+        "name": "Adam",
+        "params":{
+            "lr": 0.001
+        }
+    },
+    "loss": "SCC",
+    "token_file": "../data/vocabluraries/vocabulary_cs.tsv",
+    "lang": "cs",
+    "token_err_distribution": [0.7, 0.1, 0.1, 0.1, 0],
+    "char_err_distribution": [0.25, 0.25, 0.25, 0.25, 0],
+    "token_err_prob": 0.15,   
+    "char_err_prob": 0.02,
+    "log_file": "./logs",
+    "profile_batch": [100, 200],
+    "model_checkpoint_path": "./tmp/checkpoint/",
+    "evaluation_every_nth": 1,
+
+    "evaluation_input": "../data/geccc/dev/sentence-tokenized.input",
+    "evaluation_gold": "../data/geccc/dev/sentence.m2"
+}

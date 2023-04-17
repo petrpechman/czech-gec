@@ -281,7 +281,10 @@ class Evaluation(tf.keras.callbacks.Callback):
                 print("No predictions...")
 
 callbacks = [
-    Evaluation(tokenizer=tokenizer, nth=config['evaluation_every_nth']),
+    Evaluation(tokenizer=tokenizer, nth=config['evaluation_every_nth'],
+               max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
+               verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
+               dev_gold_edits=dev_gold_edits),
     tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch']),
     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
 ]

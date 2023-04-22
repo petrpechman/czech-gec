@@ -86,7 +86,7 @@ with strategy.scope():
             def __init__(self):
                 self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
             
-            def __call__(self, y_true, y_pred, sample_weight=None):
+            def call(self, y_true, y_pred):
                 return self.hf_compute_loss(y_true, y_pred)
 
             def hf_compute_loss(self, labels, logits):

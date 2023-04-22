@@ -252,7 +252,7 @@ class Evaluation(tf.keras.callbacks.Callback):
 
     def get_tokenized_sentence(self, line):
         line = line.decode('utf-8')
-        tokenized = tokenizer(line, padding='max_length', truncation=True, return_tensors="tf")
+        tokenized = self.tokenizer(line, padding='max_length', truncation=True, return_tensors="tf")
         return tokenized['input_ids']
 
     def create_tokenized_line(self, line):

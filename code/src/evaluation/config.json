@@ -7,7 +7,7 @@
     "num_parallel": 16,
     "batch_size_per_replica": 12,
     "max_length": 128,
-    "steps_per_epoch": 5,
+    "steps_per_epoch": 20,
     "epochs": 1000,
     "shuffle_buffer": 500,
     "optimizer":{

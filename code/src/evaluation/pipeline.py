@@ -228,66 +228,66 @@ fin.close()
 dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
 
 # %%
-class Evaluation(tf.keras.callbacks.Callback):
-    def __init__(self, tokenizer, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
-                 dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
-        self.tokenzer = tokenizer
-        self.nth = nth
-        self.max_unchanged_words = max_unchanged_words
-        self.beta = beta
-        self.ignore_whitespace_casing = ignore_whitespace_casing
-        self.verbose = verbose
-        self.very_verbose = very_verbose
-        self.dev_input_sentences = dev_input_sentences
-        self.dev_source_sentences = dev_source_sentences
-        self.dev_gold_edits = dev_gold_edits
+# class Evaluation(tf.keras.callbacks.Callback):
+#     def __init__(self, tokenizer, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
+#                  dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
+#         self.tokenzer = tokenizer
+#         self.nth = nth
+#         self.max_unchanged_words = max_unchanged_words
+#         self.beta = beta
+#         self.ignore_whitespace_casing = ignore_whitespace_casing
+#         self.verbose = verbose
+#         self.very_verbose = very_verbose
+#         self.dev_input_sentences = dev_input_sentences
+#         self.dev_source_sentences = dev_source_sentences
+#         self.dev_gold_edits = dev_gold_edits
 
-        self.ensure_shapes = ensure_shapes
-        self.split_features_and_labels = split_features_and_labels
-        self.batch_size = batch_size
+#         self.ensure_shapes = ensure_shapes
+#         self.split_features_and_labels = split_features_and_labels
+#         self.batch_size = batch_size
 
-    def get_tokenized_sentence(self, line):
-        line = line.decode('utf-8')
-        tokenized = tokenizer(line, padding='max_length', truncation=True, return_tensors="tf")
-        return tokenized['input_ids']
+#     def get_tokenized_sentence(self, line):
+#         line = line.decode('utf-8')
+#         tokenized = tokenizer(line, padding='max_length', truncation=True, return_tensors="tf")
+#         return tokenized['input_ids']
 
-    def create_tokenized_line(self, line):
-        input_ids = tf.numpy_function(self.get_tokenized_sentence, inp=[line], Tout=tf.int32)
-        dato = {
-            'input_ids': input_ids[0]
-        }
-        return dato
+#     def create_tokenized_line(self, line):
+#         input_ids = tf.numpy_function(self.get_tokenized_sentence, inp=[line], Tout=tf.int32)
+#         dato = {
+#             'input_ids': input_ids[0]
+#         }
+#         return dato
 
-    def on_epoch_end(self, epoch, logs=None):
-        if epoch % self.nth == 0:
-            try:
-                predicted_sentences = []
-                val_dataset = tf.data.Dataset.from_tensor_slices(self.dev_input_sentences)
-                val_dataset = val_dataset.map(self.create_tokenized_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                val_dataset = val_dataset.map(self.ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                val_dataset = val_dataset.map(self.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                val_dataset = val_dataset.batch(self.batch_size)
+#     def on_epoch_end(self, epoch, logs=None):
+#         if epoch % self.nth == 0:
+#             try:
+#                 predicted_sentences = []
+#                 val_dataset = tf.data.Dataset.from_tensor_slices(self.dev_input_sentences)
+#                 val_dataset = val_dataset.map(self.create_tokenized_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#                 val_dataset = val_dataset.map(self.ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#                 val_dataset = val_dataset.map(self.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#                 val_dataset = val_dataset.batch(self.batch_size)
 
-                for batch in val_dataset: 
-                    outs = model.generate(batch)
-                    for out in outs:
-                        predicted_sentence = tokenizer.decode(out)
-                        predicted_sentences.append(predicted_sentence)
+#                 for batch in val_dataset: 
+#                     outs = model.generate(batch)
+#                     for out in outs:
+#                         predicted_sentence = tokenizer.decode(out)
+#                         predicted_sentences.append(predicted_sentence)
                 
-                p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
-                                                  self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
-                print("Precision   : %.4f" % p)
-                print("Recall      : %.4f" % r)
-                print("F_%.1f       : %.4f" % (self.beta, f1))
-            except:
-                print("No predictions...")
+#                 p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
+#                                                   self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
+#                 print("Precision   : %.4f" % p)
+#                 print("Recall      : %.4f" % r)
+#                 print("F_%.1f       : %.4f" % (self.beta, f1))
+#             except:
+#                 print("No predictions...")
 
 callbacks = [
-    Evaluation(tokenizer=tokenizer, nth=config['evaluation_every_nth'],
-               max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
-               verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
-               dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,
-               batch_size=config['batch_size_eval']),
+    # Evaluation(tokenizer=tokenizer, nth=config['evaluation_every_nth'],
+    #            max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
+    #            verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
+    #            dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,
+    #            batch_size=config['batch_size_eval']),
     tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch']),
     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
 ]

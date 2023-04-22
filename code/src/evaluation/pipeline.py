@@ -87,14 +87,15 @@ with strategy.scope():
             # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
             def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
                 super().__init__(reduction, name)
+                self.softmax = tf.keras.layers.Activation('softmax', dtype='float32', name='predictions')
                 self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
             
             def call(self, y_true, y_pred):
                 return self.hf_compute_loss(y_true, y_pred)
 
             def hf_compute_loss(self, labels, logits):
-                logits = tf.cast(logits, tf.float32)
-                unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
+                preds = self.softmax(logits)
+                unmasked_loss = self.loss_func(tf.nn.relu(labels), preds)
                 loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
                 masked_loss = unmasked_loss * loss_mask
                 reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)
@@ -235,9 +236,10 @@ dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
 
 # %%
 class Evaluation(tf.keras.callbacks.Callback):
-    def __init__(self, tokenizer, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
+    def __init__(self, tokenizer, max_length, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
                  dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
         self.tokenizer = tokenizer
+        self.max_length = max_length
         self.nth = nth
         self.max_unchanged_words = max_unchanged_words
         self.beta = beta
@@ -254,7 +256,7 @@ class Evaluation(tf.keras.callbacks.Callback):
 
     def get_tokenized_sentence(self, line):
         line = line.decode('utf-8')
-        tokenized = self.tokenizer(line, padding='max_length', truncation=True, return_tensors="tf")
+        tokenized = self.tokenizer(line, max_length=self.max_length, padding='max_length', truncation=True, return_tensors="tf")
         return tokenized['input_ids']
 
     def create_tokenized_line(self, line):
@@ -289,7 +291,7 @@ class Evaluation(tf.keras.callbacks.Callback):
                 print("No predictions...")
 
 callbacks = [
-    Evaluation(tokenizer=tokenizer_eval, nth=config['evaluation_every_nth'],
+    Evaluation(tokenizer=tokenizer_eval, max_length=MAX_LENGTH ,nth=config['evaluation_every_nth'],
                max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
                verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
                dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,

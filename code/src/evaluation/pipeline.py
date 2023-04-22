@@ -93,6 +93,7 @@ with strategy.scope():
                 return self.hf_compute_loss(y_true, y_pred)
 
             def hf_compute_loss(self, labels, logits):
+                logits = tf.cast(logits, tf.float32)
                 unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
                 loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
                 masked_loss = unmasked_loss * loss_mask
@@ -115,6 +116,7 @@ char_err_prob = config['char_err_prob']
 
 # %%
 tokenizer = AutoTokenizer.from_pretrained(config['model'])
+tokenizer_eval = AutoTokenizer.from_pretrained(config['model'])
 
 # %%
 class GenereteErrorLine():
@@ -287,7 +289,7 @@ class Evaluation(tf.keras.callbacks.Callback):
                 print("No predictions...")
 
 callbacks = [
-    Evaluation(tokenizer=tokenizer, nth=config['evaluation_every_nth'],
+    Evaluation(tokenizer=tokenizer_eval, nth=config['evaluation_every_nth'],
                max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
                verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
                dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,

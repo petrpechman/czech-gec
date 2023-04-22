@@ -7,7 +7,7 @@
     "num_parallel": 16,
     "batch_size_per_replica": 12,
     "max_length": 128,
-    "steps_per_epoch": 1000,
+    "steps_per_epoch": 5,
     "epochs": 1000,
     "shuffle_buffer": 500,
     "optimizer":{
@@ -16,7 +16,7 @@
             "lr": 0.0001
         }
     },
-    "loss": null,
+    "loss": "SCC",
     "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",
     "lang": "cs",
     "token_err_distribution": [0.7, 0.1, 0.1, 0.1, 0],

@@ -1,7 +1,7 @@
 {
     "model": "google/mt5-small",
     "pretrained": true,
-    "data_paths": ["../data/tokenized/news-2018-cs-tokenized.txt"],
+    "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
     "num_parallel": 16,
     "batch_size_per_replica": 12,
     "max_length": 128,
@@ -15,7 +15,7 @@
         }
     },
     "loss": "SCC",
-    "token_file": "../data/vocabluraries/vocabulary_cs.tsv",
+    "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",
     "lang": "cs",
     "token_err_distribution": [0.7, 0.1, 0.1, 0.1, 0],
     "char_err_distribution": [0.25, 0.25, 0.25, 0.25, 0],
@@ -26,6 +26,7 @@
     "model_checkpoint_path": "./tmp/checkpoint/",
     "evaluation_every_nth": 1,
 
-    "evaluation_input": "../data/geccc/dev_part_100/sentence-tokenized.input",
-    "evaluation_gold": "../data/geccc/dev_part_100/sentence.m2"
+    "evaluation_input": "../../data/geccc/dev_part_100/sentence-tokenized.input",
+    "evaluation_gold": "../../data/geccc/dev_part_100/sentence.m2",
+    "batch_size_eval": 12
 }

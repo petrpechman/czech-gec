@@ -23,12 +23,15 @@ from m2scorer.m2scorer import load_annotation
 from tensorflow.keras import mixed_precision
 
 # %%
+policy = mixed_precision.Policy('mixed_float16')
+mixed_precision.set_global_policy(policy)
+
+# %%
 with open('config.json') as json_file:
     config = json.load(json_file)
 
 # %%
 tf.random.set_seed(config['seed'])
-mixed_precision.set_global_policy('mixed_float16')
 
 # %%
 USE_MODEL = config['model']
@@ -87,15 +90,13 @@ with strategy.scope():
             # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
             def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
                 super().__init__(reduction, name)
-                self.softmax = tf.keras.layers.Activation('softmax', dtype='float32', name='predictions')
-                self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False, reduction=reduction)
+                self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
             
             def call(self, y_true, y_pred):
                 return self.hf_compute_loss(y_true, y_pred)
 
             def hf_compute_loss(self, labels, logits):
-                preds = self.softmax(logits)
-                unmasked_loss = self.loss_func(tf.nn.relu(labels), preds)
+                unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
                 loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
                 masked_loss = unmasked_loss * loss_mask
                 reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)

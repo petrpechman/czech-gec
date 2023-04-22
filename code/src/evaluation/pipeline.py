@@ -22,11 +22,12 @@ from m2scorer.m2scorer import load_annotation
 from tensorflow.keras import mixed_precision
 
 # %%
-mixed_precision.set_global_policy('mixed_float16')
-
-# %%
 with open('config.json') as json_file:
     config = json.load(json_file)
+
+# %%
+tf.random.set_seed(config['seed'])
+mixed_precision.set_global_policy('mixed_float16')
 
 # %%
 USE_MODEL = config['model']
@@ -83,7 +84,7 @@ with strategy.scope():
         class MaskedSparseCategoricalCrossEntropy(tf.keras.losses.Loss):
             # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
             def __init__(self):
-                self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+                self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
             
             def __call__(self, y_true, y_pred, sample_weight=None):
                 return self.hf_compute_loss(y_true, y_pred)

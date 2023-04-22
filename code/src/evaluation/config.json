@@ -1,4 +1,6 @@
 {
+    "seed": 42,
+
     "model": "google/mt5-small",
     "pretrained": true,
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],

@@ -1,6 +1,6 @@
 # %%
 import sys
-sys.path.append('..')
+sys.path.append('../..')
 
 # %%
 import os
@@ -14,9 +14,15 @@ from transformers import AutoTokenizer, AutoConfig
 
 import json
 
-from m2scorer.scripts.util import paragraphs
-from m2scorer.scripts.util import smart_open
-from m2scorer.scripts.levenshtein import batch_multi_pre_rec_f1
+from m2scorer.util import paragraphs
+from m2scorer.util import smart_open
+from m2scorer.levenshtein import batch_multi_pre_rec_f1
+from m2scorer.m2scorer import load_annotation
+
+from tensorflow.keras import mixed_precision
+
+# %%
+mixed_precision.set_global_policy('mixed_float16')
 
 # %%
 with open('config.json') as json_file:
@@ -73,7 +79,18 @@ with strategy.scope():
 with strategy.scope(): 
     loss = None   
     if config['loss'] == "SCC":
-        loss = tf.keras.losses.SparseCategoricalCrossentropy()
+        def hf_compute_loss(labels, logits):
+            # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
+            loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(
+                from_logits=True, reduction=tf.keras.losses.Reduction.NONE
+            )
+            unmasked_loss = loss_fn(tf.nn.relu(labels), logits)
+            loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
+            masked_loss = unmasked_loss * loss_mask
+            reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)
+            return tf.reshape(reduced_masked_loss, (1,))
+        loss = hf_compute_loss
+    
 
 # %%
 lang = config['lang']
@@ -202,55 +219,12 @@ fin = smart_open(dev_input, 'r')
 dev_input_sentences = [line.strip() for line in fin.readlines()]
 fin.close()
 
-def load_annotation(gold_file):
-    source_sentences = []
-    gold_edits = []
-    fgold = smart_open(gold_file, 'r')
-    puffer = fgold.read()
-    fgold.close()
-    # puffer = puffer.decode('utf8')
-    for item in paragraphs(puffer.splitlines(True)):
-        item = item.splitlines(False)
-        sentence = [line[2:].strip() for line in item if line.startswith('S ')]
-        assert sentence != []
-        annotations = {}
-        for line in item[1:]:
-            if line.startswith('I ') or line.startswith('S '):
-                continue
-            assert line.startswith('A ')
-            line = line[2:]
-            fields = line.split('|||')
-            start_offset = int(fields[0].split()[0])
-            end_offset = int(fields[0].split()[1])
-            etype = fields[1]
-            if etype == 'noop':
-                start_offset = -1
-                end_offset = -1
-            corrections =  [c.strip() if c != '-NONE-' else '' for c in fields[2].split('||')]
-            # NOTE: start and end are *token* offsets
-            original = ' '.join(' '.join(sentence).split()[start_offset:end_offset])
-            annotator = int(fields[5])
-            if annotator not in list(annotations.keys()):
-                annotations[annotator] = []
-            annotations[annotator].append((start_offset, end_offset, original, corrections))
-        tok_offset = 0
-        for this_sentence in sentence:
-            tok_offset += len(this_sentence.split())
-            source_sentences.append(this_sentence)
-            this_edits = {}
-            for annotator, annotation in annotations.items():
-                this_edits[annotator] = [edit for edit in annotation if edit[0] <= tok_offset and edit[1] <= tok_offset and edit[0] >= 0 and edit[1] >= 0]
-            if len(this_edits) == 0:
-                this_edits[0] = []
-            gold_edits.append(this_edits)
-    return (source_sentences, gold_edits)
-
 dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
 
 # %%
 class Evaluation(tf.keras.callbacks.Callback):
     def __init__(self, tokenizer, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
-                 dev_input_sentences, dev_source_sentences, dev_gold_edits):
+                 dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
         self.tokenzer = tokenizer
         self.nth = nth
         self.max_unchanged_words = max_unchanged_words
@@ -262,15 +236,37 @@ class Evaluation(tf.keras.callbacks.Callback):
         self.dev_source_sentences = dev_source_sentences
         self.dev_gold_edits = dev_gold_edits
 
+        self.ensure_shapes = ensure_shapes
+        self.split_features_and_labels = split_features_and_labels
+        self.batch_size = batch_size
+
+    def get_tokenized_sentence(self, line):
+        line = line.decode('utf-8')
+        tokenized = tokenizer(line, padding='max_length', truncation=True, return_tensors="tf")
+        return tokenized['input_ids']
+
+    def create_tokenized_line(self, line):
+        input_ids = tf.numpy_function(self.get_tokenized_sentence, inp=[line], Tout=tf.int32)
+        dato = {
+            'input_ids': input_ids[0]
+        }
+        return dato
+
     def on_epoch_end(self, epoch, logs=None):
         if epoch % self.nth == 0:
             try:
                 predicted_sentences = []
-                for sentence in self.dev_input_sentences: 
-                    tokenized_sentence = tokenizer(sentence, max_length=MAX_LENGTH, padding='max_length', truncation=True, return_tensors="tf")
-                    output = model.generate(tokenized_sentence['input_ids'])
-                    predicted_sentence =  tokenizer.decode(output[0])
-                    predicted_sentences.append(predicted_sentence)
+                val_dataset = tf.data.Dataset.from_tensor_slices(self.dev_input_sentences)
+                val_dataset = val_dataset.map(self.create_tokenized_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                val_dataset = val_dataset.map(self.ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                val_dataset = val_dataset.map(self.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                val_dataset = val_dataset.batch(self.batch_size)
+
+                for batch in val_dataset: 
+                    outs = model.generate(batch)
+                    for out in outs:
+                        predicted_sentence = tokenizer.decode(out)
+                        predicted_sentences.append(predicted_sentence)
                 
                 p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
                                                   self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
@@ -284,13 +280,17 @@ callbacks = [
     Evaluation(tokenizer=tokenizer, nth=config['evaluation_every_nth'],
                max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
                verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
-               dev_gold_edits=dev_gold_edits),
+               dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,
+               batch_size=config['batch_size_eval']),
     tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch']),
     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
 ]
 
 # %% [markdown]
 # ---
+
+# %% [markdown]
+# ### Train
 
 # %%
 if STEPS_PER_EPOCH:

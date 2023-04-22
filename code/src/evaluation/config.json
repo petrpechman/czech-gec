@@ -16,7 +16,7 @@
             "lr": 0.0001
         }
     },
-    "loss": "SCC",
+    "loss": null,
     "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",
     "lang": "cs",
     "token_err_distribution": [0.7, 0.1, 0.1, 0.1, 0],

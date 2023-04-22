@@ -88,7 +88,7 @@ with strategy.scope():
             def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
                 super().__init__(reduction, name)
                 self.softmax = tf.keras.layers.Activation('softmax', dtype='float32', name='predictions')
-                self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
+                self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False, reduction=reduction)
             
             def call(self, y_true, y_pred):
                 return self.hf_compute_loss(y_true, y_pred)

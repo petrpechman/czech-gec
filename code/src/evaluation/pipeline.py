@@ -235,7 +235,7 @@ dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
 class Evaluation(tf.keras.callbacks.Callback):
     def __init__(self, tokenizer, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
                  dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
-        self.tokenzer = tokenizer
+        self.tokenizer = tokenizer
         self.nth = nth
         self.max_unchanged_words = max_unchanged_words
         self.beta = beta

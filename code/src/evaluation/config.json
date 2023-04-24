@@ -5,15 +5,15 @@
     "pretrained": true,
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
     "num_parallel": 16,
-    "batch_size_per_replica": 12,
+    "batch_size_per_replica": 16,
     "max_length": 128,
-    "steps_per_epoch": 20,
+    "steps_per_epoch": 3000,
     "epochs": 1000,
     "shuffle_buffer": 500,
     "optimizer":{
         "name": "Adam",
         "params":{
-            "lr": 0.0001
+            "lr": 0.001
         }
     },
     "loss": "SCC",
@@ -30,5 +30,5 @@
 
     "evaluation_input": "../../data/geccc/dev_part_100/sentence-tokenized.input",
     "evaluation_gold": "../../data/geccc/dev_part_100/sentence.m2",
-    "batch_size_eval": 12
+    "batch_size_eval": 16
 }

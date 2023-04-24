@@ -23,8 +23,8 @@ from m2scorer.m2scorer import load_annotation
 from tensorflow.keras import mixed_precision
 
 # %%
-policy = mixed_precision.Policy('mixed_float16')
-mixed_precision.set_global_policy(policy)
+# policy = mixed_precision.Policy('mixed_float16')
+# mixed_precision.set_global_policy(policy)
 
 # %%
 with open('config.json') as json_file:
@@ -191,7 +191,7 @@ def split_features_and_labels(input_batch):
 
 
 # %%
-dataset = tf.data.TextLineDataset(DATA_PATHS, num_parallel_reads=NUM_PARALLEL)
+dataset = tf.data.TextLineDataset(DATA_PATHS, num_parallel_reads=tf.data.experimental.AUTOTUNE)
 
 dataset = dataset.map(create_error_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 dataset = dataset.map(ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)

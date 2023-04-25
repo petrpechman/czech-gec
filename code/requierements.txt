@@ -7,3 +7,6 @@ aspell-python-py3==1.15
 sentencepiece
 git+https://github.com/petrpechman/m2scorer.git
 protobuf==3.20.*
+matplotlib
+tensorflow_datasets
+tensorflow_text

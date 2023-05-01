@@ -3,8 +3,8 @@
 
     "model": "google/mt5-small",
     "pretrained": true,
-    "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 16,
+    "data_paths": ["../../data/geccc/dev/sentence.input"],
+    "num_parallel": 4,
     "batch_size_per_replica": 16,
     "max_length": 128,
     "steps_per_epoch": 3000,

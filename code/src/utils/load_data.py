@@ -2,14 +2,10 @@ from multiprocessing import Process, Queue
 import tensorflow as tf
 from typing import List
 import random
-import introduce_errors
+from . import introduce_errors
+# import introduce_errors
 import aspell
 from transformers import AutoTokenizer
-import keras_nlp
-
-PATH = "/home/petr/Plocha/DP/czech-gec/code/data/geccc/train/sentence.input"
-NUM_LINES = 66673 # wc -l
-NUM_PROCESS = 3
 
 class GenereteErrorLine():
 
@@ -42,8 +38,8 @@ class GenereteErrorLine():
         return line
     
 
-def data_generator(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer):
-    counter = 0 
+def data_generator(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length):
+    counter = 0
     with open(filename, 'r') as f:
         while counter != start_position:
             f.readline()
@@ -51,28 +47,24 @@ def data_generator(filename, queue, start_position, end_position, gel: GenereteE
 
         while counter != end_position:
             line = f.readline()
-            
             error_line = gel(line)
-            
-            tokenized = tokenizer(error_line, text_target=line, truncation=True, return_tensors="tf")
-            
-            # input_ids = tf.reshape(tokenized['input_ids'][0], (-1))
-            # attention_mask = tf.reshape(tokenized['attention_mask'][0], (-1))
-            # labels = tf.reshape(tokenized['labels'][0], (-1))
+            tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="tf")
 
             input_ids = tokenized['input_ids'][0]
             attention_mask = tokenized['attention_mask'][0]
             labels = tokenized['labels'][0]
-
-            queue.put((input_ids, attention_mask, labels))
             
+            queue.put((input_ids, attention_mask, labels))
+
             counter += 1
 
             if not line: # EOF
                 f.seek(0) 
                 counter = 0
 
-def run_processes(queue: Queue, num_parallel: int, filename: str, file_size: int, gel: GenereteErrorLine, tokenizer):
+        
+
+def run_processes(queue: Queue, num_parallel: int, filename: str, file_size: int, gel: GenereteErrorLine, tokenizer, max_length):
     start = random.randint(0, file_size-1)
     process_size = file_size // num_parallel
     
@@ -85,20 +77,24 @@ def run_processes(queue: Queue, num_parallel: int, filename: str, file_size: int
 
     processes = []
     for i in range(num_parallel):
-        process = Process(target=data_generator, args=(filename, queue, positions[i], positions[i+1], gel, tokenizer,))
+        process = Process(target=data_generator, args=(filename, queue, positions[i], positions[i+1], gel, tokenizer, max_length,))
         process.start()
         processes.append(process)
 
     return processes
 
 
-def read_preproccess_data(queue: Queue, files: List[str], file_sizes: List[int], num_parallel: int, gel: GenereteErrorLine, tokenizer):
+def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length):
     index = 0
     while True:
         file = files[index]
-        file_size = file_sizes[index]
+
+        with open(file, 'r') as f:
+            for count, _ in enumerate(f):
+                pass
+        file_size = count + 1
         
-        processes = run_processes(queue, num_parallel, file, file_size, gel, tokenizer)
+        processes = run_processes(queue, num_parallel, file, file_size, gel, tokenizer, max_length)
         for process in processes:
             process.join()
 
@@ -106,36 +102,100 @@ def read_preproccess_data(queue: Queue, files: List[str], file_sizes: List[int],
         if index == len(files):
             index = 0
 
+########################################################################
 
-tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
-
-lang = "cs"
-token_file = "/home/petr/Plocha/DP/czech-gec/code/data/vocabluraries/vocabulary_cs.tsv"
-tokens = introduce_errors.get_token_vocabulary(token_file)
-characters = introduce_errors.get_char_vocabulary(lang)
-aspell_speller = aspell.Speller('lang', lang)
-token_err_distribution = [0.7, 0.1, 0.1, 0.1, 0]
-char_err_distribution = [0.25, 0.25, 0.25, 0.25, 0]
-token_err_prob = 0.15
-char_err_prob = 0.02
+# PATH = "/home/petr/Plocha/DP/czech-gec/code/data/geccc/train/sentence.input"
+# NUM_PROCESS = 3
+# MAX_LENGTH = 128
 
 
-random.seed(42)
-queue = Queue(2 * NUM_PROCESS)
-gel = GenereteErrorLine(tokens, characters, aspell_speller, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
+# # tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
+# tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
 
-process = Process(target=read_preproccess_data, args=(queue, [PATH], [NUM_LINES], NUM_PROCESS, gel, tokenizer,))
-process.start()
-
-dataset = tf.data.Dataset.from_generator(
-    lambda: iter(queue.get, None),
-    output_types=(tf.int32, tf.int32, tf.int32),
-    output_shapes=(tf.TensorShape([None]), tf.TensorShape([None]), tf.TensorShape([None])))
-
-dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=4))
-# dataset = dataset.ragged_batch(4)
-dataset = dataset.prefetch(2) # Number of batches to prefetch
+# lang = "cs"
+# token_file = "/home/petr/Plocha/DP/czech-gec/code/data/vocabluraries/vocabulary_cs.tsv"
+# tokens = introduce_errors.get_token_vocabulary(token_file)
+# characters = introduce_errors.get_char_vocabulary(lang)
+# aspell_speller = aspell.Speller('lang', lang)
+# token_err_distribution = [0.7, 0.1, 0.1, 0.1, 0]
+# char_err_distribution = [0.25, 0.25, 0.25, 0.25, 0]
+# token_err_prob = 0.15
+# char_err_prob = 0.02
 
 
-for d in dataset:
-    print(d)
+# random.seed(42)
+
+# queue = Queue(2 * NUM_PROCESS)
+# gel = GenereteErrorLine(tokens, characters, aspell_speller, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
+
+# process = Process(target=run_proccesses_on_files, args=(queue, [PATH], NUM_PROCESS, gel, tokenizer,))
+# process.start()
+
+# QUEUE_LIMIT = 100
+
+# def shuffle_batch():
+#     buffer_size = 100
+#     buffer = []
+
+#     max_batch_size = 2048
+#     batch_inputs = []
+#     batch_attention_masks = []
+#     batch_labels = []
+#     batch_size_inputs = 0
+#     batch_size_labels = 0
+    
+#     while True:
+#         try:
+#             dato = queue.get()
+        
+#             if len(buffer) < buffer_size: 
+#                 buffer.append(dato)
+#             else:
+#                 index = random.randint(0, buffer_size - 1)
+#                 input_ids, attention_mask, labels = buffer[index]
+#                 buffer[index] = dato
+
+#                 if (batch_size_inputs + len(input_ids) > max_batch_size) or (batch_size_labels + len(labels) > max_batch_size):
+#                     yield (tf.ragged.stack(batch_inputs), 
+#                            tf.ragged.stack(batch_attention_masks), 
+#                            tf.ragged.stack(batch_labels))
+#                     batch_inputs = []
+#                     batch_attention_masks = []
+#                     batch_labels = []
+#                     batch_size_inputs = 0
+#                     batch_size_labels = 0
+                
+#                 batch_size_inputs += len(input_ids)
+#                 batch_size_labels += len(labels)
+#                 batch_inputs.append(input_ids)
+#                 batch_attention_masks.append(attention_mask)
+#                 batch_labels.append(labels)
+
+#         except queue.Empty:
+#             pass
+
+
+# dataset = tf.data.Dataset.from_generator(
+#     # lambda: iter(queue.get, None),
+#     shuffle_batch,
+#     output_signature=(
+#         tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
+#         tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
+#         tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32)
+#         )
+#     # output_types=(tf.int32, tf.int32, tf.int32),
+#     # output_shapes=((None, None),(None, None), (None, None))
+#     )
+
+
+# # dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=4))
+# # dataset = dataset.ragged_batch(4)
+
+
+# dataset = dataset.prefetch(2) # Number of batches to prefetch
+
+# for d in dataset:
+#     print(d[0].shape)
+#     print(d[1].shape)
+#     print(d[2].shape)
+#     print()

@@ -1,7 +1,7 @@
 # %%
 import sys
 # sys.path.append('../..')
-sys.path.append('../')
+sys.path.append('..')
 
 # %%
 import os
@@ -139,7 +139,7 @@ def shuffle_batch():
     buffer_size = 100
     buffer = []
 
-    max_batch_size = 2048
+    max_batch_size = -1
     batch_inputs = []
     batch_attention_masks = []
     batch_labels = []
@@ -154,38 +154,80 @@ def shuffle_batch():
                 buffer.append(dato)
             else:
                 index = random.randint(0, buffer_size - 1)
-                input_ids, attention_mask, labels = buffer[index]
+                input_ids, attention_mask, labels, decoder_input_ids = buffer[index]
                 buffer[index] = dato
 
-                if (batch_size_inputs + len(input_ids) > max_batch_size) or (batch_size_labels + len(labels) > max_batch_size):
-                    yield ((tf.ragged.stack(batch_inputs), 
-                           tf.ragged.stack(batch_attention_masks)), 
-                           tf.ragged.stack(batch_labels))
-                    batch_inputs = []
-                    batch_attention_masks = []
-                    batch_labels = []
-                    batch_size_inputs = 0
-                    batch_size_labels = 0
-                
-                batch_size_inputs += len(input_ids)
-                batch_size_labels += len(labels)
-                batch_inputs.append(input_ids)
-                batch_attention_masks.append(attention_mask)
-                batch_labels.append(labels)
+                if max_batch_size == -1:
+                    output_dato = {
+                        'input_ids': input_ids,
+                        'attention_mask': attention_mask,
+                        'decoder_input_ids': decoder_input_ids,
+                        'labels': labels
+                    }
+                    yield output_dato
+                else:
+                    if (batch_size_inputs + len(input_ids) > max_batch_size) or (batch_size_labels + len(labels) > max_batch_size):
+                        yield (tf.ragged.stack(batch_inputs), 
+                               tf.ragged.stack(batch_attention_masks), 
+                               tf.ragged.stack(batch_labels))
+                        batch_inputs = []
+                        batch_attention_masks = []
+                        batch_labels = []
+                        batch_size_inputs = 0
+                        batch_size_labels = 0
+
+                    batch_size_inputs += len(input_ids)
+                    batch_size_labels += len(labels)
+                    batch_inputs.append(input_ids)
+                    batch_attention_masks.append(attention_mask)
+                    batch_labels.append(labels)
 
         except queue.Empty:
             pass
 
+def ensure_shapes(input_dict):
+    return {key: tf.ensure_shape(val, tf.shape(val)) for key, val in input_dict.items()}
 
+def split_features_and_labels(input_batch):
+    features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
+    labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
+    if len(features) == 1:
+        features = list(features.values())[0]
+    if len(labels) == 1:
+        labels = list(labels.values())[0]
+    if isinstance(labels, dict) and len(labels) == 0:
+        return features
+    else:
+        return features, labels
+    
 dataset = tf.data.Dataset.from_generator(
     shuffle_batch,
-    output_signature=(
-        tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
-        tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
-        tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32))
-    )
+    output_types={
+        'input_ids': tf.int32,
+        'attention_mask': tf.int32,
+        'decoder_input_ids': tf.int32,
+        'labels': tf.int32
+    },
+    output_shapes={
+        'input_ids': (None,),
+        'attention_mask': (None,),
+        'decoder_input_ids': (None,),
+        'labels': (None,)
+    })
 
-dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+# dataset = dataset.map(ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+dataset = dataset.bucket_by_sequence_length(
+        element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
+        bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
+        # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
+        bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
+)
+dataset = dataset.prefetch(2) # Number of batches to prefetch
+
+# %%
+# for d in dataset:
+#     print(d)
 
 # %%
 with strategy.scope():

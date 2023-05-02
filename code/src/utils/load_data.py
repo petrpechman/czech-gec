@@ -53,8 +53,9 @@ def data_generator(filename, queue, start_position, end_position, gel: GenereteE
             input_ids = tokenized['input_ids'][0]
             attention_mask = tokenized['attention_mask'][0]
             labels = tokenized['labels'][0]
+            decoder_input_ids = tf.roll(labels, shift=1, axis=0)
             
-            queue.put((input_ids, attention_mask, labels))
+            queue.put((input_ids, attention_mask, labels, decoder_input_ids))
 
             counter += 1
 
@@ -102,10 +103,11 @@ def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, g
         if index == len(files):
             index = 0
 
-########################################################################
+
+# ########################################################################
 
 # PATH = "/home/petr/Plocha/DP/czech-gec/code/data/geccc/train/sentence.input"
-# NUM_PROCESS = 3
+# NUM_PARALLEL = 3
 # MAX_LENGTH = 128
 
 
@@ -125,19 +127,17 @@ def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, g
 
 # random.seed(42)
 
-# queue = Queue(2 * NUM_PROCESS)
+# queue = Queue(2 * NUM_PARALLEL)
 # gel = GenereteErrorLine(tokens, characters, aspell_speller, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
 
-# process = Process(target=run_proccesses_on_files, args=(queue, [PATH], NUM_PROCESS, gel, tokenizer,))
+# process = Process(target=run_proccesses_on_files, args=(queue, [PATH], NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
 # process.start()
-
-# QUEUE_LIMIT = 100
 
 # def shuffle_batch():
 #     buffer_size = 100
 #     buffer = []
 
-#     max_batch_size = 2048
+#     max_batch_size = -1
 #     batch_inputs = []
 #     batch_attention_masks = []
 #     batch_labels = []
@@ -152,24 +152,30 @@ def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, g
 #                 buffer.append(dato)
 #             else:
 #                 index = random.randint(0, buffer_size - 1)
-#                 input_ids, attention_mask, labels = buffer[index]
+#                 input_ids, attention_mask, labels, decoder_input_ids = buffer[index]
 #                 buffer[index] = dato
 
-#                 if (batch_size_inputs + len(input_ids) > max_batch_size) or (batch_size_labels + len(labels) > max_batch_size):
-#                     yield (tf.ragged.stack(batch_inputs), 
-#                            tf.ragged.stack(batch_attention_masks), 
-#                            tf.ragged.stack(batch_labels))
-#                     batch_inputs = []
-#                     batch_attention_masks = []
-#                     batch_labels = []
-#                     batch_size_inputs = 0
-#                     batch_size_labels = 0
-                
-#                 batch_size_inputs += len(input_ids)
-#                 batch_size_labels += len(labels)
-#                 batch_inputs.append(input_ids)
-#                 batch_attention_masks.append(attention_mask)
-#                 batch_labels.append(labels)
+#                 if max_batch_size == -1:
+#                     yield (input_ids, 
+#                            attention_mask, 
+#                            labels,
+#                            decoder_input_ids)
+#                 else:
+#                     if (batch_size_inputs + len(input_ids) > max_batch_size) or (batch_size_labels + len(labels) > max_batch_size):
+#                         yield (tf.ragged.stack(batch_inputs), 
+#                                tf.ragged.stack(batch_attention_masks), 
+#                                tf.ragged.stack(batch_labels))
+#                         batch_inputs = []
+#                         batch_attention_masks = []
+#                         batch_labels = []
+#                         batch_size_inputs = 0
+#                         batch_size_labels = 0
+
+#                     batch_size_inputs += len(input_ids)
+#                     batch_size_labels += len(labels)
+#                     batch_inputs.append(input_ids)
+#                     batch_attention_masks.append(attention_mask)
+#                     batch_labels.append(labels)
 
 #         except queue.Empty:
 #             pass
@@ -178,24 +184,27 @@ def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, g
 # dataset = tf.data.Dataset.from_generator(
 #     # lambda: iter(queue.get, None),
 #     shuffle_batch,
-#     output_signature=(
-#         tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
-#         tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
-#         tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32)
-#         )
-#     # output_types=(tf.int32, tf.int32, tf.int32),
-#     # output_shapes=((None, None),(None, None), (None, None))
+#     # output_signature=(
+#     #     tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
+#     #     tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32),
+#     #     tf.RaggedTensorSpec(shape=(None, None), dtype=tf.int32, ragged_rank=1, row_splits_dtype=tf.int32)
+#     #     )
+#     output_types=(tf.int32, tf.int32, tf.int32, tf.int32),
+#     output_shapes=((None, ),(None, ), (None, ), (None, ))
 #     )
 
 
 # # dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=4))
 # # dataset = dataset.ragged_batch(4)
-
-
+# dataset = dataset.bucket_by_sequence_length(
+#         element_length_func=lambda x, y, z, w: tf.shape(x)[0],
+#         bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
+#         bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
+# )
 # dataset = dataset.prefetch(2) # Number of batches to prefetch
 
 # for d in dataset:
 #     print(d[0].shape)
 #     print(d[1].shape)
 #     print(d[2].shape)
-#     print()
+#     print(d)

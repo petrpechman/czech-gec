@@ -2,10 +2,10 @@ from multiprocessing import Process, Queue
 import tensorflow as tf
 from typing import List
 import random
-# from . import introduce_errors
-# from . import tokenizer_utils
-import introduce_errors
-import tokenizer_utils
+from . import introduce_errors
+from . import tokenizer_utils
+# import introduce_errors
+# import tokenizer_utils
 import aspell
 from transformers import AutoTokenizer
 import multiprocessing

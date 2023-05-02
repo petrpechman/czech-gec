@@ -2,8 +2,8 @@ from multiprocessing import Process, Queue
 import tensorflow as tf
 from typing import List
 import random
-# from . import introduce_errors
-import introduce_errors
+from . import introduce_errors
+# import introduce_errors
 import aspell
 from transformers import AutoTokenizer
 import multiprocessing

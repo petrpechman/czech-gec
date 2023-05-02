@@ -1,12 +1,12 @@
 # %%
 import sys
-sys.path.append('../..')
+sys.path.append('..')
 
 # %%
 import os
 import tensorflow as tf
 import keras
-from create_errors import introduce_errors
+from utils import introduce_errors
 import aspell
 
 from transformers import TFAutoModelForSeq2SeqLM, DataCollatorForSeq2Seq 

@@ -5,7 +5,7 @@
     "pretrained": true,
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
     "num_parallel": 16,
-    "batch_size_per_replica": 16,
+    "batch_size_per_replica": 10,
     "max_length": 128,
     "steps_per_epoch": 3000,
     "epochs": 1000,

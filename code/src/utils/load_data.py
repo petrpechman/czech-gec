@@ -54,8 +54,15 @@ def data_generator(filename, queue, start_position, end_position, gel: GenereteE
             attention_mask = tokenized['attention_mask'][0]
             labels = tokenized['labels'][0]
             decoder_input_ids = tf.roll(labels, shift=1, axis=0)
+
+            dato = {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "labels": labels,
+                "decoder_input_ids": decoder_input_ids
+            }
             
-            queue.put((input_ids, attention_mask, labels, decoder_input_ids))
+            queue.put(dato)
 
             counter += 1
 

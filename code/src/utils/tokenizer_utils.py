@@ -82,17 +82,13 @@ class CustomTokenizer():
 if __name__ == "__main__":
     main()
 
-    from tokenizers import Tokenizer
+    # from tokenizers import Tokenizer
 
-    tokenizer = Tokenizer.from_file("./out/tokenizer.json")
-    output = tokenizer.encode("Podobal se srdci", add_special_tokens=True)
-    print(output.ids)
-    print(output.attention_mask)
-    print(output.special_tokens_mask)
-    print(tokenizer.token_to_id("[CLS]"))
+    # tokenizer = Tokenizer.from_file("./out/tokenizer.json")
+    # output = tokenizer.encode("Podobal se srdci", add_special_tokens=True)
+    # print(output.ids)
+    # print(output.attention_mask)
 
-    my_tokenizer = CustomTokenizer(tokenizer)
-    output = my_tokenizer("Podobal se srdci", "Podobal s srdci", 10)
-    print(output)
-
-
+    # my_tokenizer = CustomTokenizer(tokenizer)
+    # output = my_tokenizer("Podobal se srdci", "Podobal s srdci", 10)
+    # print(output)

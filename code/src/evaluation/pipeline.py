@@ -80,7 +80,7 @@ def split_features_and_labels(input_batch):
 
 
 queue = Queue(2 * NUM_PARALLEL)
-gel = load_data.GenereteErrorLine(tokens, characters, aspell_speller, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
+gel = load_data.GenereteErrorLine(tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
 
 process = Process(target=load_data.run_proccesses_on_files, args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
 process.start()

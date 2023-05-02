@@ -26,17 +26,11 @@ from utils import load_data
 from utils import introduce_errors 
 
 # %%
-# policy = mixed_precision.Policy('mixed_float16')
-# mixed_precision.set_global_policy(policy)
-
-# %%
 with open('config.json') as json_file:
     config = json.load(json_file)
 
-# %%
 tf.random.set_seed(config['seed'])
 
-# %%
 USE_MODEL = config['model']
 DATA_PATHS = config['data_paths']
 NUM_PARALLEL = config['num_parallel']
@@ -45,6 +39,80 @@ MAX_LENGTH = config['max_length']
 STEPS_PER_EPOCH = config['steps_per_epoch']
 EPOCHS = config['epochs']
 SHUFFLE_BUFFER = config['shuffle_buffer']
+
+# %%
+lang = config['lang']
+token_file = config['token_file']
+tokens = introduce_errors.get_token_vocabulary(token_file)
+characters = introduce_errors.get_char_vocabulary(lang)
+aspell_speller = aspell.Speller('lang', lang)
+token_err_distribution = config['token_err_distribution']
+char_err_distribution = config['char_err_distribution']
+token_err_prob = config['token_err_prob']   
+char_err_prob = config['char_err_prob']
+
+# %%
+tokenizer = AutoTokenizer.from_pretrained(config['model'])
+
+# %%
+# new loading of dataset:
+
+from multiprocessing import Process, Queue
+import random
+
+def remap(dato):
+    input_ids, attention_mask,  = dato
+
+def ensure_shapes(input_dict):
+    return {key: tf.ensure_shape(val, tf.shape(val)) for key, val in input_dict.items()}
+
+def split_features_and_labels(input_batch):
+    features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
+    labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
+    if len(features) == 1:
+        features = list(features.values())[0]
+    if len(labels) == 1:
+        labels = list(labels.values())[0]
+    if isinstance(labels, dict) and len(labels) == 0:
+        return features
+    else:
+        return features, labels
+
+
+queue = Queue(2 * NUM_PARALLEL)
+gel = load_data.GenereteErrorLine(tokens, characters, aspell_speller, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
+
+process = Process(target=load_data.run_proccesses_on_files, args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
+process.start()
+    
+dataset = tf.data.Dataset.from_generator(
+    lambda: iter(queue.get, None),
+    output_types={
+                "input_ids": tf.int32,
+                "attention_mask": tf.int32,
+                "labels": tf.int32,
+                "decoder_input_ids": tf.int32
+            },
+    output_shapes={
+                "input_ids": (None, ),
+                "attention_mask": (None, ),
+                "labels": (None, ),
+                "decoder_input_ids": (None, )
+            })
+
+# dataset = dataset.map(ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+dataset = dataset.bucket_by_sequence_length(
+        element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
+        bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
+        # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
+        bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
+)
+dataset = dataset.prefetch(2) # Number of batches to prefetch
+
+# %%
+# policy = mixed_precision.Policy('mixed_float16')
+# mixed_precision.set_global_policy(policy)
 
 # %%
 print(f"Batch size per replica: {BATCH_SIZE_PER_REPLICE}")
@@ -109,79 +177,8 @@ with strategy.scope():
     
 
 # %%
-lang = config['lang']
-token_file = config['token_file']
-tokens = introduce_errors.get_token_vocabulary(token_file)
-characters = introduce_errors.get_char_vocabulary(lang)
-aspell_speller = aspell.Speller('lang', lang)
-token_err_distribution = config['token_err_distribution']
-char_err_distribution = config['char_err_distribution']
-token_err_prob = config['token_err_prob']   
-char_err_prob = config['char_err_prob']
 
-# %%
-tokenizer = AutoTokenizer.from_pretrained(config['model'])
 tokenizer_eval = AutoTokenizer.from_pretrained(config['model'])
-
-# %%
-# new loading of dataset:
-
-from multiprocessing import Process, Queue
-import random
-
-def remap(dato):
-    input_ids, attention_mask,  = dato
-
-def ensure_shapes(input_dict):
-    return {key: tf.ensure_shape(val, tf.shape(val)) for key, val in input_dict.items()}
-
-def split_features_and_labels(input_batch):
-    features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-    labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-    if len(features) == 1:
-        features = list(features.values())[0]
-    if len(labels) == 1:
-        labels = list(labels.values())[0]
-    if isinstance(labels, dict) and len(labels) == 0:
-        return features
-    else:
-        return features, labels
-
-
-queue = Queue(2 * NUM_PARALLEL)
-gel = load_data.GenereteErrorLine(tokens, characters, aspell_speller, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
-
-process = Process(target=load_data.run_proccesses_on_files, args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
-process.start()
-    
-dataset = tf.data.Dataset.from_generator(
-    lambda: iter(queue.get, None),
-    output_types={
-                "input_ids": tf.int32,
-                "attention_mask": tf.int32,
-                "labels": tf.int32,
-                "decoder_input_ids": tf.int32
-            },
-    output_shapes={
-                "input_ids": (None, ),
-                "attention_mask": (None, ),
-                "labels": (None, ),
-                "decoder_input_ids": (None, )
-            })
-
-# dataset = dataset.map(ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-dataset = dataset.bucket_by_sequence_length(
-        element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-        bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
-        # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
-        bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
-)
-dataset = dataset.prefetch(2) # Number of batches to prefetch
-
-# %%
-for d in dataset:
-    print(d)
 
 # %%
 with strategy.scope():

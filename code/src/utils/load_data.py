@@ -2,11 +2,14 @@ from multiprocessing import Process, Queue
 import tensorflow as tf
 from typing import List
 import random
-from . import introduce_errors
-# import introduce_errors
+# from . import introduce_errors
+# from . import tokenizer_utils
+import introduce_errors
+import tokenizer_utils
 import aspell
 from transformers import AutoTokenizer
 import multiprocessing
+from tokenizers import Tokenizer
 
 class GenereteErrorLine():
 
@@ -125,6 +128,8 @@ def main():
 
     # tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base") 
+    # tokenizer = Tokenizer.from_file("./out/tokenizer.json")
+    # tokenizer = tokenizer_utils.CustomTokenizer(tokenizer)
 
     lang = "cs"
     token_file = "/home/petr/Plocha/DP/czech-gec/code/data/vocabluraries/vocabulary_cs.tsv"

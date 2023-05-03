@@ -85,7 +85,7 @@ def run_processes(queue: Queue, num_parallel: int, filename: str, file_size: int
     current = start
     for i in range(num_parallel):
         positions.append(current)
-        current = current + process_size
+        current = (current + process_size) % file_size
     positions.append(start)
 
     processes = []

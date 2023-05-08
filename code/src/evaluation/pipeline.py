@@ -110,7 +110,8 @@ def main():
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
-            bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
+            bucket_batch_sizes=[64, 32, 21, 16, 12, 10, 9, 8]
+            # bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
     )
     dataset = dataset.prefetch(2) # Number of batches to prefetch
 

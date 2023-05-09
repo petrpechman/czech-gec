@@ -102,7 +102,6 @@ def get_batch_size(max_length, filename) -> int:
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
         except:
             return batch_size - STEP_BATCH
-        time.sleep(5)
     return 0
         
 def all_batch_sizes(filename: str):

@@ -2,7 +2,8 @@ import tensorflow as tf
 from transformers import TFAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
 from multiprocessing import Process
-from tensorflow.python.client import device_lib 
+from tensorflow.python.client import device_lib
+from tensorflow.keras import mixed_precision
 
 LINE = "Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl jsem ve městě, kde oslává Vánoc neni tak rozšiřena \
 Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl jsem ve městě, kde oslává Vánoc neni tak rozšiřena \
@@ -63,16 +64,13 @@ def try_batch_size(model, tokenizer, lines, batch_size, max_length, lr=0.00001) 
 def get_batch_size(model, tokenizer, max_length) -> int:
     NUM_LINES = 128
     MAX_BATCH_SIZE = 2049
-    STEP_BATCH = 16
+    STEP_BATCH = 4
 
     lines = [LINE] *  NUM_LINES
 
     for batch_size in range(STEP_BATCH, MAX_BATCH_SIZE, STEP_BATCH):
         try:
-            process = Process(target=try_batch_size, args=(model, tokenizer, lines, batch_size, max_length,))
-            process.start()
-            process.join()
-            process.close()
+            try_batch_size(model, tokenizer, lines, batch_size, max_length)
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
         except:
             return batch_size - STEP_BATCH
@@ -90,6 +88,9 @@ def all_batch_sizes(model, tokenizer):
     return batch_sizes
         
 def main():
+    # policy = mixed_precision.Policy('mixed_float16')
+    # mixed_precision.set_global_policy(policy)
+
     tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
     model = TFAutoModelForSeq2SeqLM.from_pretrained("google/mt5-small")
     filename = "mt5-small-batches.txt"

@@ -4,6 +4,7 @@ from transformers import AutoTokenizer
 from multiprocessing import Process
 from tensorflow.python.client import device_lib
 from tensorflow.keras import mixed_precision
+import os
 
 LINE = "Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl jsem ve městě, kde oslává Vánoc neni tak rozšiřena \
 Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl jsem ve městě, kde oslává Vánoc neni tak rozšiřena \
@@ -61,7 +62,7 @@ def try_batch_size(model, tokenizer, lines, batch_size, max_length, lr=0.00001) 
     model.fit(dataset, epochs=2, steps_per_epoch=2)
 
 
-def get_batch_size(model, tokenizer, max_length) -> int:
+def get_batch_size(max_length, filename) -> int:
     NUM_LINES = 128
     MAX_BATCH_SIZE = 2049
     STEP_BATCH = 4
@@ -70,38 +71,53 @@ def get_batch_size(model, tokenizer, max_length) -> int:
 
     for batch_size in range(STEP_BATCH, MAX_BATCH_SIZE, STEP_BATCH):
         try:
+            model_name = "facebook/bart-base"
+            # model_name = "google/mt5-small"
+
+            policy = mixed_precision.Policy('mixed_float16')    
+            mixed_precision.set_global_policy(policy)
+            
+            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
             try_batch_size(model, tokenizer, lines, batch_size, max_length)
+            log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
         except:
             return batch_size - STEP_BATCH
         
-def all_batch_sizes(model, tokenizer):
+def all_batch_sizes(filename: str):
     MAX_LENGTH = 16384
     STEP_LENGTH = 16
 
     batch_sizes = []
     for max_length in range(STEP_LENGTH, MAX_LENGTH, STEP_LENGTH):
-        batch_size = get_batch_size(model, tokenizer, max_length)
+        batch_size = get_batch_size(max_length, filename)
+        print(f"BATCH SIZE: {batch_size}   MAX LENGHT: {max_length}")
         if batch_size == 0:
             break
         batch_sizes.append((max_length, batch_size))
     return batch_sizes
-        
+
+def log_data(filename: str, text: str):
+    if os.path.exists(filename):
+        append_write = 'a' # append if already exists
+    else:
+        append_write = 'w'
+    with open(filename, append_write, encoding="utf-8") as log_file:
+        print(text, file=log_file)
+
 def main():
     # policy = mixed_precision.Policy('mixed_float16')
     # mixed_precision.set_global_policy(policy)
 
-    tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
-    model = TFAutoModelForSeq2SeqLM.from_pretrained("google/mt5-small")
-    filename = "mt5-small-batches.txt"
+    # tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+    # model = AutoModel.from_pretrained("facebook/bart-base")
 
-    batch_sizes = all_batch_sizes(model, tokenizer)
+    filename = "bart-base-batches.txt"
 
-    with open(filename, "w") as f:
-        f.writelines(batch_sizes)
-
-    print(batch_sizes)
-
+    batch_sizes = get_batch_size(64 ,filename)
+    batch_sizes = get_batch_size(128 ,filename)
+    print("BATCH:", batch_sizes)
 
 if __name__ == "__main__":
     main()

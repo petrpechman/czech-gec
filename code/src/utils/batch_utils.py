@@ -5,6 +5,8 @@ from multiprocessing import Process
 from tensorflow.python.client import device_lib
 from tensorflow.keras import mixed_precision
 import os
+from transformers import BartConfig
+import time
 
 LINE = "Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl jsem ve městě, kde oslává Vánoc neni tak rozšiřena \
 Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl jsem ve městě, kde oslává Vánoc neni tak rozšiřena \
@@ -70,12 +72,28 @@ def get_batch_size(max_length, filename) -> int:
     lines = [LINE] *  NUM_LINES
 
     for batch_size in range(STEP_BATCH, MAX_BATCH_SIZE, STEP_BATCH):
+        # # model_name = "facebook/bart-base"
+        # # model_name = "google/mt5-small"
+        # model = TFAutoModelForSeq2SeqLM.from_pretrained("./model/")
+        # tokenizer = AutoTokenizer.from_pretrained("./out/")
+        # policy = mixed_precision.Policy('mixed_float16')    
+        # mixed_precision.set_global_policy(policy)
+        
+        # # tokenizer = AutoTokenizer.from_pretrained(model_name)
+        # # model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
+        # try_batch_size(model, tokenizer, lines, batch_size, max_length)
+        # log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
+        # print(f"Allowed batch size {batch_size} for max_length {max_length}.")
+
         try:
+            policy = mixed_precision.Policy('mixed_float16')    
+            mixed_precision.set_global_policy(policy)
+
             model_name = "facebook/bart-base"
             # model_name = "google/mt5-small"
 
-            policy = mixed_precision.Policy('mixed_float16')    
-            mixed_precision.set_global_policy(policy)
+            # model = TFAutoModelForSeq2SeqLM.from_pretrained("./model/")
+            # tokenizer = AutoTokenizer.from_pretrained("./out/")
             
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
@@ -84,6 +102,8 @@ def get_batch_size(max_length, filename) -> int:
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
         except:
             return batch_size - STEP_BATCH
+        time.sleep(5)
+    return 0
         
 def all_batch_sizes(filename: str):
     MAX_LENGTH = 16384
@@ -107,17 +127,12 @@ def log_data(filename: str, text: str):
         print(text, file=log_file)
 
 def main():
-    # policy = mixed_precision.Policy('mixed_float16')
-    # mixed_precision.set_global_policy(policy)
-
-    # tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
-    # model = AutoModel.from_pretrained("facebook/bart-base")
-
     filename = "bart-base-batches.txt"
 
-    batch_sizes = get_batch_size(64 ,filename)
-    batch_sizes = get_batch_size(128 ,filename)
-    print("BATCH:", batch_sizes)
+    batch_size = get_batch_size(32 ,filename)
+    batch_size = get_batch_size(64 ,filename)
+    batch_size = get_batch_size(96 ,filename)
+    batch_size = get_batch_size(128 ,filename)
 
 if __name__ == "__main__":
     main()

@@ -27,6 +27,7 @@ from utils import introduce_errors
 
 from multiprocessing import Process, Queue
 import random
+from multiprocessing import Manager
 import multiprocessing
 
 
@@ -82,8 +83,9 @@ def main():
         else:
             return features, labels
 
+    manager = Manager()
 
-    queue = Queue(2 * NUM_PARALLEL)
+    queue = manager.Queue(2 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
 
     process = Process(target=load_data.run_proccesses_on_files, args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
@@ -110,8 +112,8 @@ def main():
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
-            bucket_batch_sizes=[64, 32, 21, 16, 12, 10, 9, 8]
-            # bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
+            # bucket_batch_sizes=[64, 32, 21, 16, 12, 10, 9, 8]
+            bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
     )
     dataset = dataset.prefetch(2) # Number of batches to prefetch
 

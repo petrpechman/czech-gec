@@ -2,6 +2,14 @@
 import sys
 sys.path.append('..')
 
+
+import sys
+SIDECAR = False
+
+if sys.argv[1] == "-e":
+    SIDECAR = True
+    print("!!! SIDECAR !!!!")
+
 # %%
 import tensorflow as tf
 
@@ -299,28 +307,24 @@ def main():
     # %% [markdown]
     # ---
 
-    def sidecar_process():
-        sidecar = tf.keras.utils.SidecarEvaluator(
-            model=model,
-            data=dataset,
-            checkpoint_dir=LOG_FILE,
-            steps=1000,
-            max_evaluations=None,
-            callbacks=callbacks
-        )
-        sidecar.start()
+    if SIDECAR:
+        def sidecar_process():
+            sidecar = tf.keras.utils.SidecarEvaluator(
+                model,
+                checkpoint_dir=LOG_FILE,
+                steps=1000,
+                max_evaluations=None,
+                callbacks=callbacks
+            )
+            sidecar.start()
 
-    sidecar_process = Process(target=sidecar_process)
-    sidecar_process.start()
-
-    # %% [markdown]
-    # ### Train
-
-    # %%
-    if STEPS_PER_EPOCH:
-        model.fit(dataset, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
+        sidecar_process = Process(target=sidecar_process)
+        sidecar_process.start()
     else:
-        model.fit(dataset, epochs=EPOCHS)
+        if STEPS_PER_EPOCH:
+            model.fit(dataset, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
+        else:
+            model.fit(dataset, epochs=EPOCHS)
 
     # %% [markdown]
     # ---

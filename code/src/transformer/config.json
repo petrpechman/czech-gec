@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 16,
+    "num_parallel": 40,
     "max_length": 128,
     "shuffle_buffer": 500,
 
@@ -29,7 +29,7 @@
 
     
     "log_file": "./logs",
-    "profile_batch": [100, 200],
+    "profile_batch": [1500, 2000],
 
     "model_checkpoint_path": "./tmp/checkpoint/",
     "evaluation_every_nth": 1,

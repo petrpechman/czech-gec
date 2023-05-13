@@ -8,7 +8,7 @@
 
     "model": "google/mt5-small",
     "pretrained": true,
-    "steps_per_epoch": 500,
+    "steps_per_epoch": 3000,
     "epochs": 10000,
     
     "optimizer":{

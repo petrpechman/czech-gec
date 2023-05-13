@@ -29,7 +29,6 @@ from multiprocessing import Process, Queue, Manager
 import multiprocessing
 
 def main():
-
     # %%
     with open('config.json') as json_file:
         config = json.load(json_file)
@@ -304,12 +303,13 @@ def main():
         save_weights_only=True, 
         save_freq='epoch')
 
-    # %% [markdown]
-    # ---
-
+    # %%
     callbacks = [
         tf.keras.callbacks.TensorBoard(log_dir=LOG_FILE, profile_batch=PROFILE_BATCH),
     ]
+
+    # %% [markdown]
+    # ---
 
     # %% [markdown]
     # ### Train
@@ -319,13 +319,14 @@ def main():
         sidecar = tf.keras.utils.SidecarEvaluator(
             model,
             dataset,
-            checkpoint_dir=LOG_FILE,
+            checkpoint_dir=MODEL_CHECKPOINT_PATH,
             steps=2000,
             max_evaluations=None,
             callbacks=[]
         )
         sidecar.start()
     else:
+
         if STEPS_PER_EPOCH:
             model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
         else:

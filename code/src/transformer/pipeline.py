@@ -121,7 +121,6 @@ def main():
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-            bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             # bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             # bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
             bucket_boundaries=[32, 64, 96],

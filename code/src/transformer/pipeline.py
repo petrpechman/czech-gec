@@ -6,9 +6,10 @@ sys.path.append('..')
 import sys
 SIDECAR = False
 
-if sys.argv[1] == "-e":
-    SIDECAR = True
-    print("!!! SIDECAR !!!!")
+if len(sys.argv) > 1: 
+    if sys.argv[1] == "-e":
+        SIDECAR = True
+        print("!!! SIDECAR !!!!")
 
 # %%
 import tensorflow as tf

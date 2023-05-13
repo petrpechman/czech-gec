@@ -9,6 +9,7 @@ if len(sys.argv) > 1:
         EVALUATOR = True
 
 # %%
+import os
 import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
@@ -299,9 +300,8 @@ def main():
 
     # %%
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=MODEL_CHECKPOINT_PATH, 
-        save_weights_only=True, 
-        save_freq='epoch')
+        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}'),
+        save_weights_only=True)
 
     # %%
     callbacks = [
@@ -320,7 +320,7 @@ def main():
             model,
             dataset,
             checkpoint_dir=MODEL_CHECKPOINT_PATH,
-            steps=2000,
+            steps=100,
             max_evaluations=None,
             callbacks=[]
         )

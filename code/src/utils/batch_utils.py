@@ -67,7 +67,7 @@ def try_batch_size(model, tokenizer, lines, batch_size, max_length, lr=0.00001) 
 def get_batch_size(max_length, filename) -> int:
     NUM_LINES = 128
     MAX_BATCH_SIZE = 2049
-    STEP_BATCH = 4
+    STEP_BATCH = 8
 
     lines = [LINE] *  NUM_LINES
 
@@ -86,11 +86,11 @@ def get_batch_size(max_length, filename) -> int:
         # print(f"Allowed batch size {batch_size} for max_length {max_length}.")
 
         try:
-            policy = mixed_precision.Policy('mixed_float16')    
-            mixed_precision.set_global_policy(policy)
+            # policy = mixed_precision.Policy('mixed_float16')    
+            # mixed_precision.set_global_policy(policy)
 
-            model_name = "facebook/bart-base"
-            # model_name = "google/mt5-small"
+            # model_name = "facebook/bart-base"
+            model_name = "google/mt5-small"
 
             # model = TFAutoModelForSeq2SeqLM.from_pretrained("./model/")
             # tokenizer = AutoTokenizer.from_pretrained("./out/")
@@ -126,7 +126,7 @@ def log_data(filename: str, text: str):
         print(text, file=log_file)
 
 def main():
-    filename = "bart-base-batches.txt"
+    filename = "mt5-small-batches-2.txt"
 
     batch_size = get_batch_size(32 ,filename)
     batch_size = get_batch_size(64 ,filename)

@@ -55,18 +55,21 @@ def data_generator(filename, queue, start_position, end_position, gel: GenereteE
         while counter != end_position:
             line = f.readline()
             error_line = gel(line, aspell_speller)
-            tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="tf")
+            tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="np")
 
             input_ids = tokenized['input_ids'][0]
             attention_mask = tokenized['attention_mask'][0]
             labels = tokenized['labels'][0]
-            decoder_input_ids = tf.roll(labels, shift=1, axis=0)
+
+            decoder_input_ids = labels
+
+            # decoder_input_ids = tf.roll(labels, shift=1, axis=0)
 
             dato = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
-                "labels": labels,
-                "decoder_input_ids": decoder_input_ids
+                "labels": labels[1:],
+                "decoder_input_ids": decoder_input_ids[:-1]
             }
             
             queue.put(dato)
@@ -96,8 +99,6 @@ def run_processes(queue: Queue, pool: Pool, num_parallel: int, filename: str, fi
     arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length,))
 
     pool.starmap(data_generator, arguments)
-    pool.close()
-    pool.join()
 
 
 def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length):

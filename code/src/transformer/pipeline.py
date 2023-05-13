@@ -26,13 +26,16 @@ from multiprocessing import Process, Queue
 import random
 import multiprocessing
 
+from multiprocessing import Manager
+
+
 def main():
     with open('config.json') as json_file:
         config = json.load(json_file)
 
     tf.random.set_seed(config['seed'])
 
-    MAX_LENGTH = config['max_length']
+    MAX_LENGTH = 128
 
     DATA_PATHS = config['data_paths']
     NUM_PARALLEL = config['num_parallel']
@@ -52,7 +55,11 @@ def main():
     char_err_prob = config['char_err_prob']
 
 
-    tokenizer = AutoTokenizer.from_pretrained("../utils/out/")
+    # tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
+    
+
+    model_name = "google/mt5-small"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def split_features_and_labels(input_batch):
         features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
@@ -66,8 +73,9 @@ def main():
         else:
             return features, labels
 
+    manager = Manager()
 
-    queue = Queue(2 * NUM_PARALLEL)
+    queue = manager.Queue(2 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
 
     process = Process(target=load_data.run_proccesses_on_files, args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
@@ -91,9 +99,10 @@ def main():
     dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-            bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
+            # bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
+            bucket_boundaries=[32, 64, 96],
             # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
-            bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
+            bucket_batch_sizes=[88, 32, 16, 16]
     )
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE) # Number of batches to prefetch
@@ -159,44 +168,20 @@ def main():
 
 
     with strategy.scope():
-        from transformers import BartConfig
-        config = BartConfig(
-            vocab_size=32_000,
-            max_position_embeddings=256,
-            encoder_layers=6,
-            encoder_ffn_dim=2048,
-            encoder_attention_heads=8,
-            decoder_layers=6,
-            decoder_ffn_dim=2048,
-            decoder_attention_heads=8,
-            encoder_layerdrop=0.0,
-            decoder_layerdrop=0.0,
-            activation_function="relu",
-            d_model=512,
-            dropout=0.1,
-            attention_dropout=0.0,
-            activation_dropout=0.0,
-            init_std=0.02,
-            classifier_dropout=0.0,
-            scale_embedding=True,
-            use_cache=True,
-            num_labels=3,
-            pad_token_id=0,
-            bos_token_id=1,
-            eos_token_id=2,
-            is_encoder_decoder=True,
-            decoder_start_token_id=2,
-            forced_eos_token_id=2,
-        )
-        model = TFAutoModelForSeq2SeqLM.from_config(config)
+        # config = AutoConfig.from_pretrained("facebook/bart-base")
+        # model = TFAutoModelForSeq2SeqLM.from_config(config)
+        model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
 
         if loss:
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
 
-    print(model.optimizer)
-    callbacks = []
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch'])
+    ]
+
+
     if STEPS_PER_EPOCH:
         model.fit(dataset, callbacks=callbacks, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
     else:

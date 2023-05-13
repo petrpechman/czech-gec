@@ -191,7 +191,7 @@ def main():
 
     # %%
     with strategy.scope():
-        model = TFAutoModelForSeq2SeqLM.from_config(MODEL)
+        model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
 
         if loss:
             model.compile(optimizer=optimizer, loss=loss)

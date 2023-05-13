@@ -1,65 +1,81 @@
+# %%
 import sys
 sys.path.append('..')
 
-import os
+# %%
 import tensorflow as tf
-import keras
-import aspell
 
-from transformers import TFAutoModelForSeq2SeqLM, DataCollatorForSeq2Seq 
-from transformers import TFEncoderDecoderModel, BertTokenizer
-from transformers import AutoTokenizer, AutoConfig
-
+from transformers import TFAutoModelForSeq2SeqLM
+from transformers import AutoTokenizer
 import json
 
-from m2scorer.util import paragraphs
-from m2scorer.util import smart_open
-from m2scorer.levenshtein import batch_multi_pre_rec_f1
-from m2scorer.m2scorer import load_annotation
+# from m2scorer.util import paragraphs
+# from m2scorer.util import smart_open
+# from m2scorer.levenshtein import batch_multi_pre_rec_f1
+# from m2scorer.m2scorer import load_annotation
 
-from tensorflow.keras import mixed_precision
+# from tensorflow.keras import mixed_precision
 
 from utils import load_data
 from utils import introduce_errors 
 
 from multiprocessing import Process, Queue
-import random
 import multiprocessing
 
-from multiprocessing import Manager
-
-
 def main():
+    # %%
     with open('config.json') as json_file:
         config = json.load(json_file)
 
-    tf.random.set_seed(config['seed'])
+    SEED = config['seed']
 
-    MAX_LENGTH = 128
-
+    # data loading
     DATA_PATHS = config['data_paths']
     NUM_PARALLEL = config['num_parallel']
-
-    STEPS_PER_EPOCH = config['steps_per_epoch']
-    EPOCHS = config['epochs']
+    MAX_LENGTH = config['max_length']
     SHUFFLE_BUFFER = config['shuffle_buffer']
 
-    lang = config['lang']
-    token_file = config['token_file']
-    tokens = introduce_errors.get_token_vocabulary(token_file)
-    characters = introduce_errors.get_char_vocabulary(lang)
-    aspell_speller = aspell.Speller('lang', lang)
-    token_err_distribution = config['token_err_distribution']
-    char_err_distribution = config['char_err_distribution']
-    token_err_prob = config['token_err_prob']   
-    char_err_prob = config['char_err_prob']
+    # model
+    MODEL = config['model']
+    PRETRAINED = config['pretrained']
+    STEPS_PER_EPOCH = config['steps_per_epoch']
+    EPOCHS = config['epochs']
 
+    # optimizer
+    OPTIMIZER_NAME = config['optimizer']['name']
+    OPTIMIZER_PARAMS = config['optimizer']['params']
 
-    # tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
-    
+    # loss
+    LOSS = config['loss']
 
-    model_name = "google/mt5-small"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # GEL config
+    LANG = config['lang']
+    TOKEN_FILE = config['token_file']
+    TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
+    CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
+    TOKEN_ERR_PROB = config['token_err_prob']   
+    CHAR_ERR_PROB = config['char_err_prob']
+
+    # logs
+    LOG_FILE = config['log_file']
+    PROFILE_BATCH = config['profile_batch']
+    ...
+
+    # %%
+    tf.random.set_seed(config['seed'])
+
+    # %%
+    tokenizer = AutoTokenizer.from_pretrained(MODEL)
+
+    # %%
+    tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
+    characters = introduce_errors.get_char_vocabulary(LANG)
+    # aspell_speller = aspell.Speller('lang', LANG)
+
+    # %%
+    # new loading of dataset:
+
+    # multiprocessing.set_start_method('spawn')   
 
     def split_features_and_labels(input_batch):
         features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
@@ -73,12 +89,17 @@ def main():
         else:
             return features, labels
 
-    manager = Manager()
 
-    queue = manager.Queue(2 * NUM_PARALLEL)
-    gel = load_data.GenereteErrorLine(tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob)
+    queue = Queue(2 * NUM_PARALLEL)
+    gel = load_data.GenereteErrorLine(
+            tokens, characters, LANG, 
+            TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
+            TOKEN_ERR_PROB, CHAR_ERR_PROB)
 
-    process = Process(target=load_data.run_proccesses_on_files, args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
+    process = Process(
+                target=load_data.data_generator, 
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
+
     process.start()
 
     dataset = tf.data.Dataset.from_generator(
@@ -100,32 +121,29 @@ def main():
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-            # bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
-            bucket_boundaries=[32, 64, 96],
+            bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
-            # bucket_batch_sizes=[64, 26, 12, 8]
-            bucket_batch_sizes=[70, 24, 16, 8]
+            bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE) # Number of batches to prefetch
 
-
+    # %%
     # policy = mixed_precision.Policy('mixed_float16')
     # mixed_precision.set_global_policy(policy)
 
+    # %%
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: %d' % strategy.num_replicas_in_sync)
 
-    optimizer_name = config['optimizer']['name']
-    optimizer_params = config['optimizer']['params']
-
+    # %%
     with strategy.scope():
-        if optimizer_name == 'Adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=optimizer_params['lr'])
-        elif optimizer_name == 'AdamW':
-            optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=optimizer_params['lr'])
-        elif optimizer_name == 'Adafactor':
-            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=optimizer_params['lr'])
-        elif optimizer_name == 'AdaptiveAdam':
+        if OPTIMIZER_NAME == 'Adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
+        elif OPTIMIZER_NAME == 'AdamW':
+            optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=OPTIMIZER_PARAMS['lr'])
+        elif OPTIMIZER_NAME == 'Adafactor':
+            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'])
+        elif OPTIMIZER_NAME == 'AdaptiveAdam':
             class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
                 def __init__(self, warmup_steps, d_model):
                     self.warmup_steps = tf.cast(warmup_steps, tf.float32)
@@ -136,10 +154,10 @@ def main():
                     lr = (1.0/tf.math.sqrt(self.d_model)) * tf.math.minimum(1.0 / tf.math.sqrt(step), (1.0 / tf.math.sqrt(self.warmup_steps)) * ((1.0 * step) / self.warmup_steps))
                     return lr
 
-            lr = LRSchedule(optimizer_params['warmup_steps'], MAX_LENGTH)
-            beta1 = optimizer_params['beta1']
-            beta2 = optimizer_params['beta2']
-            epsilon = optimizer_params['epsilon']
+            lr = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
+            beta1 = OPTIMIZER_PARAMS['beta1']
+            beta2 = OPTIMIZER_PARAMS['beta2']
+            epsilon = OPTIMIZER_PARAMS['epsilon']
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=lr,
                 beta_1=beta1,
@@ -148,7 +166,7 @@ def main():
 
     with strategy.scope(): 
         loss = None   
-        if config['loss'] == "SCC":
+        if LOSS == "SCC":
             class MaskedSparseCategoricalCrossEntropy(tf.keras.losses.Loss):
                 # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
                 def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
@@ -168,25 +186,135 @@ def main():
             loss = MaskedSparseCategoricalCrossEntropy()
 
 
+    # %%
+    # tokenizer_eval = AutoTokenizer.from_pretrained(...)
+
+    # %%
     with strategy.scope():
-        # config = AutoConfig.from_pretrained("facebook/bart-base")
-        # model = TFAutoModelForSeq2SeqLM.from_config(config)
-        model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
+        model = TFAutoModelForSeq2SeqLM.from_config(config)
 
         if loss:
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
 
-    callbacks = [
-        # tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch'])
-    ]
+    # %%
+    print(model.optimizer)
 
+    # %% [markdown]
+    # ---
+    # ### Evaluation
 
+    # %%
+    # max_unchanged_words=2
+    # beta = 0.5
+    # ignore_whitespace_casing= False
+    # verbose = False
+    # very_verbose = False
+
+    # dev_input = config['evaluation_input']
+    # dev_gold = config['evaluation_gold']
+
+    # # load source sentences and gold edits
+    # fin = smart_open(dev_input, 'r')
+    # dev_input_sentences = [line.strip() for line in fin.readlines()]
+    # fin.close()
+
+    # dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
+
+    # %%
+    # class Evaluation(tf.keras.callbacks.Callback):
+    #     def __init__(self, tokenizer, max_length, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
+    #                  dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
+    #         self.tokenizer = tokenizer
+    #         self.max_length = max_length
+    #         self.nth = nth
+    #         self.max_unchanged_words = max_unchanged_words
+    #         self.beta = beta
+    #         self.ignore_whitespace_casing = ignore_whitespace_casing
+    #         self.verbose = verbose
+    #         self.very_verbose = very_verbose
+    #         self.dev_input_sentences = dev_input_sentences
+    #         self.dev_source_sentences = dev_source_sentences
+    #         self.dev_gold_edits = dev_gold_edits
+
+    #         self.ensure_shapes = ensure_shapes
+    #         self.split_features_and_labels = split_features_and_labels
+    #         self.batch_size = batch_size
+
+    #     def get_tokenized_sentence(self, line):
+    #         line = line.decode('utf-8')
+    #         tokenized = self.tokenizer(line, max_length=self.max_length, padding='max_length', truncation=True, return_tensors="tf")
+    #         return tokenized['input_ids']
+
+    #     def create_tokenized_line(self, line):
+    #         input_ids = tf.numpy_function(self.get_tokenized_sentence, inp=[line], Tout=tf.int32)
+    #         dato = {
+    #             'input_ids': input_ids[0]
+    #         }
+    #         return dato
+
+    #     def on_epoch_end(self, epoch, logs=None):
+    #         if epoch % self.nth == 0:
+    #             try:
+    #                 predicted_sentences = []
+    #                 val_dataset = tf.data.Dataset.from_tensor_slices(self.dev_input_sentences)
+    #                 val_dataset = val_dataset.map(self.create_tokenized_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #                 val_dataset = val_dataset.map(self.ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #                 val_dataset = val_dataset.map(self.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #                 val_dataset = val_dataset.batch(self.batch_size)
+
+    #                 for batch in val_dataset: 
+    #                     outs = model.generate(batch)
+    #                     for out in outs:
+    #                         predicted_sentence = tokenizer.decode(out)
+    #                         predicted_sentences.append(predicted_sentence)
+
+    #                 p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
+    #                                                   self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
+    #                 print("Precision   : %.4f" % p)
+    #                 print("Recall      : %.4f" % r)
+    #                 print("F_%.1f       : %.4f" % (self.beta, f1))
+    #             except:
+    #                 print("No predictions...")
+
+    # %%
+
+    # callbacks = [
+    #     Evaluation(tokenizer=tokenizer_eval, max_length=MAX_LENGTH ,nth=config['evaluation_every_nth'],
+    #                max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
+    #                verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
+    #                dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,
+    #                batch_size=config['batch_size_eval']),
+    #     tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch']),
+    #     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
+    # ]
+
+    # %%
+    callbacks = []
+
+    # %% [markdown]
+    # ---
+
+    # %% [markdown]
+    # ### Train
+
+    # %%
     if STEPS_PER_EPOCH:
         model.fit(dataset, callbacks=callbacks, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
     else:
         model.fit(dataset, callbacks=callbacks, epochs=EPOCHS)
+
+    # %% [markdown]
+    # ---
+
+    # %%
+    # checkpoint_filepath = './tmp/checkpoint/' # must be folder (/ at the end)
+
+    # model.load_weights(checkpoint_filepath)
+
+    # %% [markdown]
+    # ---
 
 
 if __name__ == '__main__':

@@ -292,7 +292,9 @@ def main():
     # ]
 
     # %%
-    callbacks = []
+    callbacks = [
+        tf.keras.callbacks.TensorBoard(log_dir=LOG_FILE, profile_batch=PROFILE_BATCH),
+    ]
 
     # %% [markdown]
     # ---

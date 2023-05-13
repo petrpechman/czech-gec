@@ -44,14 +44,16 @@ class GenereteErrorLine():
         return line
     
 
-def data_generator(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length):
+def data_loader(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length):
     counter = 0
     aspell_speller = aspell.Speller('lang', gel.lang)
     with open(filename, 'r') as f:
+        # find start position
         while counter != start_position:
             f.readline()
             counter += 1
 
+        # read until end position
         while counter != end_position:
             line = f.readline()
             error_line = gel(line, aspell_speller)
@@ -59,17 +61,13 @@ def data_generator(filename, queue, start_position, end_position, gel: GenereteE
 
             input_ids = tokenized['input_ids'][0]
             attention_mask = tokenized['attention_mask'][0]
-            labels = tokenized['labels'][0]
-
-            decoder_input_ids = labels
-
-            # decoder_input_ids = tf.roll(labels, shift=1, axis=0)
+            tokenized_target_line = tokenized['labels'][0]
 
             dato = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
-                "labels": labels[1:],
-                "decoder_input_ids": decoder_input_ids[:-1]
+                "labels": tokenized_target_line[1:],
+                "decoder_input_ids": tokenized_target_line[:-1]
             }
             
             queue.put(dato)
@@ -82,10 +80,14 @@ def data_generator(filename, queue, start_position, end_position, gel: GenereteE
 
 
 
-def run_processes(queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, gel: GenereteErrorLine, tokenizer, max_length):
+def process_file_in_chunks(
+        queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, 
+        gel: GenereteErrorLine, tokenizer, max_length):
+    
     start = random.randint(0, file_size-1)
     process_size = file_size // num_parallel
 
+    # create list of arguments
     arguments = []
 
     current = start
@@ -98,22 +100,24 @@ def run_processes(queue: Queue, pool: Pool, num_parallel: int, filename: str, fi
     end_position = start
     arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length,))
 
-    pool.starmap(data_generator, arguments)
+    # start processes and wait until they finished
+    pool.starmap(data_loader, arguments)
 
 
-def run_proccesses_on_files(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length):
+def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length):
     index = 0
     pool = Pool(num_parallel)
 
     while True:
         file = files[index]
 
+        # get file size
         with open(file, 'r') as f:
             for count, _ in enumerate(f):
                 pass
         file_size = count + 1
         
-        run_processes(queue, pool, num_parallel, file, file_size, gel, tokenizer, max_length)
+        process_file_in_chunks(queue, pool, num_parallel, file, file_size, gel, tokenizer, max_length)
 
         index += 1
         if index == len(files):
@@ -163,7 +167,7 @@ def main():
 
     gel = GenereteErrorLine(tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob) 
 
-    process = Process(target=run_proccesses_on_files, args=(queue, [PATH], NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
+    process = Process(target=data_generator, args=(queue, [PATH], NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
     process.start() 
 
     dataset = tf.data.Dataset.from_generator(

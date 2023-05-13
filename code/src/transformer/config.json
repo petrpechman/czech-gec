@@ -30,8 +30,9 @@
     
     "log_file": "./logs",
     "profile_batch": [1500, 2000],
-
     "model_checkpoint_path": "./tmp/checkpoint/",
+    
+    
     "evaluation_every_nth": 1,
 
     "evaluation_input": "../../data/geccc/dev_part_100/sentence-tokenized.input",

@@ -1,0 +1,3 @@
+srun --pty --jobid 9693 /bin/bash
+
+5 GPU in node1

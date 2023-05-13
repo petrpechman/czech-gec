@@ -97,14 +97,15 @@ def main():
                 })
 
     dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             # bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             bucket_boundaries=[32, 64, 96],
             # bucket_batch_sizes=[128, 64, 42, 32, 25, 21, 18, 16]
-            bucket_batch_sizes=[88, 32, 16, 16]
+            # bucket_batch_sizes=[64, 26, 12, 8]
+            bucket_batch_sizes=[70, 24, 16, 8]
     )
-    dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE) # Number of batches to prefetch
 
 
@@ -178,7 +179,7 @@ def main():
             model.compile(optimizer=optimizer)
 
     callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch'])
+        # tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch'])
     ]
 
 

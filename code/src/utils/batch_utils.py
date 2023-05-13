@@ -22,7 +22,7 @@ Nebo nevím nějaké specifiské běloruské národní tradice, protože vyrostl
 def tokenize_line(line, tokenizer, max_length):
     def get_tokenized_sentences(line):
         line = line.decode('utf-8')
-        tokenized = tokenizer(line, text_target=line, max_length=max_length, truncation=True, return_tensors="tf")
+        tokenized = tokenizer(line, text_target=line, max_length=max_length, padding='max_length', truncation=True, return_tensors="tf")
         return tokenized['input_ids'], tokenized['attention_mask'], tokenized['labels']
     input_ids, attention_mask, labels = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32, tf.int32])
     decoder_input_ids = tf.roll(labels, shift=1, axis=1)

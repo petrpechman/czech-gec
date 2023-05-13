@@ -320,7 +320,7 @@ def main():
             model,
             dataset,
             checkpoint_dir=LOG_FILE,
-            steps=None,
+            steps=2000,
             max_evaluations=None,
             callbacks=[]
         )

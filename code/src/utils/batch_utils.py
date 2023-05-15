@@ -8,7 +8,7 @@ def get_batch_size(max_length, filename) -> int:
     NUM_LINES = 128
     MAX_BATCH_SIZE = 2049
     STEP_BATCH = 4
-
+    
     for batch_size in range(STEP_BATCH, MAX_BATCH_SIZE, STEP_BATCH):
         try:
             try_batch_size(batch_size, max_length, NUM_LINES)
@@ -40,7 +40,7 @@ def log_data(filename: str, text: str):
         print(text, file=log_file)
 
 def main():
-    filename = "mt5-small-batches-2.txt"
+    filename = "transformer-batches.txt"
     get_batch_size(32 ,filename)
     get_batch_size(64 ,filename)
     get_batch_size(96 ,filename)

@@ -6,6 +6,7 @@ import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
+from transformers import AutoConfig
 import json
 
 from utils import load_data
@@ -66,7 +67,7 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
     # model
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
-    PRETRAINED = config['pretrained']
+    FROM_CONFIG = config['from_config']
     STEPS_PER_EPOCH = config['steps_per_epoch']
     EPOCHS = config['epochs']
 
@@ -198,7 +199,11 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
             loss = MaskedSparseCategoricalCrossEntropy()
 
     with strategy.scope():
-        model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
+        if FROM_CONFIG:
+            config = AutoConfig.from_pretrained(MODEL)
+            model = TFAutoModelForSeq2SeqLM.from_config(config)
+        else:
+            model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
 
         if loss:
             model.compile(optimizer=optimizer, loss=loss)

@@ -4,10 +4,10 @@
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
     "num_parallel": 12,
     "max_length": 128,
-    "shuffle_buffer": 500,
+    "shuffle_buffer": 1000,
 
-    "model": "google/mt5-small",
-    "pretrained": true,
+    "model": "../utils/transformer/model",
+    "from_config": true,
     "steps_per_epoch": 3000,
     "epochs": 10000,
     

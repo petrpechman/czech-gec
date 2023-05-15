@@ -46,6 +46,7 @@ def main():
     
     # model
     MODEL = config['model']
+    TOKENIZER = config['tokenizer']
     FROM_CONFIG = config['from_config']
     STEPS_PER_EPOCH = config['steps_per_epoch']
     EPOCHS = config['epochs']
@@ -74,7 +75,7 @@ def main():
     tf.random.set_seed(config['seed'])
     
     # %%
-    tokenizer = AutoTokenizer.from_pretrained(MODEL)
+    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
     
     # %%
     tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
@@ -135,8 +136,8 @@ def main():
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
     # %%
-    policy = mixed_precision.Policy('mixed_float16')
-    mixed_precision.set_global_policy(policy)
+    # policy = mixed_precision.Policy('mixed_float16')
+    # mixed_precision.set_global_policy(policy)
     
     # %%
     strategy = tf.distribute.MirroredStrategy()

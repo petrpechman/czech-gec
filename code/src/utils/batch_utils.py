@@ -42,8 +42,7 @@ def split_features_and_labels(input_batch):
     
 def try_batch_size(batch_size, max_length, num_lines, lr=0.00001) -> bool:
     import batch_pipeline
-    
-    batch_pipeline.main(batch_size, max_length, num_lines, "../transformer/config.json")
+    batch_pipeline.main(batch_size, max_length, "../transformer/config.json", num_lines)
     # print(device_lib.list_local_devices())
 
     # dataset = tf.data.Dataset.from_tensor_slices((lines))
@@ -118,7 +117,7 @@ def log_data(filename: str, text: str):
         print(text, file=log_file)
 
 def main():
-    filename = "mt5-small-batches.txt"
+    filename = "mt5-small-batches-2.txt"
 
     batch_size = get_batch_size(32 ,filename)
     batch_size = get_batch_size(64 ,filename)

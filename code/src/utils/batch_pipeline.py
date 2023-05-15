@@ -196,11 +196,6 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
 
             loss = MaskedSparseCategoricalCrossEntropy()
 
-
-    # %%
-    # tokenizer_eval = AutoTokenizer.from_pretrained(...)
-
-    # %%
     with strategy.scope():
         model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
 
@@ -209,22 +204,4 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
         else:
             model.compile(optimizer=optimizer)
 
-    # %% [markdown]
-    # ---
-
-    # %% [markdown]
-    # ### Train
-
-    # %%
-    if EVALUATOR:
-        sidecar = tf.keras.utils.SidecarEvaluator(
-            model,
-            dataset,
-            checkpoint_dir=MODEL_CHECKPOINT_PATH,
-            steps=300,
-            max_evaluations=None,
-            callbacks=[]
-        )
-        sidecar.start()
-    else:
-        model.fit(dataset, epochs=2, steps_per_epoch=4)
+    model.fit(dataset, epochs=2, steps_per_epoch=4)

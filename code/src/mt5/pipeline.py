@@ -131,7 +131,7 @@ def main():
             # bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
             # bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
             bucket_boundaries=[32, 64, 96],
-            bucket_batch_sizes=[64, 32, 24, 16]
+            bucket_batch_sizes=[60, 28, 16, 12]
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE) # Number of batches to prefetch
 

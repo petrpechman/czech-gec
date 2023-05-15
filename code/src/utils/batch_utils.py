@@ -1,61 +1,8 @@
-import tensorflow as tf
-from transformers import TFAutoModelForSeq2SeqLM
-from transformers import AutoTokenizer
-from multiprocessing import Process
-from tensorflow.python.client import device_lib
-from tensorflow.keras import mixed_precision
 import os
-from transformers import BartConfig
-import time
-
-
-
-def tokenize_line(line, tokenizer, max_length):
-    def get_tokenized_sentences(line):
-        line = line.decode('utf-8')
-        tokenized = tokenizer(line, text_target=line, max_length=max_length, padding='max_length', truncation=True, return_tensors="tf")
-        return tokenized['input_ids'], tokenized['attention_mask'], tokenized['labels']
-    input_ids, attention_mask, labels = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32, tf.int32])
-    decoder_input_ids = tf.roll(labels, shift=1, axis=1)
-    dato = {
-        'input_ids': input_ids[0],
-        'attention_mask': attention_mask[0],
-        'decoder_input_ids': decoder_input_ids[0],
-        'labels': labels[0]
-    }
-    return dato
-
-def ensure_shapes(input_dict, max_length):
-    return {key: tf.ensure_shape(val, (max_length)) for key, val in input_dict.items()}
-
-def split_features_and_labels(input_batch):
-    features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-    labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-    if len(features) == 1:
-        features = list(features.values())[0]
-    if len(labels) == 1:
-        labels = list(labels.values())[0]
-    if isinstance(labels, dict) and len(labels) == 0:
-        return features
-    else:
-        return features, labels
     
 def try_batch_size(batch_size, max_length, num_lines, lr=0.00001) -> bool:
-    import batch_pipeline
-    batch_pipeline.main(batch_size, max_length, "../transformer/config.json", num_lines)
-    # print(device_lib.list_local_devices())
-
-    # dataset = tf.data.Dataset.from_tensor_slices((lines))
-    # dataset = dataset.map(lambda line: tokenize_line(line, tokenizer, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # dataset = dataset.map(lambda input_dict: ensure_shapes(input_dict, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # dataset = dataset.batch(batch_size)
-    # dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-    # optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
-    # model.compile(optimizer=optimizer)
-    # model.fit(dataset, epochs=2, steps_per_epoch=2)
-
+    import batch_pipeline_mt5
+    batch_pipeline_mt5.main(batch_size, max_length, "../transformer/config.json", num_lines)
 
 def get_batch_size(max_length, filename) -> int:
     NUM_LINES = 128
@@ -63,31 +10,7 @@ def get_batch_size(max_length, filename) -> int:
     STEP_BATCH = 4
 
     for batch_size in range(STEP_BATCH, MAX_BATCH_SIZE, STEP_BATCH):
-        # # model_name = "facebook/bart-base"
-        # # model_name = "google/mt5-small"
-        # model = TFAutoModelForSeq2SeqLM.from_pretrained("./model/")
-        # tokenizer = AutoTokenizer.from_pretrained("./out/")
-        # policy = mixed_precision.Policy('mixed_float16')    
-        # mixed_precision.set_global_policy(policy)
-        
-        # # tokenizer = AutoTokenizer.from_pretrained(model_name)
-        # # model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
-        # try_batch_size(model, tokenizer, lines, batch_size, max_length)
-        # log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
-        # print(f"Allowed batch size {batch_size} for max_length {max_length}.")
-
         try:
-            # policy = mixed_precision.Policy('mixed_float16')    
-            # mixed_precision.set_global_policy(policy)
-
-            # model_name = "facebook/bart-base"
-            # model_name = "google/mt5-small"
-
-            # model = TFAutoModelForSeq2SeqLM.from_pretrained("./model/")
-            # tokenizer = AutoTokenizer.from_pretrained("./out/")
-            
-            # tokenizer = AutoTokenizer.from_pretrained(model_name)
-            # model = TFAutoModelForSeq2SeqLM.from_pretrained(model_name)
             try_batch_size(batch_size, max_length, NUM_LINES)
             log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
@@ -118,11 +41,10 @@ def log_data(filename: str, text: str):
 
 def main():
     filename = "mt5-small-batches-2.txt"
-
-    batch_size = get_batch_size(32 ,filename)
-    batch_size = get_batch_size(64 ,filename)
-    batch_size = get_batch_size(96 ,filename)
-    batch_size = get_batch_size(128 ,filename)
+    get_batch_size(32 ,filename)
+    get_batch_size(64 ,filename)
+    get_batch_size(96 ,filename)
+    get_batch_size(128 ,filename)
 
 if __name__ == "__main__":
     main()

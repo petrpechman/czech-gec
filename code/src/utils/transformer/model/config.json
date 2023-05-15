@@ -12,7 +12,7 @@
   "decoder_ffn_dim": 2048,
   "decoder_layerdrop": 0.0,
   "decoder_layers": 6,
-  "decoder_start_token_id": 2,
+  "decoder_start_token_id": 1,
   "dropout": 0.1,
   "encoder_attention_heads": 8,
   "encoder_ffn_dim": 2048,
@@ -37,7 +37,7 @@
   "num_hidden_layers": 6,
   "pad_token_id": 0,
   "scale_embedding": true,
-  "transformers_version": "4.27.1",
+  "transformers_version": "4.27.4",
   "use_cache": true,
   "vocab_size": 32000
 }

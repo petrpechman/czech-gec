@@ -1,6 +1,5 @@
 from transformers import BartConfig
 from transformers import TFAutoModelForSeq2SeqLM
-from transformers import AutoTokenizer
 
 config = BartConfig(
                 vocab_size=32_000,
@@ -27,9 +26,9 @@ config = BartConfig(
                 bos_token_id=1,
                 eos_token_id=2,
                 is_encoder_decoder=True,
-                decoder_start_token_id=2,
+                decoder_start_token_id=1,
                 forced_eos_token_id=2,
             )
 
 model = TFAutoModelForSeq2SeqLM.from_config(config)
-model.save_pretrained("./model/")
+model.save_pretrained("./transformer/model/")

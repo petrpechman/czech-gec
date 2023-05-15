@@ -1,8 +1,8 @@
 import os
     
 def try_batch_size(batch_size, max_length, num_lines, lr=0.00001) -> bool:
-    import batch_pipeline_mt5
-    batch_pipeline_mt5.main(batch_size, max_length, "../transformer/config.json", num_lines)
+    import batch_pipeline
+    batch_pipeline.main(batch_size, max_length, "../transformer/config.json", num_lines)
 
 def get_batch_size(max_length, filename) -> int:
     NUM_LINES = 128

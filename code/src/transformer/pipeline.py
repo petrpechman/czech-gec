@@ -131,7 +131,7 @@ def main():
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             bucket_boundaries=[32, 64, 96],
-            bucket_batch_sizes=[1, 1, 1, 1]
+            bucket_batch_sizes=[100, 72, 64, 56]
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     

@@ -22,10 +22,6 @@ from tensorflow.keras import mixed_precision
 from utils import load_data
 from utils import introduce_errors 
 
-from multiprocessing import Process, Manager
-import multiprocessing
-
-
 def main():
     # %%
     with open('config-eval.json') as json_file:
@@ -34,17 +30,15 @@ def main():
     SEED = config['seed']
     
     # data loading
-    DATA_PATHS = config['data_paths']
-    NUM_PARALLEL = config['num_parallel']
+    DATA_PATH = config['data_path']
+    M2_DATA = config['m2_data']
     MAX_LENGTH = config['max_length']
-    SHUFFLE_BUFFER = config['shuffle_buffer']
+    BATCH_SIZE = config['batch_size']
     
     # model
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
     FROM_CONFIG = config['from_config']
-    STEPS_PER_EPOCH = config['steps_per_epoch']
-    EPOCHS = config['epochs']
     
     # optimizer
     OPTIMIZER_NAME = config['optimizer']['name']
@@ -53,85 +47,62 @@ def main():
     # loss
     LOSS = config['loss']
     
-    # GEL config
-    LANG = config['lang']
-    TOKEN_FILE = config['token_file']
-    TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
-    CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
-    TOKEN_ERR_PROB = config['token_err_prob']   
-    CHAR_ERR_PROB = config['char_err_prob']
-    
     # logs
     LOG_FILE = config['log_file']
     PROFILE_BATCH = config['profile_batch']
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
-
-    # evaluation
-    DEV_INPUT = config['evaluation_input']
-    DEV_GOLD = config['evaluation_gold']
     
     # %%
-    tf.random.set_seed(config['seed'])
+    tf.random.set_seed(SEED)
     
     # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
     
-    # %%
-    tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
-    characters = introduce_errors.get_char_vocabulary(LANG)
     
     # %%
     # loading of dataset:
-    
-    # multiprocessing.set_start_method('spawn')   
-    
+
     def split_features_and_labels(input_batch):
-        features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-        labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-        if len(features) == 1:
-            features = list(features.values())[0]
-        if len(labels) == 1:
-            labels = list(labels.values())[0]
-        if isinstance(labels, dict) and len(labels) == 0:
-            return features
-        else:
-            return features, labels
-    
-    manager = Manager()
-    queue = manager.Queue(2 * NUM_PARALLEL)
-    gel = load_data.GenereteErrorLine(
-            tokens, characters, LANG, 
-            TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
-            TOKEN_ERR_PROB, CHAR_ERR_PROB)
-    
-    process = Process(
-                target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
-    
-    process.start()
+       features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
+       labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
+       if len(features) == 1:
+           features = list(features.values())[0]
+       if len(labels) == 1:
+           labels = list(labels.values())[0]
+       if isinstance(labels, dict) and len(labels) == 0:
+           return features
+       else:
+           return features, labels
         
-    dataset = tf.data.Dataset.from_generator(
-        lambda: iter(queue.get, None),
-        output_types={
-                    "input_ids": tf.int32,
-                    "attention_mask": tf.int32,
-                    "labels": tf.int32,
-                    "decoder_input_ids": tf.int32
-                },
-        output_shapes={
-                    "input_ids": (None, ),
-                    "attention_mask": (None, ),
-                    "labels": (None, ),
-                    "decoder_input_ids": (None, )
-                })
+    def get_tokenized_sentences(line, gold_line):
+        line = line.decode('utf-8')
+        gold_line = gold_line.decode('utf-8')
+        tokenized = tokenizer(line, text_target=gold_line, padding='max_length', max_length=MAX_LENGTH, truncation=True, return_tensors="tf")
+        return tokenized['input_ids'], tokenized['attention_mask'], tokenized['labels']
+
+    def create_error_line(line, gold_line):
+        input_ids, attention_mask, labels = tf.numpy_function(get_tokenized_sentences, inp=[line, gold_line], Tout=[tf.int32, tf.int32, tf.int32])
+        labels = labels[0]
+        dato = {
+            'input_ids': input_ids[0],
+            'attention_mask': attention_mask[0],
+            'labels': labels[1:],
+            "decoder_input_ids": labels[:-1]
+        }
+        return dato
+
+    def ensure_shapes(x):
+        return {key: tf.ensure_shape(val, (MAX_LENGTH - 1)) if key in ["labels", "decoder_input_ids"] else tf.ensure_shape(val, (MAX_LENGTH)) for key, val in x.items()}
     
+    print(M2_DATA)
+    dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA)
+    gold_sentences = dev_source_sentences
+        
+    dataset =  tf.data.Dataset.from_tensor_slices((dev_source_sentences, gold_sentences))
+    dataset = dataset.map(create_error_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.shuffle(SHUFFLE_BUFFER)
-    dataset = dataset.bucket_by_sequence_length(
-            element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-            bucket_boundaries=[32, 64, 96],
-            bucket_batch_sizes=[1, 1, 1, 1]
-    )
+    dataset = dataset.batch(BATCH_SIZE)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
     # %%
@@ -191,12 +162,7 @@ def main():
                     return reduced_masked_loss
             
             loss = MaskedSparseCategoricalCrossEntropy()
-        
-    
-    # %%
-    # tokenizer_eval = AutoTokenizer.from_pretrained(...)
-    
-    # %%
+
     with strategy.scope():
         if FROM_CONFIG:
             config = AutoConfig.from_pretrained(MODEL)
@@ -209,135 +175,24 @@ def main():
         else:
             model.compile(optimizer=optimizer)
     
-    # %%
-    print(model.optimizer)
+    # model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    #     filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
+    #     save_weights_only=True)
     
-    # %% [markdown]
-    # ---
-    # ### Evaluation
+    # model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    #     filepath=MODEL_CHECKPOINT_PATH,
+    #     save_weights_only=True)
     
-    # %%
-    max_unchanged_words=2
-    beta = 0.5
-    ignore_whitespace_casing= False
-    verbose = False
-    very_verbose = False
-    
-    # load source sentences and gold edits
-    fin = smart_open(DEV_INPUT, 'r')
-    dev_input_sentences = [line.strip() for line in fin.readlines()]
-    fin.close()
-    
-    dev_source_sentences, dev_gold_edits = load_annotation(DEV_GOLD)
-    
-    # %%
-    class Evaluation(tf.keras.callbacks.Callback):
-        def __init__(self, tokenizer, max_length, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
-                     dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
-            self.tokenizer = tokenizer
-            self.max_length = max_length
-            self.nth = nth
-            self.max_unchanged_words = max_unchanged_words
-            self.beta = beta
-            self.ignore_whitespace_casing = ignore_whitespace_casing
-            self.verbose = verbose
-            self.very_verbose = very_verbose
-            self.dev_input_sentences = dev_input_sentences
-            self.dev_source_sentences = dev_source_sentences
-            self.dev_gold_edits = dev_gold_edits
-    
-            self.ensure_shapes = ensure_shapes
-            self.split_features_and_labels = split_features_and_labels
-            self.batch_size = batch_size
-    
-        def get_tokenized_sentence(self, line):
-            line = line.decode('utf-8')
-            tokenized = self.tokenizer(line, max_length=self.max_length, padding='max_length', truncation=True, return_tensors="tf")
-            return tokenized['input_ids']
-    
-        def create_tokenized_line(self, line):
-            input_ids = tf.numpy_function(self.get_tokenized_sentence, inp=[line], Tout=tf.int32)
-            dato = {
-                'input_ids': input_ids[0]
-            }
-            return dato
-    
-        def on_epoch_end(self, epoch, logs=None):
-            if epoch % self.nth == 0:
-                try:
-                    predicted_sentences = []
-                    val_dataset = tf.data.Dataset.from_tensor_slices(self.dev_input_sentences)
-                    val_dataset = val_dataset.map(self.create_tokenized_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                    val_dataset = val_dataset.map(self.ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                    val_dataset = val_dataset.map(self.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                    val_dataset = val_dataset.batch(self.batch_size)
-    
-                    for batch in val_dataset: 
-                        outs = model.generate(batch)
-                        for out in outs:
-                            predicted_sentence = tokenizer.decode(out)
-                            predicted_sentences.append(predicted_sentence)
-                    
-                    p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
-                                                      self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
-                    print("Precision   : %.4f" % p)
-                    print("Recall      : %.4f" % r)
-                    print("F_%.1f       : %.4f" % (self.beta, f1))
-                except:
-                    print("No predictions...")
-    
-    # %%
-    
-    # callbacks = [
-    #     Evaluation(tokenizer=tokenizer_eval, max_length=MAX_LENGTH ,nth=config['evaluation_every_nth'],
-    #                max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
-    #                verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
-    #                dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,
-    #                batch_size=config['batch_size_eval']),
-    #     tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch']),
-    #     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
-    # ]
-    
-    # %%
-    model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}'),
-        save_weights_only=True)
-    
-    # %%
-    callbacks = [
-        tf.keras.callbacks.TensorBoard(log_dir=LOG_FILE, profile_batch=PROFILE_BATCH),
-    ]
-    
-    # %% [markdown]
-    # ---
-    
-    # %% [markdown]
-    # ### Train
-    
-    # %%
-    sidecar = tf.keras.utils.SidecarEvaluator(
-            model,
-            dataset,
-            checkpoint_dir=MODEL_CHECKPOINT_PATH,
-            steps=300,
-            max_evaluations=None,
-            callbacks=[]
-        )
-    sidecar.start()
-    # %% [markdown]
-    # ---
-    
-    # %%
-    # checkpoint_filepath = './tmp/checkpoint/' # must be folder (/ at the end)
-    
-    # model.load_weights(checkpoint_filepath)
-    
-    # %% [markdown]
-    # ---
+    # model.fit(dataset, callbacks=[model_checkpoint], epochs=1)
+
+
+    # model.predict(dataset.take(1))
+    model.load_weights(filepath=MODEL_CHECKPOINT_PATH)
+    model.generate(["Neco tu je napsane..."])
+
 
 # %%
 if __name__ == '__main__':
-    multiprocessing.set_start_method('spawn')
     main()
 
 

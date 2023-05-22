@@ -3,12 +3,6 @@ import sys
 sys.path.append('..')
 
 # %%
-EVALUATOR = False
-if len(sys.argv) > 1:
-    if sys.argv[1] == "-e":
-        EVALUATOR = True
-
-# %%
 import os
 import tensorflow as tf
 
@@ -72,7 +66,7 @@ def main():
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
     
     # %%
-    tf.random.set_seed(config['seed'])
+    tf.random.set_seed(SEED)
     
     # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -131,7 +125,7 @@ def main():
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             bucket_boundaries=[32, 64, 96],
-            bucket_batch_sizes=[100, 72, 64, 56]
+            bucket_batch_sizes=[84, 64, 60, 54]
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
@@ -319,22 +313,10 @@ def main():
     # ### Train
     
     # %%
-    if EVALUATOR:
-        sidecar = tf.keras.utils.SidecarEvaluator(
-            model,
-            dataset,
-            checkpoint_dir=MODEL_CHECKPOINT_PATH,
-            steps=300,
-            max_evaluations=None,
-            callbacks=[]
-        )
-        sidecar.start()
-    
+    if STEPS_PER_EPOCH:
+        model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
     else:
-        if STEPS_PER_EPOCH:
-            model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
-        else:
-            model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS)
+        model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS)
     
     # %% [markdown]
     # ---

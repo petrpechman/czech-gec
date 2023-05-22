@@ -1,10 +1,9 @@
 {
     "seed": 42,
 
-    "data_path": "../../data/geccc/dev_part_100/sentence-tokenized.input",
     "m2_data": "../../data/geccc/dev_part_100/sentence.m2",
     "max_length": 128,
-    "batch_size": 1,
+    "batch_size": 16,
 
     "model": "../utils/transformer/model/",
     "tokenizer": "../utils/transformer/tokenizer",
@@ -19,11 +18,11 @@
 
     "loss": "SCC",
     
-    "log_file": "./logs",
-    "profile_batch": [1500, 2000],
-    "model_checkpoint_path": "tmp1/checkpoint/",
+    "model_checkpoint_path": "tmp/checkpoint/",
 
-    "evaluation_input": "../../data/geccc/dev_part_100/sentence-tokenized.input",
-    "evaluation_gold": "../../data/geccc/dev_part_100/sentence.m2",
-    "batch_size_eval": 16
+    "max_unchanged_words": 2,
+    "beta": 0.5,
+    "ignore_whitespace_casing": false,
+    "verbose": false,
+    "very_verbose": false
 }

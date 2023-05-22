@@ -6,7 +6,7 @@
     "batch_size": 16,
 
     "model": "../utils/transformer/model/",
-    "tokenizer": "../utils/transformer/tokenizer",
+    "tokenizer": "../utils/transformer/model/",
     "from_config": true,
     
     "optimizer":{

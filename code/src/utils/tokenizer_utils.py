@@ -46,8 +46,8 @@ if __name__ == "__main__":
 
     # Example:
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("./transformer/tokenizer") 
-    out = tokenizer("Monkey D. Luffy")
-    print(out)
+    tokenizer = AutoTokenizer.from_pretrained("./transformer/model") 
+    decoded = tokenizer.decode(tokenizer.encode("Monkey D. Luffy"), skip_special_tokens=True)
+    print(decoded)
 
-# CMD: python3 tokenizer_utils.py --corpus-file ../../data/tokenized/news-2018-cs-tokenized.txt --output-dir transformer/tokenizer/
+# CMD: python3 tokenizer_utils.py --corpus-file ../../data/tokenized/news-2018-cs-tokenized.txt --output-dir transformer/model/

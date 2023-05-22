@@ -206,7 +206,7 @@ def main():
 
     # %%
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}'),
+        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
         save_weights_only=True,
         save_freq="epoch")
 

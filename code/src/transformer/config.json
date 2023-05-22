@@ -9,7 +9,7 @@
     "model": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
     "tokenizer": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
     "from_config": true,
-    "steps_per_epoch": 3000,
+    "steps_per_epoch": 250,
     "epochs": 10000,
     
     "optimizer":{
@@ -30,6 +30,6 @@
 
     
     "log_file": "./logs",
-    "profile_batch": [1500, 2000],
+    "profile_batch": [100, 150],
     "model_checkpoint_path": "./tmp/checkpoint/"
 }

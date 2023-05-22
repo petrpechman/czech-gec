@@ -151,7 +151,6 @@ def main():
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
-    
 
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
@@ -161,7 +160,7 @@ def main():
                 step = int(unevaluated_checkpoint[5:])
                 result_dir = os.path.join(MODEL_CHECKPOINT_PATH, "results")
     
-                model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)).expect_partial()
+                model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
         
                 predicted_sentences = []
     

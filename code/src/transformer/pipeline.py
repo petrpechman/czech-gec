@@ -124,12 +124,12 @@ def main():
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     # %%
-    policy = mixed_precision.Policy('mixed_float16')
-    mixed_precision.set_global_policy(policy)
+    # policy = mixed_precision.Policy('mixed_float16')
+    # mixed_precision.set_global_policy(policy)
 
     # %%
-    # strategy = tf.distribute.MirroredStrategy()
-    # print('Number of devices: %d' % strategy.num_replicas_in_sync)
+    strategy = tf.distribute.MirroredStrategy()
+    print('Number of devices: %d' % strategy.num_replicas_in_sync)
 
     # %%
     with strategy.scope():

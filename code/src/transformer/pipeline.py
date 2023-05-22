@@ -128,8 +128,8 @@ def main():
     mixed_precision.set_global_policy(policy)
 
     # %%
-    strategy = tf.distribute.MirroredStrategy()
-    print('Number of devices: %d' % strategy.num_replicas_in_sync)
+    # strategy = tf.distribute.MirroredStrategy()
+    # print('Number of devices: %d' % strategy.num_replicas_in_sync)
 
     # %%
     with strategy.scope():

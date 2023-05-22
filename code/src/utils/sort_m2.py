@@ -22,3 +22,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#CMD: python3 sort_m2.py --input "../../data/geccc/dev/sentence.m2" --output "../../data/geccc/dev/sorted_sentence.m2"

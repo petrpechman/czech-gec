@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import ufal.udpipe
 
+
 class UDPipeTokenizer:
     MODELS = {
         "cs": "czech-pdt-ud-2.5-191206.udpipe",
@@ -52,12 +53,10 @@ class UDPipeTokenizer:
 
         return sentences
 
-
 if __name__ == "__main__":
     import argparse
     import fileinput
     import sys
-
     parser = argparse.ArgumentParser()
     parser.add_argument("lang", type=str, help="Language to use")
     args = parser.parse_args()

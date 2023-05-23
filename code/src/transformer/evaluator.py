@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 import os
 import time
 import shutil
@@ -12,6 +15,8 @@ from m2scorer.levenshtein import batch_multi_pre_rec_f1
 from m2scorer.m2scorer import load_annotation
 
 from tensorflow.keras import mixed_precision
+
+from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 
 
 def main():
@@ -152,6 +157,8 @@ def main():
         else:
             model.compile(optimizer=optimizer)
 
+    udpipe_tokenizer = UDPipeTokenizer("cs")
+
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
@@ -170,6 +177,12 @@ def main():
                         preds = model.generate(batch['input_ids'])
                         batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
                         predicted_sentences = predicted_sentences + batch_sentences
+
+                    tokenized_predicted_sentences = []
+
+                    for line in predicted_sentences:
+                        for sentence in tokenizer.tokenize(line):
+                            tokenized_predicted_sentences.append(" ".join([token.string for token in sentence]))
 
                     p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, dev_source_sentences, dev_gold_edits, 
                                                       MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)

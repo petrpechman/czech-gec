@@ -181,10 +181,10 @@ def main():
                     tokenized_predicted_sentences = []
 
                     for line in predicted_sentences:
-                        for sentence in tokenizer.tokenize(line):
+                        for sentence in udpipe_tokenizer.tokenize(line):
                             tokenized_predicted_sentences.append(" ".join([token.string for token in sentence]))
 
-                    p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, dev_source_sentences, dev_gold_edits, 
+                    p, r, f1 = batch_multi_pre_rec_f1(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits, 
                                                       MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
 
                     file_writer = tf.summary.create_file_writer(result_dir)

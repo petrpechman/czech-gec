@@ -64,6 +64,10 @@ def main():
     tf.random.set_seed(config['seed'])
 
     # %%
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_global_policy(policy)
+
+    # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
 
     # %%
@@ -123,10 +127,6 @@ def main():
             bucket_batch_sizes=[72, 60, 56, 44]
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-    # %%
-    # policy = mixed_precision.Policy('mixed_float16')
-    # mixed_precision.set_global_policy(policy)
 
     # %%
     strategy = tf.distribute.MirroredStrategy()
@@ -231,6 +231,8 @@ def main():
 
     # %% [markdown]
     # ### Train
+    model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+    model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     # %%
     if STEPS_PER_EPOCH:

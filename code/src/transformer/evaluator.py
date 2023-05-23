@@ -183,7 +183,7 @@ def main():
                     print(text)
                     tf.summary.text("predictions", text, step)
     
-    
+                print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                 shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
 
         time.sleep(10)

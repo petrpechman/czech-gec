@@ -58,6 +58,7 @@ def main():
     LOG_FILE = config['log_file']
     PROFILE_BATCH = config['profile_batch']
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
+    BACKUP_DIR =  config['backup_dir']
 
     # %%
     tf.random.set_seed(config['seed'])
@@ -183,9 +184,6 @@ def main():
 
 
     # %%
-    # tokenizer_eval = AutoTokenizer.from_pretrained(...)
-
-    # %%
     with strategy.scope():
         if FROM_CONFIG:
             config = AutoConfig.from_pretrained(MODEL)
@@ -203,17 +201,29 @@ def main():
 
     # %% [markdown]
     # ---
+    # ### Callbacks
 
     # %%
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
+        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}'),
         save_weights_only=True,
         save_freq="epoch")
 
     # %%
+    backup = tf.keras.callbacks.BackupAndRestore(
+        backup_dir=BACKUP_DIR
+        )
+
+    # %%
+    profiler = tf.keras.callbacks.TensorBoard(
+        log_dir=LOG_FILE, 
+        profile_batch=PROFILE_BATCH)
+
+    # %%
     callbacks = [
         model_checkpoint,
-        tf.keras.callbacks.TensorBoard(log_dir=LOG_FILE, profile_batch=PROFILE_BATCH),
+        backup,
+        profiler
     ]
 
     # %% [markdown]
@@ -228,8 +238,8 @@ def main():
     else:
         model.fit(dataset, callbacks=callbacks, epochs=EPOCHS)
 
-# %% [markdown]
-# ---
+    # %% [markdown]
+    # ---
 
 # %%
 if __name__ == '__main__':

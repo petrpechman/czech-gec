@@ -4,11 +4,11 @@ import ufal.udpipe
 
 class UDPipeTokenizer:
     MODELS = {
-        "cs": "czech-pdt-ud-2.5-191206.udpipe",
-        "cs-tokenized": "cs-tokenized.model",
-        "de": "german-gsd-ud-2.5-191206.udpipe",
-        "en": "english-ewt-ud-2.5-191206.udpipe",
-        "ru": "russian-syntagrus-ud-2.5-191206.udpipe",
+        "cs": "../utils/udpipe_tokenizer/czech-pdt-ud-2.5-191206.udpipe",
+        "cs-tokenized": "../utils/udpipe_tokenizer/cs-tokenized.model",
+        "de": "../utils/udpipe_tokenizer/german-gsd-ud-2.5-191206.udpipe",
+        "en": "../utils/udpipe_tokenizer/english-ewt-ud-2.5-191206.udpipe",
+        "ru": "../utils/udpipe_tokenizer/russian-syntagrus-ud-2.5-191206.udpipe",
     }
 
     class Token:

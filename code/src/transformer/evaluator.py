@@ -164,43 +164,79 @@ def main():
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
             
             for unevaluated_checkpoint in unevaluated:
-                try:
-                    step = int(unevaluated_checkpoint[5:])
-                    result_dir = os.path.join(MODEL_CHECKPOINT_PATH, "results")
+                step = int(unevaluated_checkpoint[5:])
+                result_dir = os.path.join(MODEL_CHECKPOINT_PATH, "results")
 
-                    model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
+                model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
 
-                    predicted_sentences = []
+                predicted_sentences = []
 
-                    for i, batch in enumerate(dataset):
-                        print(f"Evaluating {i+1}. batch...") 
-                        preds = model.generate(batch['input_ids'])
-                        batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
-                        predicted_sentences = predicted_sentences + batch_sentences
+                for i, batch in enumerate(dataset):
+                    print(f"Evaluating {i+1}. batch...") 
+                    preds = model.generate(batch['input_ids'])
+                    batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
+                    predicted_sentences = predicted_sentences + batch_sentences
 
-                    tokenized_predicted_sentences = []
+                tokenized_predicted_sentences = []
 
-                    for line in predicted_sentences:
-                        for sentence in udpipe_tokenizer.tokenize(line):
-                            tokenized_predicted_sentences.append(" ".join([token.string for token in sentence]))
+                for line in predicted_sentences:
+                    tokenization = udpipe_tokenizer.tokenize(line)
+                    sentence = " ".join([token.string for token in tokenization[0]]) if len(tokenization) > 0 else ""
+                    print(sentence)
+                    tokenized_predicted_sentences.append(sentence)
 
-                    p, r, f1 = batch_multi_pre_rec_f1(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits, 
-                                                      MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+                p, r, f1 = batch_multi_pre_rec_f1(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits, 
+                                                  MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
 
-                    file_writer = tf.summary.create_file_writer(result_dir)
-                    with file_writer.as_default():
-                        tf.summary.scalar('epoch_precision', p, step)
-                        tf.summary.scalar('epoch_recall', r, step)
-                        tf.summary.scalar('epoch_f1', f1, step)
+                file_writer = tf.summary.create_file_writer(result_dir)
+                with file_writer.as_default():
+                    tf.summary.scalar('epoch_precision', p, step)
+                    tf.summary.scalar('epoch_recall', r, step)
+                    tf.summary.scalar('epoch_f1', f1, step)
 
-                        text = "\n".join(predicted_sentences[0:20])
-                        print(text)
-                        tf.summary.text("predictions", text, step)
+                    text = "\n".join(predicted_sentences[0:20])
+                    print(text)
+                    tf.summary.text("predictions", text, step)
 
-                    print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
-                except:
-                    print("Something went wrong... Try again...")
+                print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                # try:
+                #     step = int(unevaluated_checkpoint[5:])
+                #     result_dir = os.path.join(MODEL_CHECKPOINT_PATH, "results")
+
+                #     model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
+
+                #     predicted_sentences = []
+
+                #     for i, batch in enumerate(dataset):
+                #         print(f"Evaluating {i+1}. batch...") 
+                #         preds = model.generate(batch['input_ids'])
+                #         batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
+                #         predicted_sentences = predicted_sentences + batch_sentences
+
+                #     tokenized_predicted_sentences = []
+
+                #     for line in predicted_sentences:
+                #         for sentence in udpipe_tokenizer.tokenize(line):
+                #             tokenized_predicted_sentences.append(" ".join([token.string for token in sentence]))
+
+                #     p, r, f1 = batch_multi_pre_rec_f1(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits, 
+                #                                       MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+
+                #     file_writer = tf.summary.create_file_writer(result_dir)
+                #     with file_writer.as_default():
+                #         tf.summary.scalar('epoch_precision', p, step)
+                #         tf.summary.scalar('epoch_recall', r, step)
+                #         tf.summary.scalar('epoch_f1', f1, step)
+
+                #         text = "\n".join(predicted_sentences[0:20])
+                #         print(text)
+                #         tf.summary.text("predictions", text, step)
+
+                #     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                #     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                # except:
+                #     print("Something went wrong... Try again...")
 
         time.sleep(10)
 

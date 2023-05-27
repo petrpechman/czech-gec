@@ -14,4 +14,4 @@ while getopts "c:g:m:p:" flag
 
 cd "./$PIPELINE"
 
-sbatch -p gpu -c$CPU --gpus=$GPU --mem=${MEM}G ../run_exp.sh $PIPELINE
+sbatch -p gpu --cpus-per-gpu=$CPU --gpus=$GPU --mem=${MEM}G ../run_exp.sh $PIPELINE

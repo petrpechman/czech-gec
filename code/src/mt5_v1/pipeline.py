@@ -3,20 +3,30 @@ import sys
 sys.path.append('..')
 
 # %%
+EVALUATOR = False
+if len(sys.argv) > 1:
+    if sys.argv[1] == "-e":
+        EVALUATOR = True
+
+# %%
 import os
 import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
-from transformers import AutoConfig
 import json
 
-from tensorflow.keras import mixed_precision
+# from m2scorer.util import paragraphs
+# from m2scorer.util import smart_open
+# from m2scorer.levenshtein import batch_multi_pre_rec_f1
+# from m2scorer.m2scorer import load_annotation
+
+# from tensorflow.keras import mixed_precision
 
 from utils import load_data
 from utils import introduce_errors 
 
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Queue, Manager
 import multiprocessing
 
 def main():
@@ -34,8 +44,7 @@ def main():
 
     # model
     MODEL = config['model']
-    TOKENIZER = config['tokenizer']
-    FROM_CONFIG = config['from_config']
+    PRETRAINED = config['pretrained']
     STEPS_PER_EPOCH = config['steps_per_epoch']
     EPOCHS = config['epochs']
 
@@ -58,24 +67,20 @@ def main():
     LOG_FILE = config['log_file']
     PROFILE_BATCH = config['profile_batch']
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
-    BACKUP_DIR =  config['backup_dir']
 
     # %%
     tf.random.set_seed(config['seed'])
 
     # %%
-    policy = mixed_precision.Policy('mixed_float16')
-    mixed_precision.set_global_policy(policy)
-
-    # %%
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL)
 
     # %%
     tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
     characters = introduce_errors.get_char_vocabulary(LANG)
+    # aspell_speller = aspell.Speller('lang', LANG)
 
     # %%
-    # loading of dataset:
+    # new loading of dataset:
 
     # multiprocessing.set_start_method('spawn')   
 
@@ -123,11 +128,16 @@ def main():
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
+            # bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
+            # bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
             bucket_boundaries=[32, 64, 96],
-            # bucket_batch_sizes=[72, 60, 56, 44]
-            bucket_batch_sizes=[156, 128, 120, 104]
+            bucket_batch_sizes=[52, 20, 12, 10]
     )
-    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE) # Number of batches to prefetch
+
+    # %%
+    # policy = mixed_precision.Policy('mixed_float16')
+    # mixed_precision.set_global_policy(policy)
 
     # %%
     strategy = tf.distribute.MirroredStrategy()
@@ -185,12 +195,11 @@ def main():
 
 
     # %%
+    # tokenizer_eval = AutoTokenizer.from_pretrained(...)
+
+    # %%
     with strategy.scope():
-        if FROM_CONFIG:
-            config = AutoConfig.from_pretrained(MODEL)
-            model = TFAutoModelForSeq2SeqLM.from_config(config)
-        else:
-            model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
+        model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
 
         if loss:
             model.compile(optimizer=optimizer, loss=loss)
@@ -202,29 +211,101 @@ def main():
 
     # %% [markdown]
     # ---
-    # ### Callbacks
+    # ### Evaluation
+
+    # %%
+    # max_unchanged_words=2
+    # beta = 0.5
+    # ignore_whitespace_casing= False
+    # verbose = False
+    # very_verbose = False
+
+    # dev_input = config['evaluation_input']
+    # dev_gold = config['evaluation_gold']
+
+    # # load source sentences and gold edits
+    # fin = smart_open(dev_input, 'r')
+    # dev_input_sentences = [line.strip() for line in fin.readlines()]
+    # fin.close()
+
+    # dev_source_sentences, dev_gold_edits = load_annotation(dev_gold)
+
+    # %%
+    # class Evaluation(tf.keras.callbacks.Callback):
+    #     def __init__(self, tokenizer, max_length, nth, max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, 
+    #                  dev_input_sentences, dev_source_sentences, dev_gold_edits, ensure_shapes, split_features_and_labels, batch_size):
+    #         self.tokenizer = tokenizer
+    #         self.max_length = max_length
+    #         self.nth = nth
+    #         self.max_unchanged_words = max_unchanged_words
+    #         self.beta = beta
+    #         self.ignore_whitespace_casing = ignore_whitespace_casing
+    #         self.verbose = verbose
+    #         self.very_verbose = very_verbose
+    #         self.dev_input_sentences = dev_input_sentences
+    #         self.dev_source_sentences = dev_source_sentences
+    #         self.dev_gold_edits = dev_gold_edits
+
+    #         self.ensure_shapes = ensure_shapes
+    #         self.split_features_and_labels = split_features_and_labels
+    #         self.batch_size = batch_size
+
+    #     def get_tokenized_sentence(self, line):
+    #         line = line.decode('utf-8')
+    #         tokenized = self.tokenizer(line, max_length=self.max_length, padding='max_length', truncation=True, return_tensors="tf")
+    #         return tokenized['input_ids']
+
+    #     def create_tokenized_line(self, line):
+    #         input_ids = tf.numpy_function(self.get_tokenized_sentence, inp=[line], Tout=tf.int32)
+    #         dato = {
+    #             'input_ids': input_ids[0]
+    #         }
+    #         return dato
+
+    #     def on_epoch_end(self, epoch, logs=None):
+    #         if epoch % self.nth == 0:
+    #             try:
+    #                 predicted_sentences = []
+    #                 val_dataset = tf.data.Dataset.from_tensor_slices(self.dev_input_sentences)
+    #                 val_dataset = val_dataset.map(self.create_tokenized_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #                 val_dataset = val_dataset.map(self.ensure_shapes, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #                 val_dataset = val_dataset.map(self.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #                 val_dataset = val_dataset.batch(self.batch_size)
+
+    #                 for batch in val_dataset: 
+    #                     outs = model.generate(batch)
+    #                     for out in outs:
+    #                         predicted_sentence = tokenizer.decode(out)
+    #                         predicted_sentences.append(predicted_sentence)
+
+    #                 p, r, f1 = batch_multi_pre_rec_f1(predicted_sentences, self.dev_source_sentences, self.dev_gold_edits, 
+    #                                                   self.max_unchanged_words, self.beta, self.ignore_whitespace_casing, self.verbose, self.very_verbose)
+    #                 print("Precision   : %.4f" % p)
+    #                 print("Recall      : %.4f" % r)
+    #                 print("F_%.1f       : %.4f" % (self.beta, f1))
+    #             except:
+    #                 print("No predictions...")
+
+    # %%
+
+    # callbacks = [
+    #     Evaluation(tokenizer=tokenizer_eval, max_length=MAX_LENGTH ,nth=config['evaluation_every_nth'],
+    #                max_unchanged_words=max_unchanged_words, beta=beta, ignore_whitespace_casing=ignore_whitespace_casing,
+    #                verbose=verbose, very_verbose=very_verbose, dev_input_sentences=dev_input_sentences, dev_source_sentences=dev_source_sentences,
+    #                dev_gold_edits=dev_gold_edits, ensure_shapes=ensure_shapes, split_features_and_labels=split_features_and_labels,
+    #                batch_size=config['batch_size_eval']),
+    #     tf.keras.callbacks.TensorBoard(log_dir=config['log_file'], profile_batch=config['profile_batch']),
+    #     tf.keras.callbacks.ModelCheckpoint(filepath=config['model_checkpoint_path'], save_weights_only=True, save_freq='epoch')
+    # ]
 
     # %%
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
-        save_weights_only=True,
-        save_freq="epoch")
-
-    # %%
-    backup = tf.keras.callbacks.BackupAndRestore(
-        backup_dir=BACKUP_DIR
-        )
-
-    # %%
-    profiler = tf.keras.callbacks.TensorBoard(
-        log_dir=LOG_FILE, 
-        profile_batch=PROFILE_BATCH)
+        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}'),
+        save_weights_only=True)
 
     # %%
     callbacks = [
-        model_checkpoint,
-        backup,
-        profiler
+        tf.keras.callbacks.TensorBoard(log_dir=LOG_FILE, profile_batch=PROFILE_BATCH),
     ]
 
     # %% [markdown]
@@ -232,14 +313,32 @@ def main():
 
     # %% [markdown]
     # ### Train
-    model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-    model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     # %%
-    if STEPS_PER_EPOCH:
-        model.fit(dataset, callbacks=callbacks, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
+    if EVALUATOR:
+        sidecar = tf.keras.utils.SidecarEvaluator(
+            model,
+            dataset,
+            checkpoint_dir=MODEL_CHECKPOINT_PATH,
+            steps=300,
+            max_evaluations=None,
+            callbacks=[]
+        )
+        sidecar.start()
     else:
-        model.fit(dataset, callbacks=callbacks, epochs=EPOCHS)
+
+        if STEPS_PER_EPOCH:
+            model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
+        else:
+            model.fit(dataset, callbacks=[model_checkpoint], epochs=EPOCHS)
+
+    # %% [markdown]
+    # ---
+
+    # %%
+    # checkpoint_filepath = './tmp/checkpoint/' # must be folder (/ at the end)
+
+    # model.load_weights(checkpoint_filepath)
 
     # %% [markdown]
     # ---

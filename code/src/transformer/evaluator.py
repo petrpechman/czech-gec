@@ -1,3 +1,30 @@
+import errno
+import os
+import signal
+import functools
+
+class TimeoutError(Exception):
+    pass
+
+def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
+    def decorator(func):
+        def _handle_timeout(signum, frame):
+            raise TimeoutError(error_message)
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.alarm(seconds)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                signal.alarm(0)
+            return result
+
+        return wrapper
+
+    return decorator
+
 import sys
 sys.path.append('..')
 
@@ -11,13 +38,14 @@ from transformers import AutoTokenizer
 from transformers import AutoConfig
 import json
 
-from m2scorer.levenshtein import batch_multi_pre_rec_f1
+from m2scorer.levenshtein import batch_multi_pre_rec_f1_part, batch_multi_pre_rec_f1
 from m2scorer.m2scorer import load_annotation
 
 from tensorflow.keras import mixed_precision
 
 from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 
+from multiprocessing import Process, Queue, Manager, Pool
 
 def main():
     with open('config-eval.json') as json_file:
@@ -25,6 +53,8 @@ def main():
     
     SEED = config['seed']
     
+    NUM_PARALLEL = config['num_parallel']
+
     # data loading
     M2_DATA = config['m2_data']
     MAX_LENGTH = config['max_length']
@@ -34,13 +64,6 @@ def main():
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
     FROM_CONFIG = config['from_config']
-    
-    # optimizer
-    OPTIMIZER_NAME = config['optimizer']['name']
-    OPTIMIZER_PARAMS = config['optimizer']['params']
-    
-    # loss
-    LOSS = config['loss']
     
     # logs
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
@@ -91,59 +114,11 @@ def main():
     dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
-    # policy = mixed_precision.Policy('mixed_float16')
-    # mixed_precision.set_global_policy(policy)
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_global_policy(policy)
     
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: %d' % strategy.num_replicas_in_sync)
-    
-    with strategy.scope():
-        if OPTIMIZER_NAME == 'Adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
-        elif OPTIMIZER_NAME == 'AdamW':
-            optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=OPTIMIZER_PARAMS['lr'])
-        elif OPTIMIZER_NAME == 'Adafactor':
-            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'])
-        elif OPTIMIZER_NAME == 'AdaptiveAdam':
-            class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
-                def __init__(self, warmup_steps, d_model):
-                    self.warmup_steps = tf.cast(warmup_steps, tf.float32)
-                    self.d_model = tf.cast(d_model, tf.float32)
-    
-                def __call__(self, step):
-                    step = tf.cast(step, tf.float32)
-                    lr = (1.0/tf.math.sqrt(self.d_model)) * tf.math.minimum(1.0 / tf.math.sqrt(step), (1.0 / tf.math.sqrt(self.warmup_steps)) * ((1.0 * step) / self.warmup_steps))
-                    return lr
-    
-            lr = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
-            beta1 = OPTIMIZER_PARAMS['beta1']
-            beta2 = OPTIMIZER_PARAMS['beta2']
-            epsilon = OPTIMIZER_PARAMS['epsilon']
-            optimizer = tf.keras.optimizers.Adam(
-                learning_rate=lr,
-                beta_1=beta1,
-                beta_2=beta2,
-                epsilon=epsilon)
-    
-    with strategy.scope(): 
-        loss = None   
-        if LOSS == "SCC":
-            class MaskedSparseCategoricalCrossEntropy(tf.keras.losses.Loss):
-                # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
-                def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
-                    super().__init__(reduction, name)
-                    self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
-
-                def call(self, y_true, y_pred):
-                    return self.hf_compute_loss(y_true, y_pred)
-
-                def hf_compute_loss(self, labels, logits):
-                    unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
-                    loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
-                    masked_loss = unmasked_loss * loss_mask
-                    reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)
-                    return reduced_masked_loss     
-            loss = MaskedSparseCategoricalCrossEntropy()
 
     with strategy.scope():
         if FROM_CONFIG:
@@ -152,10 +127,8 @@ def main():
         else:
             model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
 
-        if loss:
-            model.compile(optimizer=optimizer, loss=loss)
-        else:
-            model.compile(optimizer=optimizer)
+    model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+    model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     udpipe_tokenizer = UDPipeTokenizer("cs")
 
@@ -170,24 +143,70 @@ def main():
 
                     model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
 
+                    print("Generating...")
                     predicted_sentences = []
 
                     for i, batch in enumerate(dataset):
-                        print(f"Evaluating {i+1}. batch...") 
+                        print(f"Generate {i+1}. batch.") 
                         preds = model.generate(batch['input_ids'])
                         batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
                         predicted_sentences = predicted_sentences + batch_sentences
+                    
+                    print("End of generating...")
 
+                    print("Udpipe tokenization...")
                     tokenized_predicted_sentences = []
 
-                    for line in predicted_sentences:
+                    for i, line in enumerate(predicted_sentences):
+                        if i % BATCH_SIZE == 0:
+                            print(f"Tokenize {i+BATCH_SIZE} sentences.")
                         tokenization = udpipe_tokenizer.tokenize(line)
                         sentence = " ".join([token.string for token in tokenization[0]]) if len(tokenization) > 0 else ""
                         tokenized_predicted_sentences.append(sentence)
 
-                    p, r, f1 = batch_multi_pre_rec_f1(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits, 
-                                                      MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+                    print("End of tokenization...")
 
+                    print("Compute metrics...")
+                    total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
+
+                    @timeout(1)
+                    def compute_m2_part(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits):
+                        stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
+                            tokenized_predicted_sentences,
+                            dev_source_sentences,
+                            dev_gold_edits,
+                            MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+                        return stat_correct, stat_proposed, stat_gold
+
+                    size = 10
+                    for i in range(0, len(tokenized_predicted_sentences), size):
+                        try:
+                            stat_correct, stat_proposed, stat_gold = compute_m2_part(tokenized_predicted_sentences[i:i+size], 
+                                dev_source_sentences[i:i+size], 
+                                dev_gold_edits[i:i+size])
+
+                            total_stat_correct += stat_correct
+                            total_stat_proposed += stat_proposed
+                            total_stat_gold += stat_gold
+                            
+                            p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
+                            r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
+                            f1 = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+                            print(f"Step {i+1}")
+                            print("Precision:\t", p)
+                            print("Recall:\t", r)
+                            print("F1:\t", f1)
+                        except:
+                            print(f"Skip {size}...")
+
+                        
+
+                    print("End of computing...")
+
+                    print("Write into files...")
+                    p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
+                    r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
+                    f1 = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
                     file_writer = tf.summary.create_file_writer(result_dir)
                     with file_writer.as_default():
                         tf.summary.scalar('epoch_precision', p, step)

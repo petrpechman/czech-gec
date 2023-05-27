@@ -2,15 +2,15 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 20,
+    "num_parallel": 16,
     "max_length": 128,
     "shuffle_buffer": 1000,
 
     "model": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
     "tokenizer": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
     "from_config": true,
-    "steps_per_epoch": 3000,
-    "epochs": 10000,
+    "steps_per_epoch": 8000,
+    "epochs": 100000,
     
     "optimizer":{
         "name": "Adam",
@@ -30,7 +30,7 @@
 
     
     "log_file": "./tmp/logs",
-    "profile_batch": [1000, 1500],
+    "profile_batch": [2000, 2500],
     "model_checkpoint_path": "./tmp/checkpoint/",
     "backup_dir": "./tmp/backup"
 }

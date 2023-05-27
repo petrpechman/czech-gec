@@ -31,6 +31,8 @@ def main():
     NUM_PARALLEL = config['num_parallel']
     MAX_LENGTH = config['max_length']
     SHUFFLE_BUFFER = config['shuffle_buffer']
+    BUCKET_BOUNDARIES = config['bucket_boundaries']
+    BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
 
     # model
     MODEL = config['model']
@@ -38,6 +40,7 @@ def main():
     FROM_CONFIG = config['from_config']
     STEPS_PER_EPOCH = config['steps_per_epoch']
     EPOCHS = config['epochs']
+    USE_F16 = config['use_f16']
 
     # optimizer
     OPTIMIZER_NAME = config['optimizer']['name']
@@ -61,11 +64,7 @@ def main():
     BACKUP_DIR =  config['backup_dir']
 
     # %%
-    tf.random.set_seed(config['seed'])
-
-    # %%
-    policy = mixed_precision.Policy('mixed_float16')
-    mixed_precision.set_global_policy(policy)
+    tf.random.set_seed(SEED)
 
     # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -73,6 +72,13 @@ def main():
     # %%
     tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
     characters = introduce_errors.get_char_vocabulary(LANG)
+
+    # %%
+    strategy = tf.distribute.MirroredStrategy()
+    num_div = strategy.num_replicas_in_sync
+    print('Number of devices: %d' % num_div)
+
+    bucket_batch_sizes = BUCKET_BATCH_SIZES_PER_GPU * num_div 
 
     # %%
     # loading of dataset:
@@ -123,15 +129,15 @@ def main():
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-            bucket_boundaries=[32, 64, 96],
-            # bucket_batch_sizes=[72, 60, 56, 44]
-            bucket_batch_sizes=[156, 128, 120, 104]
+            bucket_boundaries=BUCKET_BOUNDARIES,
+            bucket_batch_sizes=bucket_batch_sizes
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     # %%
-    strategy = tf.distribute.MirroredStrategy()
-    print('Number of devices: %d' % strategy.num_replicas_in_sync)
+    if USE_F16:
+        policy = mixed_precision.Policy('mixed_float16')
+        mixed_precision.set_global_policy(policy)
 
     # %%
     with strategy.scope():
@@ -232,8 +238,11 @@ def main():
 
     # %% [markdown]
     # ### Train
-    model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-    model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+
+    # %%
+    if USE_F16:
+        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     # %%
     if STEPS_PER_EPOCH:

@@ -3,11 +3,12 @@
 
     "m2_data": "/home/pechmanp/DP/czech-gec/code/data/geccc/dev/sorted_sentence.m2",
     "max_length": 128,
-    "batch_size": 32,
+    "batch_size": 32,    
 
     "model": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
     "tokenizer": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
     "from_config": true,
+    "use_f16": true,
     
     "model_checkpoint_path": "tmp/checkpoint/",
 

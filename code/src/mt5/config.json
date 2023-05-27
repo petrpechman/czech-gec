@@ -5,12 +5,15 @@
     "num_parallel": 16,
     "max_length": 128,
     "shuffle_buffer": 1000,
+    "bucket_boundaries": [32, 64, 96],
+    "bucket_batch_sizes_per_gpu": [60, 28, 16, 12],
 
     "model": "google/mt5-small",
     "tokenizer": "google/mt5-small",
     "from_config": true,
     "steps_per_epoch": 8000,
     "epochs": 100000,
+    "use_f16": false,
     
     "optimizer":{
         "name": "Adam",

@@ -62,6 +62,7 @@ def main():
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
     FROM_CONFIG = config['from_config']
+    USE_F16 = config['use_f16']
     
     # logs
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
@@ -112,8 +113,9 @@ def main():
     dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
-    # policy = mixed_precision.Policy('mixed_float16')
-    # mixed_precision.set_global_policy(policy)
+    if USE_F16:
+        policy = mixed_precision.Policy('mixed_float16')
+        mixed_precision.set_global_policy(policy)
     
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: %d' % strategy.num_replicas_in_sync)
@@ -124,9 +126,9 @@ def main():
             model = TFAutoModelForSeq2SeqLM.from_config(config)
         else:
             model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
-
-    # model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-    # model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+    if USE_F16:
+        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     udpipe_tokenizer = UDPipeTokenizer("cs")
 

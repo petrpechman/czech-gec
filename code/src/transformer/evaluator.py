@@ -52,8 +52,6 @@ def main():
         config = json.load(json_file)
     
     SEED = config['seed']
-    
-    NUM_PARALLEL = config['num_parallel']
 
     # data loading
     M2_DATA = config['m2_data']

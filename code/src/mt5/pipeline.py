@@ -64,8 +64,8 @@ def main():
     tf.random.set_seed(config['seed'])
 
     # %%
-    policy = mixed_precision.Policy('mixed_float16')
-    mixed_precision.set_global_policy(policy)
+    # policy = mixed_precision.Policy('mixed_float16')
+    # mixed_precision.set_global_policy(policy)
 
     # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -124,8 +124,7 @@ def main():
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             bucket_boundaries=[32, 64, 96],
-            # bucket_batch_sizes=[72, 60, 56, 44]
-            bucket_batch_sizes=[156, 128, 120, 104]
+            bucket_batch_sizes=[60, 28, 16, 12]
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
@@ -232,8 +231,8 @@ def main():
 
     # %% [markdown]
     # ### Train
-    model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-    model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+    # model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+    # model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     # %%
     if STEPS_PER_EPOCH:

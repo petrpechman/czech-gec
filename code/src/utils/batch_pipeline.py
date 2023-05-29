@@ -1,6 +1,3 @@
-import sys
-sys.path.append('..')
-
 import os
 import tensorflow as tf
 
@@ -9,47 +6,9 @@ from transformers import AutoTokenizer
 from transformers import AutoConfig
 import json
 
-from utils import load_data
-from utils import introduce_errors 
+from tensorflow.keras import mixed_precision
 
-from multiprocessing import Process, Queue, Manager
-import multiprocessing
-
-LINE = "Monkey D. Luffy, also known as Straw Hat Luffy and commonly as Straw Hat,[10] is the founder and captain of the increasingly" \
-        " infamous and powerful Straw Hat Pirates, as well as the most powerful of its top fighters.[26][27] He desires to find" \
-        " the legendary treasure left behind by the late Gol D. Roger and thereby become the Pirate King,[28] which would help" \
-        " facilitate an unknown dream of his that he has told only to Shanks, his brothers, and crew.[29][30] He believes that" \
-        " being the Pirate King means having the most freedom in the world.[31] Born in Foosha Village, Luffy is the son of" \
-        " Monkey D. Dragon, the leader of the Revolutionary Army,[32] and the grandson of the Marine hero Monkey D. Garp,[33]" \
-        " and their family carries the initial and Will of D. At age 7, Luffy accidentally ate the Gomu Gomu no Mi, which turned his body into rubber." \
-        " [34] Shanks also gave Luffy the very straw hat that has become Luffy's signature accessory, having gifted it to the boy as part of a promise" \
-        " for them to meet again someday after he became a great pirate.[35] Growing up on Dawn Island under the care of Curly Dadan,[36] Luffy befriended" \
-        " and became sworn brothers of the late Fire Fist Portgas D. Ace[37] and Revolutionary Chief-of-Staff Sabo.[38] Luffy has gone up against numerous" \
-        " global powers around him, starting with fighting the most powerful pirates in the East Blue and moving to clashes against the Marines, " \
-        "Seven Warlords of the Sea, Cipher Pol, World Nobles, and even the Four Emperors of the Grand Line, emerging victorious in a majority of" \
-        " these battles. He invaded and indirectly caused the annihilation of Enies Lobby, escaped the impregnable Impel Down, and was a focal figure " \
-        "in the Summit War of Marineford. He has also either defeated or befriended seven of the eleven known past or present Warlords prior to the" \
-        " organization's dissolution. Furthermore, Luffy has invaded the territory of the Four Emperors on multiple occasions, and eventually managed to" \
-        "defeat one. Luffy's accomplishments and heritage have caused him to be labeled as a Dangerous Future Element while in the process gaining a " \
-        "reputation for being reckless and, in some cases, insane, earning the wrath of Fleet Admiral Sakazuki, the Marine Headquarters, and even " \
-        "the World Government.[39] Luffy also has a penchant for attracting followers and has unwillingly been named the leader of the Straw Hat Grand Fleet" \
-        ", consisting of seven pirate crews who swore to come to his aid whenever he wishes. After learning of this and his exploits against the Big Mom Pirates," \
-        " the press labeled him the Fifth Emperor of the Sea, though many prominent figures initially considered this to be exaggerated.[40] However, after" \
-        " defeating Kaidou during the Raid on Onigashima, Luffy was officially declared as one of the Four Emperors by the World Government along with Buggy," \
-        " replacing Kaidou and Big Mom.[3] Luffy has made tremendous strides in his life of piracy, with his bounty heavily reflecting this fact. He gained " \
-        "his first bounty of Beli30,000,000 for defeating the strongest pirate captains of the East Blue, which then increased to Beli100,000,000 after defeating" \
-        " Crocodile in Arabasta. After his crew's invasion into and escape from Enies Lobby, his bounty was increased to Beli300,000,000. His sizeable bounty upon" \
-        " arriving at the Sabaody Archipelago caused Luffy, along with Zoro to be included among the eleven Super Rookies, pirates who simultaneously reached the" \
-        "Red Line with bounties of over Beli100,000,000 shortly before the Summit War.[41] He, the other ten Super Rookies, and Marshall D. Teach would go on to" \
-        " be referred to as the Worst Generation.[42] Two years after the war, with his bounty increased to Beli400,000,000, he entered the New World and began " \
-        " challenging the Emperors and their allies directly, with his bounty going up to Beli500,000,000 after the Dressrosa Arc, and later all the way to Beli1," \
-        " 500,000,000 after the global revelation that he is Sabo's brother and the existence of Straw Hat Grand Fleet becoming public, as well as the events of " \
-        " the Whole Cake Island Arc. After leading the Raid on Onigashima and defeating Kaidou as well he became a member of the Four Emperors, his bounty was " \
-        " increased to Beli3,000,000,000. He is the main protagonist of the manga and anime, One Piece."
-
-
-def main(batch_size: int, max_length: int, config: str, num_lines: int):
-    lines = [LINE] *  num_lines
+def main(batch_size: int, max_length: int, config: str, filename: str):
     MAX_LENGTH = max_length
     BATCH_SIZE = batch_size
     CONFIG = config
@@ -59,17 +18,11 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
 
     SEED = config['seed']
 
-    # data loading
-    DATA_PATHS = config['data_paths']
-    NUM_PARALLEL = config['num_parallel']
-    SHUFFLE_BUFFER = config['shuffle_buffer']
-
     # model
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
     FROM_CONFIG = config['from_config']
-    STEPS_PER_EPOCH = config['steps_per_epoch']
-    EPOCHS = config['epochs']
+    USE_F16 = config['use_f16']
 
     # optimizer
     OPTIMIZER_NAME = config['optimizer']['name']
@@ -78,36 +31,20 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
     # loss
     LOSS = config['loss']
 
-    # GEL config
-    LANG = config['lang']
-    TOKEN_FILE = config['token_file']
-    TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
-    CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
-    TOKEN_ERR_PROB = config['token_err_prob']   
-    CHAR_ERR_PROB = config['char_err_prob']
+    tf.random.set_seed(SEED)
 
-    # logs
-    LOG_FILE = config['log_file']
-    PROFILE_BATCH = config['profile_batch']
-    MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
-
-    # %%
-    tf.random.set_seed(config['seed'])
-
-    # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
 
-    # %%
-    tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
-    characters = introduce_errors.get_char_vocabulary(LANG)
+    strategy = tf.distribute.MirroredStrategy()
+    num_div = strategy.num_replicas_in_sync
+    print('Number of devices: %d' % num_div)
 
-    # %%
-    # new loading of dataset:
-    def tokenize_line(line, tokenizer, max_length):
-        def get_tokenized_sentences(line):
-            line = line.decode('utf-8')
-            tokenized = tokenizer(line, text_target=line, max_length=max_length, padding='max_length', truncation=True, return_tensors="tf")
-            return tokenized['input_ids'], tokenized['attention_mask'], tokenized['labels']
+    def get_tokenized_sentences(line):
+        line = line.decode('utf-8')
+        tokenized = tokenizer(line, text_target=line, max_length=max_length, padding='max_length', truncation=True, return_tensors="tf")
+        return tokenized['input_ids'], tokenized['attention_mask'], tokenized['labels']
+
+    def tokenize_line(line, max_length):
         input_ids, attention_mask, labels = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32, tf.int32])
         decoder_input_ids = tf.roll(labels, shift=1, axis=1)
         dato = {
@@ -133,22 +70,17 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
         else:
             return features, labels
 
-    dataset = tf.data.Dataset.from_tensor_slices((lines))
-    dataset = dataset.map(lambda line: tokenize_line(line, tokenizer, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = tf.data.TextLineDataset([filename])
+    dataset = dataset.map(lambda line: tokenize_line(line, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(lambda input_dict: ensure_shapes(input_dict, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.batch(batch_size)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-    # %%
-    # policy = mixed_precision.Policy('mixed_float16')
-    # mixed_precision.set_global_policy(policy)
+    if USE_F16:
+        policy = mixed_precision.Policy('mixed_float16')
+        mixed_precision.set_global_policy(policy)
 
-    # %%
-    strategy = tf.distribute.MirroredStrategy()
-    print('Number of devices: %d' % strategy.num_replicas_in_sync)
-
-    # %%
     with strategy.scope():
         if OPTIMIZER_NAME == 'Adam':
             optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
@@ -209,5 +141,9 @@ def main(batch_size: int, max_length: int, config: str, num_lines: int):
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
+
+    if USE_F16:
+        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     model.fit(dataset, epochs=2, steps_per_epoch=4)

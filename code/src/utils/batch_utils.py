@@ -1,50 +1,36 @@
 import os
     
-def try_batch_size(batch_size, max_length, num_lines, lr=0.00001) -> bool:
+def try_batch_size(batch_size, max_length, lr=0.00001) -> bool:
     import batch_pipeline
-    batch_pipeline.main(batch_size, max_length, "../transformer/config.json", num_lines)
+    batch_pipeline.main(batch_size, max_length, "../transformer/config.json", "./text.txt")
 
-def get_batch_size(max_length, filename) -> int:
-    NUM_LINES = 128
+def get_batch_size(start: int, max_length, filename) -> int:
     MAX_BATCH_SIZE = 2049
-    STEP_BATCH = 4
+    STEP_BATCH = 8
     
-    for batch_size in range(STEP_BATCH, MAX_BATCH_SIZE, STEP_BATCH):
+    for batch_size in range(start, MAX_BATCH_SIZE, STEP_BATCH):
         try:
-            try_batch_size(batch_size, max_length, NUM_LINES)
+            try_batch_size(batch_size, max_length)
             log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
         except:
             return batch_size - STEP_BATCH
-    return 0
-        
-def all_batch_sizes(filename: str):
-    MAX_LENGTH = 16384
-    STEP_LENGTH = 16
-
-    batch_sizes = []
-    for max_length in range(STEP_LENGTH, MAX_LENGTH, STEP_LENGTH):
-        batch_size = get_batch_size(max_length, filename)
-        print(f"BATCH SIZE: {batch_size}   MAX LENGHT: {max_length}")
-        if batch_size == 0:
-            break
-        batch_sizes.append((max_length, batch_size))
-    return batch_sizes
 
 def log_data(filename: str, text: str):
     if os.path.exists(filename):
-        append_write = 'a' # append if already exists
+        append_write = 'a'
     else:
         append_write = 'w'
     with open(filename, append_write, encoding="utf-8") as log_file:
         print(text, file=log_file)
 
 def main():
-    filename = "transformer-batches.txt"
-    get_batch_size(32 ,filename)
-    get_batch_size(64 ,filename)
-    get_batch_size(96 ,filename)
-    get_batch_size(128 ,filename)
+    filename = "mt5-small-batches.txt"
+    # !! not use 0
+    get_batch_size(88, 32 ,filename)
+    get_batch_size(28, 64 ,filename)
+    get_batch_size(16, 96 ,filename)
+    get_batch_size(12, 128 ,filename)
 
 if __name__ == "__main__":
     main()

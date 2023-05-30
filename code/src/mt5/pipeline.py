@@ -20,52 +20,51 @@ from utils import dataset_utils
 from components import losses
 
 from multiprocessing import Process, Manager
-import multiprocessing
+
+# %%
+with open('config.json') as json_file:
+    config = json.load(json_file)
+
+SEED = config['seed']
+
+# data loading
+DATA_PATHS = config['data_paths']
+NUM_PARALLEL = config['num_parallel']
+MAX_LENGTH = config['max_length']
+SHUFFLE_BUFFER = config['shuffle_buffer']
+BUCKET_BOUNDARIES = config['bucket_boundaries']
+BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
+
+# model
+MODEL = config['model']
+TOKENIZER = config['tokenizer']
+FROM_CONFIG = config['from_config']
+STEPS_PER_EPOCH = config['steps_per_epoch']
+EPOCHS = config['epochs']
+USE_F16 = config['use_f16']
+
+# optimizer
+OPTIMIZER_NAME = config['optimizer']['name']
+OPTIMIZER_PARAMS = config['optimizer']['params']
+
+# loss
+LOSS = config['loss']
+
+# GEL config
+LANG = config['lang']
+TOKEN_FILE = config['token_file']
+TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
+CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
+TOKEN_ERR_PROB = config['token_err_prob']   
+CHAR_ERR_PROB = config['char_err_prob']
+
+# logs
+LOG_FILE = config['log_file']
+PROFILE_BATCH = config['profile_batch']
+MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
+BACKUP_DIR =  config['backup_dir']
 
 def main():
-    # %%
-    with open('config.json') as json_file:
-        config = json.load(json_file)
-
-    SEED = config['seed']
-
-    # data loading
-    DATA_PATHS = config['data_paths']
-    NUM_PARALLEL = config['num_parallel']
-    MAX_LENGTH = config['max_length']
-    SHUFFLE_BUFFER = config['shuffle_buffer']
-    BUCKET_BOUNDARIES = config['bucket_boundaries']
-    BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
-
-    # model
-    MODEL = config['model']
-    TOKENIZER = config['tokenizer']
-    FROM_CONFIG = config['from_config']
-    STEPS_PER_EPOCH = config['steps_per_epoch']
-    EPOCHS = config['epochs']
-    USE_F16 = config['use_f16']
-
-    # optimizer
-    OPTIMIZER_NAME = config['optimizer']['name']
-    OPTIMIZER_PARAMS = config['optimizer']['params']
-
-    # loss
-    LOSS = config['loss']
-
-    # GEL config
-    LANG = config['lang']
-    TOKEN_FILE = config['token_file']
-    TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
-    CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
-    TOKEN_ERR_PROB = config['token_err_prob']   
-    CHAR_ERR_PROB = config['char_err_prob']
-
-    # logs
-    LOG_FILE = config['log_file']
-    PROFILE_BATCH = config['profile_batch']
-    MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
-    BACKUP_DIR =  config['backup_dir']
-
     # %%
     tf.random.set_seed(SEED)
 
@@ -84,7 +83,7 @@ def main():
     bucket_batch_sizes = BUCKET_BATCH_SIZES_PER_GPU * num_div 
 
     # %%
-    # loading of dataset:   
+    # loading of dataset:
     manager = Manager()
     queue = manager.Queue(2 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(
@@ -161,6 +160,7 @@ def main():
         if LOSS == "SCC":
             loss = losses.MaskedSparseCategoricalCrossEntropy()
 
+
     # %%
     with strategy.scope():
         if FROM_CONFIG:
@@ -173,9 +173,6 @@ def main():
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
-
-    # %%
-    print(model.optimizer)
 
     # %% [markdown]
     # ---

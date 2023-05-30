@@ -47,6 +47,9 @@ def main():
     IGNORE_WHITESPACE_CASING = config['ignore_whitespace_casing']
     VERBOSE = config['verbose']
     VERY_VERBOSE = config['very_verbose']
+
+    TIMEOUT = 2
+    SIZE = 10
     
     tf.random.set_seed(SEED)
     
@@ -87,6 +90,7 @@ def main():
             model = TFAutoModelForSeq2SeqLM.from_config(config)
         else:
             model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
+
     if USE_F16:
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
@@ -130,7 +134,7 @@ def main():
                     print("Compute metrics...")
                     total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
 
-                    @timeout(2)
+                    @timeout(TIMEOUT)
                     def compute_m2_part(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits):
                         stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
                             tokenized_predicted_sentences,
@@ -139,7 +143,7 @@ def main():
                             MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
                         return stat_correct, stat_proposed, stat_gold
 
-                    size = 10
+                    size = SIZE
                     for i in range(0, len(tokenized_predicted_sentences), size):
                         try:
                             stat_correct, stat_proposed, stat_gold = compute_m2_part(tokenized_predicted_sentences[i:i+size], 
@@ -158,7 +162,7 @@ def main():
                             print("Recall:\t", r)
                             print("F1:\t", f1)
                         except:
-                            print(f"Skip {i}...")
+                            print(f"Skip {size}...")
 
                     print("End of computing...")
 

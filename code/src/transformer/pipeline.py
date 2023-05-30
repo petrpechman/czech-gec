@@ -17,55 +17,54 @@ from utils import load_data
 from utils import introduce_errors 
 from utils import dataset_utils
 
-
+from components import losses
 
 from multiprocessing import Process, Manager
-import multiprocessing
+
+# %%
+with open('config.json') as json_file:
+    config = json.load(json_file)
+
+SEED = config['seed']
+
+# data loading
+DATA_PATHS = config['data_paths']
+NUM_PARALLEL = config['num_parallel']
+MAX_LENGTH = config['max_length']
+SHUFFLE_BUFFER = config['shuffle_buffer']
+BUCKET_BOUNDARIES = config['bucket_boundaries']
+BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
+
+# model
+MODEL = config['model']
+TOKENIZER = config['tokenizer']
+FROM_CONFIG = config['from_config']
+STEPS_PER_EPOCH = config['steps_per_epoch']
+EPOCHS = config['epochs']
+USE_F16 = config['use_f16']
+
+# optimizer
+OPTIMIZER_NAME = config['optimizer']['name']
+OPTIMIZER_PARAMS = config['optimizer']['params']
+
+# loss
+LOSS = config['loss']
+
+# GEL config
+LANG = config['lang']
+TOKEN_FILE = config['token_file']
+TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
+CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
+TOKEN_ERR_PROB = config['token_err_prob']   
+CHAR_ERR_PROB = config['char_err_prob']
+
+# logs
+LOG_FILE = config['log_file']
+PROFILE_BATCH = config['profile_batch']
+MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
+BACKUP_DIR =  config['backup_dir']
 
 def main():
-    # %%
-    with open('config.json') as json_file:
-        config = json.load(json_file)
-
-    SEED = config['seed']
-
-    # data loading
-    DATA_PATHS = config['data_paths']
-    NUM_PARALLEL = config['num_parallel']
-    MAX_LENGTH = config['max_length']
-    SHUFFLE_BUFFER = config['shuffle_buffer']
-    BUCKET_BOUNDARIES = config['bucket_boundaries']
-    BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
-
-    # model
-    MODEL = config['model']
-    TOKENIZER = config['tokenizer']
-    FROM_CONFIG = config['from_config']
-    STEPS_PER_EPOCH = config['steps_per_epoch']
-    EPOCHS = config['epochs']
-    USE_F16 = config['use_f16']
-
-    # optimizer
-    OPTIMIZER_NAME = config['optimizer']['name']
-    OPTIMIZER_PARAMS = config['optimizer']['params']
-
-    # loss
-    LOSS = config['loss']
-
-    # GEL config
-    LANG = config['lang']
-    TOKEN_FILE = config['token_file']
-    TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
-    CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
-    TOKEN_ERR_PROB = config['token_err_prob']   
-    CHAR_ERR_PROB = config['char_err_prob']
-
-    # logs
-    LOG_FILE = config['log_file']
-    PROFILE_BATCH = config['profile_batch']
-    MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
-    BACKUP_DIR =  config['backup_dir']
-
     # %%
     tf.random.set_seed(SEED)
 
@@ -159,23 +158,7 @@ def main():
     with strategy.scope(): 
         loss = None   
         if LOSS == "SCC":
-            class MaskedSparseCategoricalCrossEntropy(tf.keras.losses.Loss):
-                # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
-                def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
-                    super().__init__(reduction, name)
-                    self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
-
-                def call(self, y_true, y_pred):
-                    return self.hf_compute_loss(y_true, y_pred)
-
-                def hf_compute_loss(self, labels, logits):
-                    unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
-                    loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
-                    masked_loss = unmasked_loss * loss_mask
-                    reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)
-                    return reduced_masked_loss
-
-            loss = MaskedSparseCategoricalCrossEntropy()
+            loss = losses.MaskedSparseCategoricalCrossEntropy()
 
 
     # %%
@@ -190,9 +173,6 @@ def main():
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
-
-    # %%
-    print(model.optimizer)
 
     # %% [markdown]
     # ---

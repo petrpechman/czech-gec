@@ -15,6 +15,9 @@ from tensorflow.keras import mixed_precision
 
 from utils import load_data
 from utils import introduce_errors 
+from utils import dataset_utils
+
+from components import losses
 
 from multiprocessing import Process, Manager
 import multiprocessing
@@ -81,22 +84,7 @@ def main():
     bucket_batch_sizes = BUCKET_BATCH_SIZES_PER_GPU * num_div 
 
     # %%
-    # loading of dataset:
-
-    # multiprocessing.set_start_method('spawn')   
-
-    def split_features_and_labels(input_batch):
-        features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-        labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-        if len(features) == 1:
-            features = list(features.values())[0]
-        if len(labels) == 1:
-            labels = list(labels.values())[0]
-        if isinstance(labels, dict) and len(labels) == 0:
-            return features
-        else:
-            return features, labels
-
+    # loading of dataset:   
     manager = Manager()
     queue = manager.Queue(2 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(
@@ -125,7 +113,7 @@ def main():
                     "decoder_input_ids": (None, )
                 })
 
-    dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
@@ -171,24 +159,7 @@ def main():
     with strategy.scope(): 
         loss = None   
         if LOSS == "SCC":
-            class MaskedSparseCategoricalCrossEntropy(tf.keras.losses.Loss):
-                # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
-                def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
-                    super().__init__(reduction, name)
-                    self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
-
-                def call(self, y_true, y_pred):
-                    return self.hf_compute_loss(y_true, y_pred)
-
-                def hf_compute_loss(self, labels, logits):
-                    unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
-                    loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
-                    masked_loss = unmasked_loss * loss_mask
-                    reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)
-                    return reduced_masked_loss
-
-            loss = MaskedSparseCategoricalCrossEntropy()
-
+            loss = losses.MaskedSparseCategoricalCrossEntropy()
 
     # %%
     with strategy.scope():

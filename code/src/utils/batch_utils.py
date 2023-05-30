@@ -33,8 +33,8 @@ def main():
 
     # Do not use 0 because than the batch size is 0 and it returns error.
     # get_batch_size(56, 32, epochs, steps_per_epoch, filename, config, text_file)
-    get_batch_size(24, 64, epochs, steps_per_epoch, filename, config, text_file)
-    get_batch_size(16, 96, epochs, steps_per_epoch, filename, config, text_file)
+    get_batch_size(64, 64, epochs, steps_per_epoch, filename, config, text_file)
+    # get_batch_size(16, 96, epochs, steps_per_epoch, filename, config, text_file)
     get_batch_size(16, 128, epochs, steps_per_epoch, filename, config, text_file)
 
 if __name__ == "__main__":

@@ -35,5 +35,16 @@
     "log_file": "./tmp/logs",
     "profile_batch": [2000, 2500],
     "model_checkpoint_path": "./tmp/checkpoint/",
-    "backup_dir": "./tmp/backup"
+    "backup_dir": "./tmp/backup",
+
+
+
+    "m2_data": "/home/pechmanp/DP/czech-gec/code/data/geccc/dev/sorted_sentence.m2",
+    "batch_size": 32,    
+
+    "max_unchanged_words": 2,
+    "beta": 0.5,
+    "ignore_whitespace_casing": false,
+    "verbose": false,
+    "very_verbose": false
 }

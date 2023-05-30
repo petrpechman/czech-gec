@@ -34,7 +34,7 @@
     
     "log_file": "./tmp/logs",
     "profile_batch": [2000, 2500],
-    "model_checkpoint_path": "./tmp/checkpoint/",
+    "model_checkpoint_path": "/home/pechmanp/DP/czech-gec/code/src/mt5/tmp/checkpoint/",
     "backup_dir": "./tmp/backup",
 
 

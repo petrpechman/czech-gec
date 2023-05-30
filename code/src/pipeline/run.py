@@ -10,7 +10,9 @@ def main(config_filename: str, eval: bool):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("config", type=str, help="Config file.")
-    parser.add_argument("eval", type=bool, help="Run evaluation.")
+    parser.add_argument("--config", type=str, help="Config file.")
+    parser.add_argument("--eval", action=argparse.BooleanOptionalAction, help="Run evaluation.")
     args = parser.parse_args()
+
+    print(args.eval)
     main(args.config, args.eval)

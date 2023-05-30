@@ -15,6 +15,7 @@ from tensorflow.keras import mixed_precision
 
 from utils import load_data
 from utils import introduce_errors 
+from utils import dataset_utils
 
 from multiprocessing import Process, Manager
 import multiprocessing
@@ -82,21 +83,6 @@ def main():
 
     # %%
     # loading of dataset:
-
-    # multiprocessing.set_start_method('spawn')   
-
-    def split_features_and_labels(input_batch):
-        features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-        labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-        if len(features) == 1:
-            features = list(features.values())[0]
-        if len(labels) == 1:
-            labels = list(labels.values())[0]
-        if isinstance(labels, dict) and len(labels) == 0:
-            return features
-        else:
-            return features, labels
-
     manager = Manager()
     queue = manager.Queue(2 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(
@@ -125,7 +111,7 @@ def main():
                     "decoder_input_ids": (None, )
                 })
 
-    dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
@@ -255,7 +241,6 @@ def main():
 
 # %%
 if __name__ == '__main__':
-    multiprocessing.set_start_method('spawn')
     main()
 
 

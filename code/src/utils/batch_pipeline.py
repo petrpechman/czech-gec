@@ -12,6 +12,7 @@ def main(batch_size: int, max_length: int, config: str, filename: str):
     MAX_LENGTH = max_length
     BATCH_SIZE = batch_size
     CONFIG = config
+    FILENAME = filename
 
     with open(CONFIG) as json_file:
         config = json.load(json_file)
@@ -70,7 +71,7 @@ def main(batch_size: int, max_length: int, config: str, filename: str):
         else:
             return features, labels
 
-    dataset = tf.data.TextLineDataset([filename])
+    dataset = tf.data.TextLineDataset([FILENAME])
     dataset = dataset.map(lambda line: tokenize_line(line, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(lambda input_dict: ensure_shapes(input_dict, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)

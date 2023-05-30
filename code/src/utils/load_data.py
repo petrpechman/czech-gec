@@ -3,9 +3,7 @@ import tensorflow as tf
 from typing import List
 import random
 from . import introduce_errors
-from . import tokenizer_utils
 # import introduce_errors
-# import tokenizer_utils
 import aspell
 from transformers import AutoTokenizer
 import multiprocessing
@@ -124,7 +122,8 @@ def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: Gener
             index = 0
 
 
-# ########################################################################
+
+# Main is just for try:
 
 def main():
     multiprocessing.set_start_method('spawn')   
@@ -136,8 +135,6 @@ def main():
 
     # tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base") 
-    # tokenizer = Tokenizer.from_file("./out/tokenizer.json")
-    # tokenizer = tokenizer_utils.CustomTokenizer(tokenizer)
 
     lang = "cs"
     token_file = "/home/petr/Plocha/DP/czech-gec/code/data/vocabluraries/vocabulary_cs.tsv"

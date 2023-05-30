@@ -5,8 +5,8 @@
     "max_length": 128,
     "batch_size": 32,    
 
-    "model": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
-    "tokenizer": "/home/pechmanp/DP/czech-gec/code/src/utils/transformer/model/",
+    "model": "google/mt5-small",
+    "tokenizer": "google/mt5-small",
     "from_config": true,
     "use_f16": false,
     

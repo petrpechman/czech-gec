@@ -1,4 +1,0 @@
-srun --pty --jobid 9693 /bin/bash
-
-4 GPU in node1 -training
-3 GPU in node1 -evaluation

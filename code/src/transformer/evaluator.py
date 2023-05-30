@@ -1,30 +1,3 @@
-import errno
-import os
-import signal
-import functools
-
-class TimeoutError(Exception):
-    pass
-
-def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
-    def decorator(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(error_message)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                signal.alarm(0)
-            return result
-
-        return wrapper
-
-    return decorator
-
 import sys
 sys.path.append('..')
 
@@ -43,9 +16,10 @@ from m2scorer.m2scorer import load_annotation
 
 from tensorflow.keras import mixed_precision
 
+from utils import dataset_utils
 from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 
-from multiprocessing import Process, Queue, Manager, Pool
+from utils.time_check import timeout
 
 def main():
     with open('config-eval.json') as json_file:
@@ -78,26 +52,13 @@ def main():
     
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
     
-    
     # loading of dataset:
-    def split_features_and_labels(input_batch):
-       features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-       labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-       if len(features) == 1:
-           features = list(features.values())[0]
-       if len(labels) == 1:
-           labels = list(labels.values())[0]
-       if isinstance(labels, dict) and len(labels) == 0:
-           return features
-       else:
-           return features, labels
-        
     def get_tokenized_sentences(line):
         line = line.decode('utf-8')
         tokenized = tokenizer(line, max_length=MAX_LENGTH, truncation=True, return_tensors="tf")
         return tokenized['input_ids'], tokenized['attention_mask']
 
-    def create_error_line(line):
+    def tokenize_line(line):
         input_ids, attention_mask = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32])
         dato = {
             'input_ids': input_ids[0],
@@ -108,8 +69,8 @@ def main():
     dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA)
         
     dataset =  tf.data.Dataset.from_tensor_slices((dev_source_sentences))
-    dataset = dataset.map(create_error_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
@@ -198,8 +159,6 @@ def main():
                             print("F1:\t", f1)
                         except:
                             print(f"Skip {size}...")
-
-                        
 
                     print("End of computing...")
 

@@ -1,7 +1,7 @@
 import os
 
 MAX_BATCH_SIZE = 2049
-STEP_BATCH = 8
+STEP_BATCH = 16
     
 def try_batch_size(batch_size, max_length, epochs, steps_per_epoch, config, text_file) -> bool:
     import batch_pipeline
@@ -25,16 +25,17 @@ def log_data(filename: str, text: str):
         print(text, file=log_file)
 
 def main():
-    filename = "mt5-small-batches.txt"
-    config = "../mt5/config.json"
+    filename = "transformer-f16-batches.txt"
+    config = "../transformer/config.json"
     text_file = "./text.txt"
     epochs = 2
-    steps_per_epoch = 4
+    steps_per_epoch = 16
 
     # Do not use 0 because than the batch size is 0 and it returns error.
-    get_batch_size(32, 64, epochs, steps_per_epoch, filename)
-    get_batch_size(16, 96, epochs, steps_per_epoch, filename)
-    get_batch_size(16, 128, epochs, steps_per_epoch, filename)
+    # get_batch_size(56, 32, epochs, steps_per_epoch, filename, config, text_file)
+    get_batch_size(24, 64, epochs, steps_per_epoch, filename, config, text_file)
+    get_batch_size(16, 96, epochs, steps_per_epoch, filename, config, text_file)
+    get_batch_size(16, 128, epochs, steps_per_epoch, filename, config, text_file)
 
 if __name__ == "__main__":
     main()

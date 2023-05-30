@@ -162,7 +162,7 @@ def main(config_filename: str):
                             print("Recall:\t", r)
                             print("F1:\t", f1)
                         except:
-                            print(f"Skip {size}...")
+                            print(f"Skip {i}...")
 
                     print("End of computing...")
 

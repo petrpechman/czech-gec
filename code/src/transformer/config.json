@@ -6,7 +6,7 @@
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [72, 60, 56, 44],
+    "bucket_batch_sizes_per_gpu": [120, 96, 64, 48],
 
     "model": "../../models/transformer/",
     "tokenizer": "../../models/transformer/",

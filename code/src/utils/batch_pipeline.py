@@ -7,10 +7,13 @@ from transformers import AutoConfig
 import json
 
 from tensorflow.keras import mixed_precision
+from dataset_utils import split_features_and_labels
 
-def main(batch_size: int, max_length: int, config: str, filename: str):
-    MAX_LENGTH = max_length
+def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, config: str, filename: str):
     BATCH_SIZE = batch_size
+    MAX_LENGTH = max_length
+    EPOCHS=epochs
+    STEPS_PER_EPOCH=steps_per_epoch
     CONFIG = config
     FILENAME = filename
 
@@ -58,18 +61,6 @@ def main(batch_size: int, max_length: int, config: str, filename: str):
 
     def ensure_shapes(input_dict, max_length):
         return {key: tf.ensure_shape(val, (max_length)) for key, val in input_dict.items()}
-
-    def split_features_and_labels(input_batch):
-        features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-        labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-        if len(features) == 1:
-            features = list(features.values())[0]
-        if len(labels) == 1:
-            labels = list(labels.values())[0]
-        if isinstance(labels, dict) and len(labels) == 0:
-            return features
-        else:
-            return features, labels
 
     dataset = tf.data.TextLineDataset([FILENAME])
     dataset = dataset.map(lambda line: tokenize_line(line, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -147,4 +138,4 @@ def main(batch_size: int, max_length: int, config: str, filename: str):
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
-    model.fit(dataset, epochs=2, steps_per_epoch=4)
+    model.fit(dataset, epochs=epochs, steps_per_epoch=steps_per_epoch)

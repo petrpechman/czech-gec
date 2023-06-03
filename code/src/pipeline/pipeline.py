@@ -81,7 +81,7 @@ def main(config_filename: str):
     num_div = strategy.num_replicas_in_sync
     print('Number of devices: %d' % num_div)
 
-    bucket_batch_sizes = BUCKET_BATCH_SIZES_PER_GPU * num_div 
+    bucket_batch_sizes = [bucket_batch_size * num_div for bucket_batch_size in BUCKET_BATCH_SIZES_PER_GPU]
 
     # %%
     # loading of dataset:
@@ -130,7 +130,7 @@ def main(config_filename: str):
     # %%
     with strategy.scope():
         if OPTIMIZER_NAME == 'Adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
         elif OPTIMIZER_NAME == 'AdamW':
             optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=OPTIMIZER_PARAMS['lr'])
         elif OPTIMIZER_NAME == 'Adafactor':

@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 16,
+    "num_parallel": 20,
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
@@ -11,7 +11,7 @@
     "model": "google/mt5-small",
     "tokenizer": "google/mt5-small",
     "from_config": true,
-    "steps_per_epoch": 8000,
+    "steps_per_epoch": 64000,
     "epochs": 100000,
     "use_f16": false,
     

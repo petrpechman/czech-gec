@@ -17,7 +17,7 @@ aspell_speller = aspell.Speller('lang', "cs")
 token_replace_prob, token_insert_prob, token_delete_prob, token_swap_prob, recase_prob = token_err_distribution
 char_replace_prob, char_insert_prob, char_delete_prob, char_swap_prob, change_diacritics_prob = char_err_distribution
 
-seed = 42
+seed = 1412
 
 np.random.seed(seed)
 times = [0, 0, 0, 0, 0, 0, 0]
@@ -33,17 +33,27 @@ for i in range(1000):
 print(times)
 
 np.random.seed(seed)
+result1 = introduce_token_level_errors_on_sentence_timer("Moje krásná věta .".split(' '), token_replace_prob, token_insert_prob, token_delete_prob,
+                                                        token_swap_prob, recase_prob, token_err_prob, token_std_dev,
+                                                        tokens, aspell_speller)
 time1 = timeit(lambda: introduce_token_level_errors_on_sentence_timer("Moje krásná věta .".split(' '), token_replace_prob, token_insert_prob, token_delete_prob,
                                                         token_swap_prob, recase_prob, token_err_prob, token_std_dev,
                                                         tokens, aspell_speller), number=1000)
+
+
 np.random.seed(seed)
 time2 = timeit(lambda: introduce_char_level_errors_on_sentence("Moje krásná věta .", char_replace_prob, char_insert_prob, char_delete_prob, char_swap_prob,
                                                        change_diacritics_prob, char_err_prob, char_std_dev,
                                                        characters), number=1000)                                                    
 np.random.seed(seed)
+result3 = introduce_token_level_errors_on_sentence("Moje krásná věta .".split(' '), token_replace_prob, token_insert_prob, token_delete_prob,
+                                                        token_swap_prob, recase_prob, token_err_prob, token_std_dev,
+                                                        tokens, aspell_speller)
 time3 = timeit(lambda: introduce_token_level_errors_on_sentence("Moje krásná věta .".split(' '), token_replace_prob, token_insert_prob, token_delete_prob,
                                                         token_swap_prob, recase_prob, token_err_prob, token_std_dev,
                                                         tokens, aspell_speller), number=1000)
+print(result1)
+print(result3)
 
 
 print(time1)

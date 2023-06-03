@@ -15,6 +15,8 @@ czech_diacritizables_chars = [char for sublist in czech_diacritics_tuples for ch
                                                                                                   czech_diacritics_tuples for char in
                                                                                                   sublist]
 
+import random
+
 
 def get_char_vocabulary(lang):
     if lang == 'cs':
@@ -61,47 +63,80 @@ def introduce_token_level_errors_on_sentence(tokens, replace_prob, insert_prob, 
 
     if num_errors == 0:
         return ' '.join(tokens)
-    token_ids_to_modify = np.random.choice(len(tokens), num_errors, replace=False)
 
-    new_sentence = ''
+    token_ids_to_modify = []
+    for n in range(num_errors):
+        token_id = np.random.randint(len(tokens))
+        while token_id in token_ids_to_modify: 
+            token_id = np.random.randint(len(tokens))
+        token_ids_to_modify.append(token_id)
+    # token_ids_to_modify = np.random.choice(len(tokens), num_errors, replace=False)
+
+    # new_sentence = ''
+    new_sentence_tokens = []
     for token_id in range(len(tokens)):
         if token_id not in token_ids_to_modify:
-            if new_sentence:
-                new_sentence += ' '
-            new_sentence += tokens[token_id]
+            # if new_sentence:
+            #     new_sentence += ' '
+            # new_sentence += tokens[token_id]
+            new_sentence_tokens.append(tokens[token_id])
             continue
 
         current_token = tokens[token_id]
-        operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=[replace_prob, insert_prob, delete_prob,
-                                                                                           swap_prob, recase_prob])
-        new_token = ''
-        if operation == 'replace':
+
+        prob = np.random.random(1)
+        replace_interval = replace_prob
+        insert_interval = replace_interval + insert_prob
+        delete_interval = insert_interval + delete_prob
+        recase_interval = delete_interval + recase_prob
+        swap_interval = recase_interval + swap_prob
+        # operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=[replace_prob, insert_prob, delete_prob,
+        #                                                                                    swap_prob, recase_prob])
+        
+        # new_token = ''
+        if prob <= replace_interval:
+            # replace:
             if not current_token.isalpha():
-                new_token = current_token
+                # new_token = current_token
+                new_sentence_tokens.append(current_token)
             else:
                 proposals = aspell_speller.suggest(current_token)[:10]
-                if len(proposals) > 0:
-                    new_token = np.random.choice(proposals)  # [np.random.randint(0, len(proposals))]
+                if len(proposals) == 1:
+                    new_sentence_tokens.append(proposals[0])
+                elif len(proposals) > 1:
+                    choice_index = np.random.randint(len(proposals) - 1)
+                    # new_token = proposals[choice_index]
+                    new_sentence_tokens.append(proposals[choice_index])
                 else:
-                    new_token = current_token
-        elif operation == 'insert':
+                    # new_token = current_token
+                    new_sentence_tokens.append(current_token)
+        elif replace_interval < prob <= insert_interval:
+            # insert:
+            new_sentence_tokens.append(current_token)
             choice_index = np.random.randint(len(word_vocabulary) - 1)
-            new_token = current_token + " " + word_vocabulary[choice_index]
+            new_sentence_tokens.append(word_vocabulary[choice_index])
+            # new_token = current_token + " " + word_vocabulary[choice_index]
             # new_token = current_token + ' ' + np.random.choice(word_vocabulary)
-        elif operation == 'delete':
+        elif insert_interval < prob <= delete_interval:
+            # delete:
             if not current_token.isalpha() or current_token in allowed_source_delete_tokens:
-                new_token = current_token
-            else:
-                new_token = ''
-        elif operation == 'recase':
+                # new_token = current_token
+                new_sentence_tokens.append(current_token)
+            # else:
+            #     new_token = ''
+        elif delete_interval < prob <= recase_interval:
+            # recase:
             if not current_token.isalpha():
-                new_token = current_token
+                # new_token = current_token
+                new_sentence_tokens.append(current_token)
             elif current_token.islower():
-                new_token = current_token[0].upper() + current_token[1:]
+                # new_token = current_token[0].upper() + current_token[1:]
+                new_sentence_tokens.append(current_token[0].upper() + current_token[1:])
             else:
                 # either whole word is upper-case or mixed-case
                 if np.random.random() < 0.5:
-                    new_token = current_token.lower()
+                    # new_token = current_token.lower()
+                    new_sentence_tokens.append(current_token.lower())
                 else:
                     num_recase = min(len(current_token), max(1, int(np.round(np.random.normal(0.3, 0.4) * len(current_token)))))
                     char_ids_to_recase = np.random.choice(len(current_token), num_recase, replace=False)
@@ -114,18 +149,23 @@ def introduce_token_level_errors_on_sentence(tokens, replace_prob, insert_prob, 
                                 new_token += char.upper()
                         else:
                             new_token += char
+                    new_sentence_tokens.append(new_token)
 
-        elif operation == 'swap':
+        elif recase_interval < prob <= swap_interval:
+            # swap:
             if token_id == len(tokens) - 1:
                 continue
 
-            new_token = tokens[token_id + 1]
+            new_sentence_tokens.append(tokens[token_id + 1])
+            # new_token = tokens[token_id + 1]
             tokens[token_id + 1] = tokens[token_id]
 
-        if new_sentence and new_token:
-            new_sentence += ' '
-        new_sentence = new_sentence + new_token
+        # if new_sentence and new_token:
+        #     new_sentence += ' '
+        # new_sentence = new_sentence + new_token
+        # new_sentence_tokens.append(new_token)
 
+    new_sentence = " ".join(new_sentence_tokens)
     return new_sentence
 
 
@@ -149,77 +189,113 @@ def introduce_token_level_errors_on_sentence_timer(tokens, replace_prob, insert_
     if num_errors == 0:
         return ' '.join(tokens), [0, 0, 0, 0, 0, 0, 0]
     
-    token_ids_to_modify = np.random.choice(len(tokens), num_errors, replace=False)
+    token_ids_to_modify = []
+    for n in range(num_errors):
+        token_id = np.random.randint(len(tokens))
+        while token_id in token_ids_to_modify: 
+            token_id = np.random.randint(len(tokens))
+        token_ids_to_modify.append(token_id)
+
+    # token_ids_to_modify = np.random.choice(len(tokens), num_errors, replace=False)
 
     new_sentence_tokens = []
     for token_id in range(len(tokens)):
         start1 = time.time()
         if token_id not in token_ids_to_modify:
             new_sentence_tokens.append(tokens[token_id])
+            end1 = time.time()
+            time_part1 += (end1 - start1)
             continue
 
         current_token = tokens[token_id]
-        operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=[replace_prob, insert_prob, delete_prob, swap_prob, recase_prob])
-        new_token = ''
+        
+        prob = np.random.random(1)
+        replace_interval = replace_prob
+        insert_interval = replace_interval + insert_prob
+        delete_interval = insert_interval + delete_prob
+        recase_interval = delete_interval + recase_prob
+        swap_interval = recase_interval + swap_prob
+
+        # operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=[replace_prob, insert_prob, delete_prob, swap_prob, recase_prob])
+        # new_token = ''
         end1 = time.time()
         time_part1 += (end1 - start1)
 
-        if operation == 'replace':
+        if prob <= replace_interval:
             start2 = time.time()
-            if not current_token.isalpha() or current_token not in word_vocabulary:
-                new_token = current_token
+            # replace:
+            if not current_token.isalpha():
+                # new_token = current_token
+                new_sentence_tokens.append(current_token)
             else:
                 proposals = aspell_speller.suggest(current_token)[:10]
-                if len(proposals) > 0:
-                    new_token = np.random.choice(proposals)
-                else:
-                    new_token = current_token
+                if len(proposals) == 1:
+                    new_sentence_tokens.append(proposals[0])
+                elif len(proposals) > 1:
+                    choice_index = np.random.randint(len(proposals) - 1)
+                    # new_token = proposals[choice_index]
+                    new_sentence_tokens.append(proposals[choice_index])
             end2 = time.time()
             time_part2 += (end2 - start2)
-        elif operation == 'insert':
+        elif replace_interval < prob <= insert_interval:
             start3 = time.time()
+            # insert:
             new_sentence_tokens.append(current_token)
-            new_sentence_tokens.append(" ")
             choice_index = np.random.randint(len(word_vocabulary) - 1)
             new_sentence_tokens.append(word_vocabulary[choice_index])
-            # new_sentence_tokens.append(np.random.choice(word_vocabulary))
             end3 = time.time()
             time_part3 += (end3 - start3)
             continue
-        elif operation == 'delete':
+        elif insert_interval < prob <= delete_interval:
             start4 = time.time()
+            # delete:
             if not current_token.isalpha() or current_token in allowed_source_delete_tokens:
-                new_token = current_token
-            else:
-                new_token = ''
+                # new_token = current_token
+                new_sentence_tokens.append(current_token)
             end4 = time.time()
             time_part4 += (end4 - start4)
-        elif operation == 'recase':
+        elif delete_interval < prob <= recase_interval:
             start5 = time.time()
+            # recase:
             if not current_token.isalpha():
-                new_token = current_token
+                # new_token = current_token
+                new_sentence_tokens.append(current_token)
             elif current_token.islower():
-                new_token = current_token[0].upper() + current_token[1:]
+                # new_token = current_token[0].upper() + current_token[1:]
+                new_sentence_tokens.append(current_token[0].upper() + current_token[1:])
             else:
+                # either whole word is upper-case or mixed-case
                 if np.random.random() < 0.5:
-                    new_token = current_token.lower()
+                    # new_token = current_token.lower()
+                    new_sentence_tokens.append(current_token.lower())
                 else:
                     num_recase = min(len(current_token), max(1, int(np.round(np.random.normal(0.3, 0.4) * len(current_token)))))
                     char_ids_to_recase = np.random.choice(len(current_token), num_recase, replace=False)
-                    new_token = ''.join([char.lower() if i in char_ids_to_recase and char.isupper() else char.upper() if i in char_ids_to_recase else char for i, char in enumerate(current_token)])
+                    new_token = ''
+                    for char_i, char in enumerate(current_token):
+                        if char_i in char_ids_to_recase:
+                            if char.isupper():
+                                new_token += char.lower()
+                            else:
+                                new_token += char.upper()
+                        else:
+                            new_token += char
+                    new_sentence_tokens.append(new_token)
             end5 = time.time()
             time_part5 += (end5 - start5)
-        elif operation == 'swap':
+        elif recase_interval < prob <= swap_interval:
             start6 = time.time()
+            # swap:
             if token_id == len(tokens) - 1:
                 continue
 
-            new_token = tokens[token_id + 1]
+            new_sentence_tokens.append(tokens[token_id + 1])
+            # new_token = tokens[token_id + 1]
             tokens[token_id + 1] = tokens[token_id]
             end6 = time.time()
             time_part6 += (end6 - start6)
 
-        new_sentence_tokens.append(new_token)
+        # new_sentence_tokens.append(new_token)
 
     result = ' '.join(new_sentence_tokens)
     end_t = time.time()

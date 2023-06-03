@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # Example:
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("./transformer/model") 
+    tokenizer = AutoTokenizer.from_pretrained("../../models/transformer") 
     decoded = tokenizer.decode(tokenizer.encode("Monkey D. Luffy"), skip_special_tokens=True)
     print(decoded)
 

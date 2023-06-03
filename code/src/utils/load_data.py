@@ -11,6 +11,8 @@ from tokenizers import Tokenizer
 from multiprocessing import Pool
 from multiprocessing import Manager
 
+# import dataset_utils 
+
 class GenereteErrorLine():
 
     def __init__(self, tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob, token_std_dev=0.2, char_std_dev=0.01):
@@ -56,7 +58,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
             line = f.readline()
             error_line = gel(line, aspell_speller)
             tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="np")
-
+            
             input_ids = tokenized['input_ids'][0]
             attention_mask = tokenized['attention_mask'][0]
             tokenized_target_line = tokenized['labels'][0]
@@ -76,7 +78,68 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                 f.seek(0) 
                 counter = 0
 
+def data_loader_timer(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length):
+    times_readline = []
+    times_gel = []
+    times_tok = []
 
+    counter = 0
+    aspell_speller = aspell.Speller('lang', gel.lang)
+    with open(filename, 'r') as f:
+        # find start position
+        while counter != start_position:
+            f.readline()
+            counter += 1
+
+        # read until end position
+        while counter != end_position:
+            if (len(times_readline) % 256 == 0) and (len(times_readline) > 0):
+                print("Readline:")
+                print("sum: ", sum(times_readline))
+                print("avg: ", sum(times_readline) / len(times_readline))
+                print()
+                print("Gel:")
+                print("sum: ", sum(times_gel))
+                print("avg: ", sum(times_gel) / len(times_gel))
+                print()
+                print("Tokenizer:")
+                print("sum: ", sum(times_tok))
+                print("avg: ", sum(times_tok) / len(times_tok))
+
+
+            start = time.time()
+            line = f.readline()
+            end = time.time()
+            times_readline.append(end - start)
+
+            start1 = time.time()
+            error_line = gel(line, aspell_speller)
+            end1 = time.time()
+            times_gel.append(end1 - start1)
+
+            start2 = time.time()
+            tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="np")
+            end2 = time.time()
+            times_tok.append(end2 - start2)
+            
+            input_ids = tokenized['input_ids'][0]
+            attention_mask = tokenized['attention_mask'][0]
+            tokenized_target_line = tokenized['labels'][0]
+
+            dato = {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "labels": tokenized_target_line[1:],
+                "decoder_input_ids": tokenized_target_line[:-1]
+            }
+            
+            queue.put(dato)
+
+            counter += 1
+
+            if not line: # EOF
+                f.seek(0) 
+                counter = 0
 
 def process_file_in_chunks(
         queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, 
@@ -126,36 +189,22 @@ def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: Gener
 # Main is just for try:
 
 def main():
-    multiprocessing.set_start_method('spawn')   
-
-    PATH = "/home/petr/Plocha/DP/czech-gec/code/data/geccc/train/sentence.input"
-    NUM_PARALLEL = 3
+    PATH = "../../data/geccc/train/sentence.input"
+    NUM_PARALLEL = 12
     MAX_LENGTH = 128    
 
 
     # tokenizer = AutoTokenizer.from_pretrained("google/mt5-small")
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base") 
+    tokenizer = AutoTokenizer.from_pretrained("../../models/transformer/") 
 
     lang = "cs"
-    token_file = "/home/petr/Plocha/DP/czech-gec/code/data/vocabluraries/vocabulary_cs.tsv"
+    token_file = "../../data/vocabluraries/vocabulary_cs.tsv"
     tokens = introduce_errors.get_token_vocabulary(token_file)
     characters = introduce_errors.get_char_vocabulary(lang)
     token_err_distribution = [0.7, 0.1, 0.1, 0.1, 0]
     char_err_distribution = [0.25, 0.25, 0.25, 0.25, 0]
     token_err_prob = 0.15
     char_err_prob = 0.02    
-
-    def split_features_and_labels(input_batch):
-        features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-        labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
-        if len(features) == 1:
-            features = list(features.values())[0]
-        if len(labels) == 1:
-            labels = list(labels.values())[0]
-        if isinstance(labels, dict) and len(labels) == 0:
-            return features
-        else:
-            return features, labels
 
     random.seed(42) 
 
@@ -182,13 +231,19 @@ def main():
                 "decoder_input_ids": (None, )
             })
 
-    dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
-            bucket_boundaries=[16, 32, 48, 64, 80, 96, 112],
-            bucket_batch_sizes=[1, 1, 1, 1 , 1 , 1 , 1, 1]
+            bucket_boundaries=[32, 64, 96],
+            bucket_batch_sizes=[120, 96, 64, 48]
     )
-    dataset = dataset.prefetch(2)
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-    for d in dataset:
-        print(d)    
+    print("START")
+
+    for i, d in enumerate(dataset):
+        if i % 256 == 0:
+            print(i)
+
+if __name__ == "__main__":
+    main()

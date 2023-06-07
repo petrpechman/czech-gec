@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 28,
+    "num_parallel": 18,
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
@@ -16,10 +16,10 @@
     "use_f16": true,
     
     "optimizer":{
-        "name": "Adam",
+        "name": "Adafactor",
         "params":{
             "lr": 0.001,
-            "clipvalue": 0.3,
+            "clipvalue": 0.5,
             "global_clipnorm": 1.0
         }
     },

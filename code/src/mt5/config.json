@@ -46,5 +46,7 @@
     "beta": 0.5,
     "ignore_whitespace_casing": false,
     "verbose": false,
-    "very_verbose": false
+    "very_verbose": false,
+
+    "timeout":  3600
 }

@@ -48,8 +48,7 @@ def main(config_filename: str):
     VERBOSE = config['verbose']
     VERY_VERBOSE = config['very_verbose']
 
-    TIMEOUT = 2
-    SIZE = 10
+    TIMEOUT = config['timeout']
     
     tf.random.set_seed(SEED)
     
@@ -97,6 +96,28 @@ def main(config_filename: str):
 
     udpipe_tokenizer = UDPipeTokenizer("cs")
 
+    @timeout(TIMEOUT)
+    def compute_metrics(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits):
+        total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
+        size = BATCH_SIZE
+        for i in range(0, len(tokenized_predicted_sentences), size):
+            stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
+                tokenized_predicted_sentences[i:i+size], 
+                dev_source_sentences[i:i+size], 
+                dev_gold_edits[i:i+size],
+                MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+            total_stat_correct += stat_correct
+            total_stat_proposed += stat_proposed
+            total_stat_gold += stat_gold
+            p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
+            r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
+            f1 = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+            print(f"Step {i+1}")
+            print("Precision:\t", p)
+            print("Recall:\t", r)
+            print("F1:\t", f1)
+        return total_stat_correct, total_stat_proposed, total_stat_gold
+
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
@@ -132,38 +153,7 @@ def main(config_filename: str):
                     print("End of tokenization...")
 
                     print("Compute metrics...")
-                    total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
-
-                    @timeout(TIMEOUT)
-                    def compute_m2_part(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits):
-                        stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
-                            tokenized_predicted_sentences,
-                            dev_source_sentences,
-                            dev_gold_edits,
-                            MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
-                        return stat_correct, stat_proposed, stat_gold
-
-                    size = SIZE
-                    for i in range(0, len(tokenized_predicted_sentences), size):
-                        try:
-                            stat_correct, stat_proposed, stat_gold = compute_m2_part(tokenized_predicted_sentences[i:i+size], 
-                                dev_source_sentences[i:i+size], 
-                                dev_gold_edits[i:i+size])
-
-                            total_stat_correct += stat_correct
-                            total_stat_proposed += stat_proposed
-                            total_stat_gold += stat_gold
-                            
-                            p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
-                            r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
-                            f1 = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                            print(f"Step {i+1}")
-                            print("Precision:\t", p)
-                            print("Recall:\t", r)
-                            print("F1:\t", f1)
-                        except:
-                            print(f"Skip {i}...")
-
+                    total_stat_correct, total_stat_proposed, total_stat_gold = compute_metrics(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits)
                     print("End of computing...")
 
                     print("Write into files...")

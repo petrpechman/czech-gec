@@ -86,7 +86,7 @@ def main(config_filename: str):
     # %%
     # loading of dataset:
     manager = Manager()
-    queue = manager.Queue(2 * NUM_PARALLEL)
+    queue = manager.Queue(4 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(
             tokens, characters, LANG, 
             TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
@@ -130,11 +130,17 @@ def main(config_filename: str):
     # %%
     with strategy.scope():
         if OPTIMIZER_NAME == 'Adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
+            if 'clipvalue' in OPTIMIZER_PARAMS:
+                print("Use clipping...")
+                optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
+            else:
+                optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
         elif OPTIMIZER_NAME == 'AdamW':
             optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=OPTIMIZER_PARAMS['lr'])
         elif OPTIMIZER_NAME == 'Adafactor':
-            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'])
+            if 'clipvalue' in OPTIMIZER_PARAMS:
+                print("Use clipping...")
+                optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
         elif OPTIMIZER_NAME == 'AdaptiveAdam':
             class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
                 def __init__(self, warmup_steps, d_model):

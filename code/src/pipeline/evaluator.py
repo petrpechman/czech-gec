@@ -166,7 +166,7 @@ def main(config_filename: str):
                         tf.summary.scalar('epoch_recall', r, step)
                         tf.summary.scalar('epoch_f1', f1, step)
 
-                        text = "\n".join(predicted_sentences[0:20])
+                        text = "  \n".join(tokenized_predicted_sentences[0:40])
                         print(text)
                         tf.summary.text("predictions", text, step)
 

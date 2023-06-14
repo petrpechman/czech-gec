@@ -2,11 +2,11 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 20,
+    "num_parallel": 2,
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [2, 2, 2, 2],
+    "bucket_batch_sizes_per_gpu": [1, 0, 0, 0],
 
     "model": "google/mt5-base",
     "tokenizer": "google/mt5-base",

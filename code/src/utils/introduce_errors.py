@@ -55,6 +55,77 @@ def get_token_vocabulary(tsv_token_file):
 
     return tokens
 
+def introduce_token_level_errors_on_sentence_old(tokens, replace_prob, insert_prob, delete_prob, swap_prob, recase_prob, err_prob, std_dev,
+                                             word_vocabulary, aspell_speller):
+    num_errors = int(np.round(np.random.normal(err_prob, std_dev) * len(tokens)))
+    num_errors = min(max(0, num_errors), len(tokens))  # num_errors \in [0; len(tokens)]
+
+    if num_errors == 0:
+        return ' '.join(tokens)
+    token_ids_to_modify = np.random.choice(len(tokens), num_errors, replace=False)
+
+    new_sentence = ''
+    for token_id in range(len(tokens)):
+        if token_id not in token_ids_to_modify:
+            if new_sentence:
+                new_sentence += ' '
+            new_sentence += tokens[token_id]
+            continue
+
+        current_token = tokens[token_id]
+        operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=[replace_prob, insert_prob, delete_prob,
+                                                                                           swap_prob, recase_prob])
+        new_token = ''
+        if operation == 'replace':
+            if not current_token.isalpha():
+                new_token = current_token
+            else:
+                proposals = aspell_speller.suggest(current_token)[:10]
+                if len(proposals) > 0:
+                    new_token = np.random.choice(proposals)  # [np.random.randint(0, len(proposals))]
+                else:
+                    new_token = current_token
+        elif operation == 'insert':
+            new_token = current_token + ' ' + np.random.choice(word_vocabulary)
+        elif operation == 'delete':
+            if not current_token.isalpha() or current_token in allowed_source_delete_tokens:
+                new_token = current_token
+            else:
+                new_token = ''
+        elif operation == 'recase':
+            if not current_token.isalpha():
+                new_token = current_token
+            elif current_token.islower():
+                new_token = current_token[0].upper() + current_token[1:]
+            else:
+                # either whole word is upper-case or mixed-case
+                if np.random.random() < 0.5:
+                    new_token = current_token.lower()
+                else:
+                    num_recase = min(len(current_token), max(1, int(np.round(np.random.normal(0.3, 0.4) * len(current_token)))))
+                    char_ids_to_recase = np.random.choice(len(current_token), num_recase, replace=False)
+                    new_token = ''
+                    for char_i, char in enumerate(current_token):
+                        if char_i in char_ids_to_recase:
+                            if char.isupper():
+                                new_token += char.lower()
+                            else:
+                                new_token += char.upper()
+                        else:
+                            new_token += char
+
+        elif operation == 'swap':
+            if token_id == len(tokens) - 1:
+                continue
+
+            new_token = tokens[token_id + 1]
+            tokens[token_id + 1] = tokens[token_id]
+
+        if new_sentence and new_token:
+            new_sentence += ' '
+        new_sentence = new_sentence + new_token
+
+    return new_sentence
 
 def introduce_token_level_errors_on_sentence(tokens, replace_prob, insert_prob, delete_prob, swap_prob, recase_prob, err_prob, std_dev,
                                              word_vocabulary, aspell_speller):

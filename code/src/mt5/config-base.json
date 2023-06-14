@@ -1,0 +1,52 @@
+{
+    "seed": 42,
+
+    "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
+    "num_parallel": 20,
+    "max_length": 128,
+    "shuffle_buffer": 1000,
+    "bucket_boundaries": [32, 64, 96],
+    "bucket_batch_sizes_per_gpu": [2, 2, 2, 2],
+
+    "model": "google/mt5-base",
+    "tokenizer": "google/mt5-base",
+    "from_config": true,
+    "steps_per_epoch": 64000,
+    "epochs": 100000,
+    "use_f16": false,
+    
+    "optimizer":{
+        "name": "Adafactor",
+        "params":{
+            "lr": 0.0001
+        }
+    },
+
+    "loss": "SCC",
+
+    "lang": "cs",
+    "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",
+    "token_err_distribution": [0.7, 0.1, 0.1, 0.1, 0],
+    "char_err_distribution": [0.25, 0.25, 0.25, 0.25, 0],
+    "token_err_prob": 0.15,   
+    "char_err_prob": 0.02,
+
+    
+    "log_file": "./tmp/logs",
+    "profile_batch": [2000, 2500],
+    "model_checkpoint_path": "/home/pechmanp/DP/czech-gec/code/src/mt5/tmp/checkpoint/",
+    "backup_dir": "./tmp/backup",
+
+
+
+    "m2_data": "/home/pechmanp/DP/czech-gec/code/data/geccc/dev/sorted_sentence.m2",
+    "batch_size": 32,    
+
+    "max_unchanged_words": 2,
+    "beta": 0.5,
+    "ignore_whitespace_casing": false,
+    "verbose": false,
+    "very_verbose": false,
+
+    "timeout":  3600
+}

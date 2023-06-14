@@ -141,6 +141,8 @@ def main(config_filename: str):
             if 'clipvalue' in OPTIMIZER_PARAMS:
                 print("Use clipping...")
                 optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
+            else:
+                optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
         elif OPTIMIZER_NAME == 'AdaptiveAdam':
             class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
                 def __init__(self, warmup_steps, d_model):

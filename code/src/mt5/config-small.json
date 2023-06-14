@@ -16,7 +16,7 @@
     "use_f16": false,
     
     "optimizer":{
-        "name": "Adam",
+        "name": "Adafactor",
         "params":{
             "lr": 0.0001
         }

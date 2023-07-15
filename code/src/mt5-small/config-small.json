@@ -39,7 +39,7 @@
 
 
 
-    "m2_data": "/home/pechmanp/DP/czech-gec/code/data/geccc/dev/sorted_sentence.m2",
+    "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
     "batch_size": 32,    
 
     "max_unchanged_words": 2,

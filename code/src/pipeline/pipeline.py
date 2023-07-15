@@ -142,7 +142,7 @@ def main(config_filename: str):
                 print("Use clipping...")
                 optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
             else:
-                optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
+                optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'])
         elif OPTIMIZER_NAME == 'AdaptiveAdam':
             class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
                 def __init__(self, warmup_steps, d_model):
@@ -160,9 +160,22 @@ def main(config_filename: str):
             epsilon = OPTIMIZER_PARAMS['epsilon']
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=lr,
+                clipvalue=OPTIMIZER_PARAMS['clipvalue'], 
+                global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'],
                 beta_1=beta1,
                 beta_2=beta2,
                 epsilon=epsilon)
+        elif OPTIMIZER_NAME == 'CosineDecay':
+            initial_learning_rate = OPTIMIZER_PARAMS['initial_learning_rate']
+            decay_steps = OPTIMIZER_PARAMS['decay_steps']
+
+            cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(
+                initial_learning_rate = initial_learning_rate,
+                decay_steps = decay_steps
+            )
+
+            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=cosine_decay_scheduler)
+
 
     with strategy.scope(): 
         loss = None   
@@ -176,6 +189,7 @@ def main(config_filename: str):
             config = AutoConfig.from_pretrained(MODEL)
             model = TFAutoModelForSeq2SeqLM.from_config(config)
         else:
+            print("Use pretrained model...")
             model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
 
         if loss:
@@ -204,10 +218,16 @@ def main(config_filename: str):
         profile_batch=PROFILE_BATCH)
 
     # %%
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+        log_dir=LOG_FILE, 
+        histogram_freq=1)
+
+    # %%
     callbacks = [
         model_checkpoint,
         backup,
-        profiler
+        profiler,
+        tensorboard_callback
     ]
 
     # %% [markdown]

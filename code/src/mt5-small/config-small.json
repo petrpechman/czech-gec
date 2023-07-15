@@ -2,25 +2,23 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 18,
+    "num_parallel": 14,
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [120, 96, 64, 48],
+    "bucket_batch_sizes_per_gpu": [284, 112, 72, 52],
 
-    "model": "../../models/transformer/",
-    "tokenizer": "../../models/transformer/",
+    "model": "google/mt5-small",
+    "tokenizer": "google/mt5-small",
     "from_config": true,
-    "steps_per_epoch": 32000,
+    "steps_per_epoch": 64000,
     "epochs": 100000,
-    "use_f16": true,
+    "use_f16": false,
     
     "optimizer":{
         "name": "Adafactor",
         "params":{
-            "lr": 0.001,
-            "clipvalue": 0.5,
-            "global_clipnorm": 1.0
+            "lr": 0.001
         }
     },
 
@@ -36,14 +34,14 @@
     
     "log_file": "./tmp/logs",
     "profile_batch": [2000, 2500],
-    "model_checkpoint_path": "/home/pechmanp/DP/czech-gec/code/src/transformer/tmp/checkpoint/",
+    "model_checkpoint_path": "./tmp/checkpoint/",
     "backup_dir": "./tmp/backup",
 
 
 
-    "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
-    "batch_size": 32,
-    
+    "m2_data": "/home/pechmanp/DP/czech-gec/code/data/geccc/dev/sorted_sentence.m2",
+    "batch_size": 32,    
+
     "max_unchanged_words": 2,
     "beta": 0.5,
     "ignore_whitespace_casing": false,

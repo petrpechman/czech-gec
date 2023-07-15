@@ -10,3 +10,8 @@ def split_features_and_labels(input_batch):
         return features
     else:
         return features, labels
+
+def change_value(tensor, original_value, new_value):
+    condition = tf.not_equal(tensor, original_value)
+    changed_tensor = tf.where(condition, tensor, new_value)
+    return changed_tensor

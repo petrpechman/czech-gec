@@ -63,6 +63,9 @@ def main(config_filename: str):
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
     BACKUP_DIR =  config['backup_dir']
 
+    # padding
+    LABEL_PAD_VALUE = -100
+
 
     tf.random.set_seed(SEED)
 
@@ -113,6 +116,8 @@ def main(config_filename: str):
             bucket_boundaries=BUCKET_BOUNDARIES,
             bucket_batch_sizes=bucket_batch_sizes
     )
+    if LABEL_PAD_VALUE:
+        dataset = dataset.map(lambda x, y: (x, dataset_utils.change_value(y, 0, LABEL_PAD_VALUE)))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     if USE_F16:

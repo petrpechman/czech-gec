@@ -11,14 +11,25 @@ class UDPipeTokenizer:
         "ru": "../utils/udpipe_tokenizer/russian-syntagrus-ud-2.5-191206.udpipe",
     }
 
+    MODELS_NO_PATHS = {
+        "cs": "czech-pdt-ud-2.5-191206.udpipe",
+        "cs-tokenized": "cs-tokenized.model",
+        "de": "german-gsd-ud-2.5-191206.udpipe",
+        "en": "english-ewt-ud-2.5-191206.udpipe",
+        "ru": "russian-syntagrus-ud-2.5-191206.udpipe",
+    }
+
     class Token:
         def __init__(self, string, start, end):
             self.string = string
             self.start = start
             self.end = end
 
-    def __init__(self, lang):
-        self._model = ufal.udpipe.Model.load(self.MODELS[lang])
+    def __init__(self, lang, nopaths: bool = None):
+        if nopaths:
+            self._model = ufal.udpipe.Model.load(self.MODELS_NO_PATHS[lang])
+        else:
+            self._model = ufal.udpipe.Model.load(self.MODELS[lang])
 
     def tokenize(self, text):
         """ Return tokenized text as a list of sentences, each a list of tokens. """
@@ -59,9 +70,10 @@ if __name__ == "__main__":
     import sys
     parser = argparse.ArgumentParser()
     parser.add_argument("lang", type=str, help="Language to use")
+    parser.add_argument("-n", "--nopaths", default=False, action='store_true')
     args = parser.parse_args()
 
-    tokenizer = UDPipeTokenizer(args.lang)
+    tokenizer = UDPipeTokenizer(args.lang, args.nopaths)
 
     for line in sys.stdin:
         for sentence in tokenizer.tokenize(line):

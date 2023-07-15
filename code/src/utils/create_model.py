@@ -31,4 +31,4 @@ config = BartConfig(
             )
 
 model = TFAutoModelForSeq2SeqLM.from_config(config)
-model.save_pretrained("./transformer/model/")
+model.save_pretrained("../../models/transformer/")

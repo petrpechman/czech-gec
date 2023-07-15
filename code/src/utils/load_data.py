@@ -63,12 +63,19 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
             attention_mask = tokenized['attention_mask'][0]
             tokenized_target_line = tokenized['labels'][0]
 
+            # dato = {
+            #     "input_ids": input_ids,
+            #     "attention_mask": attention_mask,
+            #     "labels": tokenized_target_line[1:],
+            #     "decoder_input_ids": tokenized_target_line[:-1]
+            # }
+            
             dato = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
-                "labels": tokenized_target_line[1:],
-                "decoder_input_ids": tokenized_target_line[:-1]
+                "tokenized_target_line": tokenized_target_line,
             }
+            
             
             queue.put(dato)
 
@@ -126,11 +133,17 @@ def data_loader_timer(filename, queue, start_position, end_position, gel: Genere
             attention_mask = tokenized['attention_mask'][0]
             tokenized_target_line = tokenized['labels'][0]
 
+            # dato = {
+            #     "input_ids": input_ids,
+            #     "attention_mask": attention_mask,
+            #     "labels": tokenized_target_line[1:],
+            #     "decoder_input_ids": tokenized_target_line[:-1]
+            # }
+
             dato = {
                 "input_ids": input_ids,
                 "attention_mask": attention_mask,
-                "labels": tokenized_target_line[1:],
-                "decoder_input_ids": tokenized_target_line[:-1]
+                "tokenized_target_line": tokenized_target_line,
             }
             
             queue.put(dato)

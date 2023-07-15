@@ -6,7 +6,7 @@
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [284, 112, 72, 52],
+    "bucket_batch_sizes_per_gpu": [48, 16, 8, 4],
 
     "model": "google/mt5-small",
     "tokenizer": "google/mt5-small",
@@ -48,5 +48,5 @@
     "verbose": false,
     "very_verbose": false,
 
-    "timeout":  3600
+    "timeout": 3600
 }

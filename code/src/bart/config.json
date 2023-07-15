@@ -11,7 +11,7 @@
     "model": "../../models/transformer/",
     "tokenizer": "../../models/transformer/",
     "from_config": true,
-    "steps_per_epoch": 32000,
+    "steps_per_epoch": 16000,
     "epochs": 100000,
     "use_f16": false,
     
@@ -27,7 +27,7 @@
         }
     },
 
-    "loss": null,
+    "loss": "SCC",
 
     "lang": "cs",
     "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",

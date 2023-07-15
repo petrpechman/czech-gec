@@ -63,8 +63,14 @@ def main(config_filename: str):
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
     BACKUP_DIR =  config['backup_dir']
 
-    # padding
+    # input edits
     LABEL_PAD_VALUE = -100
+    MODEL_TYPE = ""
+    if MODEL in ["google/mt5-small", "google/mt5-base"]:
+        MODEL_TYPE = "T5"
+    else:
+        MODEL_TYPE = "Bart-mine"
+    print(MODEL_TYPE)
 
 
     tf.random.set_seed(SEED)
@@ -99,15 +105,41 @@ def main(config_filename: str):
         output_types={
                     "input_ids": tf.int32,
                     "attention_mask": tf.int32,
-                    "labels": tf.int32,
-                    "decoder_input_ids": tf.int32
+                    "tokenized_target_line": tf.int32,
                 },
         output_shapes={
                     "input_ids": (None, ),
                     "attention_mask": (None, ),
-                    "labels": (None, ),
-                    "decoder_input_ids": (None, )
+                    "tokenized_target_line": (None, ),
                 })
+
+    def fix_format(input_batch, model_type):
+        if model_type == "T5":
+            dato = {
+                    "input_ids": input_batch["input_ids"],
+                    "attention_mask": input_batch["attention_mask"],
+                    "labels": input_batch["tokenized_target_line"],
+                    "decoder_input_ids": tf.concat([[0], input_batch["tokenized_target_line"][:-1]], axis=0)
+                }
+        elif model_type == "Bart-mine":
+            dato = {
+                    "input_ids": input_batch["input_ids"],
+                    "attention_mask": input_batch["attention_mask"],
+                    "labels": input_batch["tokenized_target_line"][1:],
+                    "decoder_input_ids": input_batch["tokenized_target_line"][:-1]
+                }
+        elif model_type == "Bart":
+            # TODO
+            dato = {
+                    "input_ids": input_batch["input_ids"],
+                    "attention_mask": input_batch["attention_mask"],
+                    "labels": input_batch["tokenized_target_line"],
+                    "decoder_input_ids": tf.concat([[0], input_batch["tokenized_target_line"][:-1]], axis=0)
+                }
+
+        return dato
+
+    dataset = dataset.map(lambda input_batch: fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(SHUFFLE_BUFFER)

@@ -1,3 +1,4 @@
+import tensorflow as tf
 
 def split_features_and_labels(input_batch):
     features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}

@@ -1,16 +1,14 @@
-# %%
 import argparse
 import sys
 sys.path.append('..')
 
-# %%
 import os
+import json
 import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
 from transformers import AutoConfig
-import json
 
 from tensorflow.keras import mixed_precision
 
@@ -23,7 +21,6 @@ from components import losses
 from multiprocessing import Process, Manager
 
 def main(config_filename: str):
-    # %%
     with open(config_filename) as json_file:
         config = json.load(json_file)
 
@@ -66,24 +63,20 @@ def main(config_filename: str):
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
     BACKUP_DIR =  config['backup_dir']
 
-    # %%
+
     tf.random.set_seed(SEED)
 
-    # %%
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
 
-    # %%
     tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
     characters = introduce_errors.get_char_vocabulary(LANG)
 
-    # %%
     strategy = tf.distribute.MirroredStrategy()
     num_div = strategy.num_replicas_in_sync
     print('Number of devices: %d' % num_div)
 
     bucket_batch_sizes = [bucket_batch_size * num_div for bucket_batch_size in BUCKET_BATCH_SIZES_PER_GPU]
 
-    # %%
     # loading of dataset:
     manager = Manager()
     queue = manager.Queue(4 * NUM_PARALLEL)
@@ -122,12 +115,10 @@ def main(config_filename: str):
     )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-    # %%
     if USE_F16:
         policy = mixed_precision.Policy('mixed_float16')
         mixed_precision.set_global_policy(policy)
 
-    # %%
     with strategy.scope():
         if OPTIMIZER_NAME == 'Adam':
             if 'clipvalue' in OPTIMIZER_PARAMS:
@@ -183,7 +174,6 @@ def main(config_filename: str):
             loss = losses.MaskedSparseCategoricalCrossEntropy()
 
 
-    # %%
     with strategy.scope():
         if FROM_CONFIG:
             config = AutoConfig.from_pretrained(MODEL)
@@ -197,32 +187,25 @@ def main(config_filename: str):
         else:
             model.compile(optimizer=optimizer)
 
-    # %% [markdown]
-    # ---
-    # ### Callbacks
+    ### Callbacks
 
-    # %%
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
         save_weights_only=True,
         save_freq="epoch")
 
-    # %%
     backup = tf.keras.callbacks.BackupAndRestore(
         backup_dir=BACKUP_DIR
         )
 
-    # %%
     profiler = tf.keras.callbacks.TensorBoard(
         log_dir=LOG_FILE, 
         profile_batch=PROFILE_BATCH)
 
-    # %%
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=LOG_FILE, 
         histogram_freq=1)
 
-    # %%
     callbacks = [
         model_checkpoint,
         backup,
@@ -230,22 +213,13 @@ def main(config_filename: str):
         tensorboard_callback
     ]
 
-    # %% [markdown]
-    # ---
+    ### Train
 
-    # %% [markdown]
-    # ### Train
-
-    # %%
     if USE_F16:
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
-    # %%
     if STEPS_PER_EPOCH:
         model.fit(dataset, callbacks=callbacks, epochs=EPOCHS, steps_per_epoch=STEPS_PER_EPOCH)
     else:
         model.fit(dataset, callbacks=callbacks, epochs=EPOCHS)
-
-    # %% [markdown]
-    # ---

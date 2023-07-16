@@ -20,11 +20,11 @@
     "optimizer":{
         "name": "Adafactor",
         "params":{
-            "lr": 5e-7
+            "lr": 0.0005
         }
     },
 
-    "loss": null,
+    "loss": "SCC",
 
     "lang": "cs",
     "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",

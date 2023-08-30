@@ -16,7 +16,8 @@ from utils import load_data
 from utils import introduce_errors 
 from utils import dataset_utils
 
-from components import losses
+from components.losses import MaskedSparseCategoricalCrossEntropy
+from components.callbacks import MyBackupAndRestore
 
 from multiprocessing import Process, Manager
 
@@ -158,19 +159,11 @@ def main(config_filename: str):
 
     with strategy.scope():
         if OPTIMIZER_NAME == 'Adam':
-            if 'clipvalue' in OPTIMIZER_PARAMS:
-                print("Use clipping...")
-                optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
-            else:
-                optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.Adam(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'AdamW':
-            optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.experimental.AdamW(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'Adafactor':
-            if 'clipvalue' in OPTIMIZER_PARAMS:
-                print("Use clipping...")
-                optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'], clipvalue=OPTIMIZER_PARAMS['clipvalue'], global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'])
-            else:
-                optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.experimental.Adafactor(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'AdaptiveAdam':
             class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
                 def __init__(self, warmup_steps, d_model):
@@ -181,34 +174,19 @@ def main(config_filename: str):
                     step = tf.cast(step, tf.float32)
                     lr = (1.0/tf.math.sqrt(self.d_model)) * tf.math.minimum(1.0 / tf.math.sqrt(step), (1.0 / tf.math.sqrt(self.warmup_steps)) * ((1.0 * step) / self.warmup_steps))
                     return lr
-
-            lr = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
-            beta1 = OPTIMIZER_PARAMS['beta1']
-            beta2 = OPTIMIZER_PARAMS['beta2']
-            epsilon = OPTIMIZER_PARAMS['epsilon']
-            optimizer = tf.keras.optimizers.Adam(
-                learning_rate=lr,
-                clipvalue=OPTIMIZER_PARAMS['clipvalue'], 
-                global_clipnorm=OPTIMIZER_PARAMS['global_clipnorm'],
-                beta_1=beta1,
-                beta_2=beta2,
-                epsilon=epsilon)
+            learning_rate = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
+            del OPTIMIZER_PARAMS['warmup_steps']
+            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, **OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'CosineDecay':
-            initial_learning_rate = OPTIMIZER_PARAMS['initial_learning_rate']
-            decay_steps = OPTIMIZER_PARAMS['decay_steps']
-
-            cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(
-                initial_learning_rate = initial_learning_rate,
-                decay_steps = decay_steps
-            )
-
+            # OPTIMIZER_PARAMS['initial_learning_rate'], OPTIMIZER_PARAMS['decay_steps']
+            cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(**OPTIMIZER_PARAMS)
             optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=cosine_decay_scheduler)
 
 
     with strategy.scope(): 
         loss = None   
         if LOSS == "SCC":
-            loss = losses.MaskedSparseCategoricalCrossEntropy()
+            loss = MaskedSparseCategoricalCrossEntropy()
 
 
     with strategy.scope():
@@ -231,44 +209,11 @@ def main(config_filename: str):
         save_weights_only=True,
         save_freq="epoch")
 
-    # My Callback
-    class MyBackupAndRestore(tf.keras.callbacks.Callback):
-        def __init__(self, backup_dir, optimizer, model):
-            super().__init__()
-            self._ckpt_saved_epoch = tf.Variable(
-                initial_value=tf.constant(0, dtype=tf.int64), 
-                name="ckpt_saved_epoch"
-            )
-
-            self.checkpoint = tf.train.Checkpoint(
-                optimizer=optimizer, 
-                model=model,
-                ckpt_saved_epoch=self._ckpt_saved_epoch,
-            )
-            self.manager = tf.train.CheckpointManager(
-                self.checkpoint, 
-                backup_dir, 
-                max_to_keep=1)
-
-        def on_epoch_begin(self, epoch, logs=None):
-            self._ckpt_saved_epoch.assign(epoch + 1)
-            self._current_epoch = epoch
-
-        def on_epoch_end(self, epoch, logs=None):
-            self.manager.save()
-            # save_path = checkpoint.save(checkpoint_directory)
-
-
     mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
     status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
     print("STATUS:", status)
     initial_epoch = mybackup._ckpt_saved_epoch
     print("INITIAL EPOCH:", int(initial_epoch))
-    ####
-
-    # backup = tf.keras.callbacks.BackupAndRestore(
-    #     backup_dir=BACKUP_DIR
-    #     )
 
     profiler = tf.keras.callbacks.TensorBoard(
         log_dir=LOG_FILE, 
@@ -280,7 +225,6 @@ def main(config_filename: str):
 
     callbacks = [
         model_checkpoint,
-        # backup,
         mybackup,
         profiler,
         tensorboard_callback

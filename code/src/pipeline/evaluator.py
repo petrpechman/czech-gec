@@ -47,6 +47,8 @@ def main(config_filename: str):
     IGNORE_WHITESPACE_CASING = config['ignore_whitespace_casing']
     VERBOSE = config['verbose']
     VERY_VERBOSE = config['very_verbose']
+    
+    MAX_OUTPUT_LENGTH = config['max_output_length']
 
     TIMEOUT = config['timeout']
     
@@ -134,7 +136,7 @@ def main(config_filename: str):
 
                     for i, batch in enumerate(dataset):
                         print(f"Generate {i+1}. batch.") 
-                        preds = model.generate(batch['input_ids'])
+                        preds = model.generate(batch['input_ids'], max_length=MAX_OUTPUT_LENGTH)
                         batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
                         predicted_sentences = predicted_sentences + batch_sentences
                     

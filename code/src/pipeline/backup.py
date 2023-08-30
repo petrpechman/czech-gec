@@ -19,6 +19,7 @@ from utils import dataset_utils
 from components import losses
 
 from multiprocessing import Process, Manager
+from m2scorer.m2scorer import load_annotation
 
 def main(config_filename: str):
     with open(config_filename) as json_file:
@@ -45,6 +46,9 @@ def main(config_filename: str):
     # optimizer
     OPTIMIZER_NAME = config['optimizer']['name']
     OPTIMIZER_PARAMS = config['optimizer']['params']
+    
+    
+    M2_DATA = config['m2_data']
 
     # loss
     LOSS = config['loss']
@@ -142,7 +146,7 @@ def main(config_filename: str):
     dataset = dataset.map(lambda input_batch: fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.shuffle(SHUFFLE_BUFFER)
+    # dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
             bucket_boundaries=BUCKET_BOUNDARIES,
@@ -231,44 +235,9 @@ def main(config_filename: str):
         save_weights_only=True,
         save_freq="epoch")
 
-    # My Callback
-    class MyBackupAndRestore(tf.keras.callbacks.Callback):
-        def __init__(self, backup_dir, optimizer, model):
-            super().__init__()
-            self._ckpt_saved_epoch = tf.Variable(
-                initial_value=tf.constant(0, dtype=tf.int64), 
-                name="ckpt_saved_epoch"
-            )
-
-            self.checkpoint = tf.train.Checkpoint(
-                optimizer=optimizer, 
-                model=model,
-                ckpt_saved_epoch=self._ckpt_saved_epoch,
-            )
-            self.manager = tf.train.CheckpointManager(
-                self.checkpoint, 
-                backup_dir, 
-                max_to_keep=1)
-
-        def on_epoch_begin(self, epoch, logs=None):
-            self._ckpt_saved_epoch.assign(epoch + 1)
-            self._current_epoch = epoch
-
-        def on_epoch_end(self, epoch, logs=None):
-            self.manager.save()
-            # save_path = checkpoint.save(checkpoint_directory)
-
-
-    mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
-    status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
-    print("STATUS:", status)
-    initial_epoch = mybackup._ckpt_saved_epoch
-    print("INITIAL EPOCH:", int(initial_epoch))
-    ####
-
-    # backup = tf.keras.callbacks.BackupAndRestore(
-    #     backup_dir=BACKUP_DIR
-    #     )
+    backup = tf.keras.callbacks.BackupAndRestore(
+        backup_dir=BACKUP_DIR
+        )
 
     profiler = tf.keras.callbacks.TensorBoard(
         log_dir=LOG_FILE, 
@@ -280,8 +249,7 @@ def main(config_filename: str):
 
     callbacks = [
         model_checkpoint,
-        # backup,
-        mybackup,
+        backup,
         profiler,
         tensorboard_callback
     ]
@@ -292,16 +260,43 @@ def main(config_filename: str):
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
+    #CHANGED:
+
     if STEPS_PER_EPOCH:
-        model.fit(
-            dataset, 
-            initial_epoch=int(initial_epoch),
-            callbacks=callbacks, 
-            epochs=EPOCHS, 
-            steps_per_epoch=STEPS_PER_EPOCH)
-    else:
-        model.fit(
-            dataset,
-            initial_epoch=int(initial_epoch),
-            callbacks=callbacks, 
-            epochs=EPOCHS)
+        model.fit(dataset, callbacks=callbacks, epochs=1, steps_per_epoch=1)
+
+    # loading of dataset:
+    def get_tokenized_sentences(line):
+        line = line.decode('utf-8')
+        tokenized = tokenizer(line, max_length=MAX_LENGTH, truncation=True, return_tensors="tf")
+        return tokenized['input_ids'], tokenized['attention_mask']
+
+    def tokenize_line(line):
+        input_ids, attention_mask = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32])
+        dato = {
+            'input_ids': input_ids[0],
+            'attention_mask': attention_mask[0],
+        }
+        return dato
+    
+    dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA)
+    #OK
+    eval_dataset = tf.data.Dataset.from_tensor_slices((dev_source_sentences))
+    eval_dataset = eval_dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    #OK
+    eval_dataset = eval_dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    eval_dataset = eval_dataset.padded_batch(16, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
+    eval_dataset = eval_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+    for i, batch in enumerate(eval_dataset):
+        print(f"Generate {i+1}. batch.") 
+        preds = model.generate(batch['input_ids'], max_length=150)
+        batch_sentences = tokenizer.batch_decode(preds)
+        break
+
+    print(batch['input_ids'])
+    print(preds)
+    print(batch_sentences)
+
+if __name__ == '__main__':
+    main("./config.json")

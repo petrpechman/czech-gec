@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 14,
+    "num_parallel": 6,
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
@@ -11,14 +11,14 @@
     "model": "google/mt5-small",
     "tokenizer": "google/mt5-small",
     "from_config": true,
-    "steps_per_epoch": 64000,
+    "steps_per_epoch": 256000,
     "epochs": 100000,
     "use_f16": false,
     
     "optimizer":{
         "name": "Adafactor",
         "params":{
-            "lr": 0.001
+            "learning_rate": 0.001
         }
     },
 
@@ -48,5 +48,7 @@
     "verbose": false,
     "very_verbose": false,
 
-    "timeout": 3600
+    "max_eval_length": 256,
+
+    "timeout": 64800
 }

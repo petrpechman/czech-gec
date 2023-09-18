@@ -29,7 +29,7 @@ def main(config_filename: str):
 
     # data loading
     M2_DATA = config['m2_data']
-    MAX_LENGTH = config['max_length']
+    # MAX_LENGTH = config['max_length']
     BATCH_SIZE = config['batch_size']
     
     # model
@@ -48,9 +48,12 @@ def main(config_filename: str):
     VERBOSE = config['verbose']
     VERY_VERBOSE = config['very_verbose']
     
-    MAX_OUTPUT_LENGTH = config['max_output_length']
+    MAX_EVAL_LENGTH = config['max_eval_length']
 
     TIMEOUT = config['timeout']
+
+    # OUTPUT_DIR = 'results' # "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
+    OUTPUT_DIR = 'akces-results' # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
     
     tf.random.set_seed(SEED)
     
@@ -59,7 +62,7 @@ def main(config_filename: str):
     # loading of dataset:
     def get_tokenized_sentences(line):
         line = line.decode('utf-8')
-        tokenized = tokenizer(line, max_length=MAX_LENGTH, truncation=True, return_tensors="tf")
+        tokenized = tokenizer(line, max_length=MAX_EVAL_LENGTH, truncation=True, return_tensors="tf")
         return tokenized['input_ids'], tokenized['attention_mask']
 
     def tokenize_line(line):
@@ -75,6 +78,7 @@ def main(config_filename: str):
     dataset =  tf.data.Dataset.from_tensor_slices((dev_source_sentences))
     dataset = dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None]})
     dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
@@ -103,6 +107,12 @@ def main(config_filename: str):
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
         size = BATCH_SIZE
         for i in range(0, len(tokenized_predicted_sentences), size):
+            ###
+            print("Batch of sentences:")
+            for s in tokenized_predicted_sentences[i:i+size]:
+                print(s)
+            print("End of batch")
+            ###
             stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
                 tokenized_predicted_sentences[i:i+size], 
                 dev_source_sentences[i:i+size], 
@@ -127,7 +137,7 @@ def main(config_filename: str):
             for unevaluated_checkpoint in unevaluated:
                 try:
                     step = int(unevaluated_checkpoint[5:])
-                    result_dir = os.path.join(MODEL_CHECKPOINT_PATH, "results")
+                    result_dir = os.path.join(MODEL_CHECKPOINT_PATH, OUTPUT_DIR)
 
                     model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
 
@@ -136,7 +146,7 @@ def main(config_filename: str):
 
                     for i, batch in enumerate(dataset):
                         print(f"Generate {i+1}. batch.") 
-                        preds = model.generate(batch['input_ids'], max_length=MAX_OUTPUT_LENGTH)
+                        preds = model.generate(batch['input_ids'], max_length=MAX_EVAL_LENGTH)
                         batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
                         predicted_sentences = predicted_sentences + batch_sentences
                     

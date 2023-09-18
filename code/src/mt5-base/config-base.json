@@ -1,9 +1,7 @@
 {
     "seed": 42,
 
-    "data_paths": [
-        "../../data/tokenized/news-2018-cs-tokenized.txt"
-    ],
+    "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
     "num_parallel": 12,
     "max_length": 128,
     "shuffle_buffer": 1000,
@@ -13,14 +11,14 @@
     "model": "google/mt5-base",
     "tokenizer": "google/mt5-base",
     "from_config": false,
-    "steps_per_epoch": 8000,
+    "steps_per_epoch": 96000,
     "epochs": 100000,
     "use_f16": false,
     
     "optimizer":{
         "name": "Adafactor",
         "params":{
-            "lr": 0.0005
+            "learning_rate": 0.0005
         }
     },
 
@@ -41,8 +39,8 @@
 
 
 
-    "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
-    "batch_size": 32,    
+    "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    "batch_size": 16,    
 
     "max_unchanged_words": 2,
     "beta": 0.5,
@@ -50,5 +48,7 @@
     "verbose": false,
     "very_verbose": false,
 
-    "timeout":  3600
+    "max_eval_length": 384,
+
+    "timeout":  324000
 }

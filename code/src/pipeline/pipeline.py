@@ -178,7 +178,6 @@ def main(config_filename: str):
             del OPTIMIZER_PARAMS['warmup_steps']
             optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, **OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'CosineDecay':
-            # OPTIMIZER_PARAMS['initial_learning_rate'], OPTIMIZER_PARAMS['decay_steps']
             cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(**OPTIMIZER_PARAMS)
             optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=cosine_decay_scheduler)
 

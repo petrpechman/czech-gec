@@ -16,8 +16,8 @@ from utils import load_data
 from utils import introduce_errors 
 from utils import dataset_utils
 
-from components.losses import MaskedSparseCategoricalCrossEntropy
-from components.callbacks import MyBackupAndRestore
+from utils.components.losses import MaskedSparseCategoricalCrossEntropy
+from utils.components.callbacks import MyBackupAndRestore
 
 from multiprocessing import Process, Manager
 
@@ -114,34 +114,7 @@ def main(config_filename: str):
                     "tokenized_target_line": (None, ),
                 })
 
-    def fix_format(input_batch, model_type):
-        if model_type == "T5":
-            dato = {
-                    "input_ids": input_batch["input_ids"],
-                    "attention_mask": input_batch["attention_mask"],
-                    "labels": input_batch["tokenized_target_line"],
-                    "decoder_input_ids": tf.concat([[0], input_batch["tokenized_target_line"][:-1]], axis=0)
-                }
-        elif model_type == "Bart-mine":
-            dato = {
-                    "input_ids": input_batch["input_ids"],
-                    "attention_mask": input_batch["attention_mask"],
-                    "labels": input_batch["tokenized_target_line"][1:],
-                    "decoder_input_ids": input_batch["tokenized_target_line"][:-1]
-                }
-        elif model_type == "Bart":
-            # TODO
-            dato = {
-                    "input_ids": input_batch["input_ids"],
-                    "attention_mask": input_batch["attention_mask"],
-                    "labels": input_batch["tokenized_target_line"],
-                    "decoder_input_ids": tf.concat([[0], input_batch["tokenized_target_line"][:-1]], axis=0)
-                }
-
-        return dato
-
-    dataset = dataset.map(lambda input_batch: fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
+    dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
@@ -149,9 +122,20 @@ def main(config_filename: str):
             bucket_boundaries=BUCKET_BOUNDARIES,
             bucket_batch_sizes=bucket_batch_sizes
     )
-    if LABEL_PAD_VALUE:
-        dataset = dataset.map(lambda x, y: (x, dataset_utils.change_value(y, 0, LABEL_PAD_VALUE)))
+    # if LABEL_PAD_VALUE:
+    #     dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE))
+    dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+    # for d in dataset:
+    #     break
+
+    # print(d[0]['input_ids'][0:2])
+    # print(d[0]['attention_mask'][0:2])
+    # print(d[0]['decoder_input_ids'][0:2])
+    # print("SPLIT")
+    # print(d[1][0:2])
+    # return
 
     if USE_F16:
         policy = mixed_precision.Policy('mixed_float16')

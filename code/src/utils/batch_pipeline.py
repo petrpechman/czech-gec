@@ -7,7 +7,9 @@ from transformers import AutoConfig
 import json
 
 from tensorflow.keras import mixed_precision
-from dataset_utils import split_features_and_labels
+import dataset_utils 
+
+from components.losses import MaskedSparseCategoricalCrossEntropy
 
 def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, config: str, filename: str):
     BATCH_SIZE = batch_size
@@ -35,6 +37,15 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
     # loss
     LOSS = config['loss']
 
+    # input edits
+    LABEL_PAD_VALUE = -100
+    MODEL_TYPE = ""
+    if MODEL in ["google/mt5-small", "google/mt5-base"]:
+        MODEL_TYPE = "T5"
+    else:
+        MODEL_TYPE = "Bart-mine"
+    print(MODEL_TYPE)
+
     tf.random.set_seed(SEED)
 
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -50,12 +61,10 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
 
     def tokenize_line(line, max_length):
         input_ids, attention_mask, labels = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32, tf.int32])
-        decoder_input_ids = tf.roll(labels, shift=1, axis=1)
         dato = {
             'input_ids': input_ids[0],
             'attention_mask': attention_mask[0],
-            'decoder_input_ids': decoder_input_ids[0],
-            'labels': labels[0]
+            'tokenized_target_line': labels[0]
         }
         return dato
 
@@ -64,9 +73,11 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
 
     dataset = tf.data.TextLineDataset([FILENAME])
     dataset = dataset.map(lambda line: tokenize_line(line, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(lambda input_dict: ensure_shapes(input_dict, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.map(split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.batch(batch_size)
+    dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     if USE_F16:
@@ -75,11 +86,11 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
 
     with strategy.scope():
         if OPTIMIZER_NAME == 'Adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.Adam(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'AdamW':
-            optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.experimental.AdamW(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'Adafactor':
-            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=OPTIMIZER_PARAMS['lr'])
+            optimizer = tf.keras.optimizers.experimental.Adafactor(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'AdaptiveAdam':
             class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
                 def __init__(self, warmup_steps, d_model):
@@ -90,36 +101,16 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
                     step = tf.cast(step, tf.float32)
                     lr = (1.0/tf.math.sqrt(self.d_model)) * tf.math.minimum(1.0 / tf.math.sqrt(step), (1.0 / tf.math.sqrt(self.warmup_steps)) * ((1.0 * step) / self.warmup_steps))
                     return lr
-
-            lr = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
-            beta1 = OPTIMIZER_PARAMS['beta1']
-            beta2 = OPTIMIZER_PARAMS['beta2']
-            epsilon = OPTIMIZER_PARAMS['epsilon']
-            optimizer = tf.keras.optimizers.Adam(
-                learning_rate=lr,
-                beta_1=beta1,
-                beta_2=beta2,
-                epsilon=epsilon)
+            learning_rate = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
+            del OPTIMIZER_PARAMS['warmup_steps']
+            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, **OPTIMIZER_PARAMS)
+        elif OPTIMIZER_NAME == 'CosineDecay':
+            cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(**OPTIMIZER_PARAMS)
+            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=cosine_decay_scheduler)
 
     with strategy.scope(): 
         loss = None   
         if LOSS == "SCC":
-            class MaskedSparseCategoricalCrossEntropy(tf.keras.losses.Loss):
-                # source: https://github.com/huggingface/transformers/blob/04ab5605fbb4ef207b10bf2772d88c53fc242e83/src/transformers/modeling_tf_utils.py#L210
-                def __init__(self, reduction=tf.keras.losses.Reduction.NONE, name=None):
-                    super().__init__(reduction, name)
-                    self.loss_func = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=reduction)
-
-                def call(self, y_true, y_pred):
-                    return self.hf_compute_loss(y_true, y_pred)
-
-                def hf_compute_loss(self, labels, logits):
-                    unmasked_loss = self.loss_func(tf.nn.relu(labels), logits)
-                    loss_mask = tf.cast(labels != -100, dtype=unmasked_loss.dtype)
-                    masked_loss = unmasked_loss * loss_mask
-                    reduced_masked_loss = tf.reduce_sum(masked_loss) / tf.reduce_sum(loss_mask)
-                    return reduced_masked_loss
-
             loss = MaskedSparseCategoricalCrossEntropy()
 
     with strategy.scope():

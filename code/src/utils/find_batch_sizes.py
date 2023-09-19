@@ -13,7 +13,8 @@ def get_batch_size(start: int, max_length, epochs, steps_per_epoch, filename, co
             try_batch_size(batch_size, max_length, epochs, steps_per_epoch, config, text_file)
             log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
             print(f"Allowed batch size {batch_size} for max_length {max_length}.")
-        except:
+        except Exception as e:
+            print(e)
             return batch_size - STEP_BATCH
 
 def log_data(filename: str, text: str):
@@ -25,17 +26,17 @@ def log_data(filename: str, text: str):
         print(text, file=log_file)
 
 def main():
-    filename = "mt5-base-3090.txt"
-    config = "../mt5/config-base.json"
+    filename = "mt5-small-node1.txt"
+    config = "../mt5-small/config-small.json"
     text_file = "./text.txt"
     epochs = 2
     steps_per_epoch = 4
 
     # Do not use 0 because than the batch size is 0 and it returns error.
-    get_batch_size(144, 32, epochs, steps_per_epoch, filename, config, text_file)
-    get_batch_size(64, 64, epochs, steps_per_epoch, filename, config, text_file)
-    get_batch_size(32, 96, epochs, steps_per_epoch, filename, config, text_file)
-    get_batch_size(16, 128, epochs, steps_per_epoch, filename, config, text_file)
+    max_lenghts = [32, 64, 96, 128]
+    for max_length in max_lenghts:
+        batch_size = get_batch_size(4, max_length, epochs, steps_per_epoch, filename, config, text_file)
+        print(f"For max_lenght {max_length} is batch_size {batch_size}.")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,4 @@
+Allowed batch size 300 for max_length 32.
+Allowed batch size 128 for max_length 64.
+Allowed batch size 88 for max_length 96.
+Allowed batch size 68 for max_length 128.

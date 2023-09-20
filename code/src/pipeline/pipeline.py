@@ -1,25 +1,27 @@
-import argparse
+
 import sys
 sys.path.append('..')
 
 import os
 import json
+import argparse
 import tensorflow as tf
 
-from transformers import TFAutoModelForSeq2SeqLM
-from transformers import AutoTokenizer
 from transformers import AutoConfig
+from transformers import AutoTokenizer
+from transformers import TFAutoModelForSeq2SeqLM
 
 from tensorflow.keras import mixed_precision
 
 from utils import load_data
-from utils import introduce_errors 
 from utils import dataset_utils
+from utils import introduce_errors
 
-from utils.components.losses import MaskedSparseCategoricalCrossEntropy
 from utils.components.callbacks import MyBackupAndRestore
+from utils.components.losses import MaskedSparseCategoricalCrossEntropy
 
 from multiprocessing import Process, Manager
+
 
 def main(config_filename: str):
     with open(config_filename) as json_file:

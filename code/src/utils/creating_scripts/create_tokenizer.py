@@ -1,17 +1,19 @@
 import argparse
-from pathlib import Path
+import tensorflow as tf
 
+from pathlib import Path
 from tokenizers import BertWordPieceTokenizer
 from tokenizers.processors import TemplateProcessing
-import tensorflow as tf
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus-file", required=True)
-    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--output-dir", default='../../../models/transformer/')
     parser.add_argument("--vocab-size", type=int, default=32_000)
     parser.add_argument("--min-frequency", type=int, default=5)
     args = parser.parse_args()
+    
+    args.output_dir = args.output_dir.rstrip('/') + '/'
 
     Path(args.output_dir).mkdir(exist_ok=True, parents=True)
 
@@ -44,10 +46,10 @@ def main():
 if __name__ == "__main__":
     main()
 
-    # Example:
-    from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("../../models/transformer") 
-    decoded = tokenizer.decode(tokenizer.encode("Monkey D. Luffy"), skip_special_tokens=True)
-    print(decoded)
+    # Example how to use:
+    # from transformers import AutoTokenizer
+    # tokenizer = AutoTokenizer.from_pretrained("../../models/transformer") # output-dir 
+    # decoded = tokenizer.decode(tokenizer.encode("Monkey D. Luffy"), skip_special_tokens=True)
+    # print(decoded)
 
 # CMD: python3 tokenizer_utils.py --corpus-file ../../data/tokenized/news-2018-cs-tokenized.txt --output-dir transformer/model/

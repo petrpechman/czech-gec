@@ -1,3 +1,6 @@
+import argparse
+
+from pathlib import Path
 from transformers import BartConfig
 from transformers import TFAutoModelForSeq2SeqLM
 
@@ -30,5 +33,16 @@ config = BartConfig(
                 forced_eos_token_id=2,
             )
 
-model = TFAutoModelForSeq2SeqLM.from_config(config)
-model.save_pretrained("../../models/transformer/")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output-dir", default="../../../models/transformer/")
+    args = parser.parse_args()
+    
+    args.output_dir = args.output_dir.rstrip('/') + '/'
+    Path(args.output_dir).mkdir(exist_ok=True, parents=True)
+
+    model = TFAutoModelForSeq2SeqLM.from_config(config)
+    model.save_pretrained(args.output_dir)
+
+if __name__ == "__main__":
+    main()

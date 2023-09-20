@@ -1,15 +1,14 @@
 import os
+import json
+import dataset_utils 
 import tensorflow as tf
 
-from transformers import TFAutoModelForSeq2SeqLM
-from transformers import AutoTokenizer
 from transformers import AutoConfig
-import json
-
+from transformers import AutoTokenizer
+from transformers import TFAutoModelForSeq2SeqLM
 from tensorflow.keras import mixed_precision
-import dataset_utils 
-
 from components.losses import MaskedSparseCategoricalCrossEntropy
+
 
 def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, config: str, filename: str):
     BATCH_SIZE = batch_size
@@ -44,7 +43,7 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
         MODEL_TYPE = "T5"
     else:
         MODEL_TYPE = "Bart-mine"
-    print(MODEL_TYPE)
+    # print(MODEL_TYPE)
 
     tf.random.set_seed(SEED)
 
@@ -52,7 +51,7 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
 
     strategy = tf.distribute.MirroredStrategy()
     num_div = strategy.num_replicas_in_sync
-    print('Number of devices: %d' % num_div)
+    # print('Number of devices: %d' % num_div)
 
     def get_tokenized_sentences(line):
         line = line.decode('utf-8')
@@ -129,4 +128,4 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
-    model.fit(dataset, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    model.fit(dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, verbose=0)

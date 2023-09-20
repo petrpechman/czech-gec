@@ -2,7 +2,7 @@ import os
 import argparse
 
 EPOCHS = 2
-STEPS_PER_EPOCH = 4
+STEPS_PER_EPOCH = 8
 
 
 def try_batch_size(batch_size, max_length, epochs, steps_per_epoch, config, text_file) -> bool:
@@ -25,7 +25,6 @@ def get_batch_size(batch_size: int, max_length, epochs, steps_per_epoch, filenam
         log_data(filename, f"Allowed batch size {batch_size} for max_length {max_length}.")
         print(f"Allowed batch size {batch_size} for max_length {max_length}.")
     except Exception as e:
-        print(e)
         return
 
 

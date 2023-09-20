@@ -9,7 +9,7 @@ step_size=4
 max_size=512
 filename="./results/mt5-small-node1.txt"
 config="../../mt5-small/config-small.json"
-text_file="./text.txt"
+text_file="./text_shuffled.txt"
 
 # Loop over max_length values
 for max_length in "${max_lengths[@]}"; do
@@ -22,7 +22,7 @@ for max_length in "${max_lengths[@]}"; do
             echo "$output"
         else
             echo "Finish fo max length: $max_length"
-            continue
+            break
         fi
     done
 done

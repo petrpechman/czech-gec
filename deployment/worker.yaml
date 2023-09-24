@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petr-worker
+  labels:
+    app: petr-worker
+    team: srch-mlops
+  namespace: mlops-production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: petr-worker
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: petr-worker
+        team: srch-mlops
+    spec:
+      imagePullSecrets:
+      - name: mlops-secrets
+      containers:
+      - name: worker
+        image: docker.ops.iszn.cz/mlops/petr/train:base
+        imagePullPolicy: Always
+        command: [ "sleep" ]
+        args: [ "infinity"]
+        env:
+          - name: https_proxy
+            value: "http://proxy.dev.dszn.cz:3128"
+        resources:
+          limits:
+            cpu: "20"
+            memory: 256Gi
+            nvidia.com/gpu: 1
+          requests:
+            cpu: "20"
+            memory: 256Gi
+            nvidia.com/gpu: 1
+        volumeMounts:
+          - name: network-datastore
+            mountPath: /code/src/utils/batch_size/results_store
+      volumes:
+      - name: network-datastore
+        hostPath:
+          path: /mnt/home/pechmanp/batch-size

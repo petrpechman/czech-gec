@@ -30,6 +30,12 @@ spec:
         env:
           - name: https_proxy
             value: "http://proxy.dev.dszn.cz:3128"
+          - name: http_proxy
+            value: "http://proxy.dev.dszn.cz:3128"
+          - name: HTTPS_PROXY
+            value: "http://proxy.dev.dszn.cz:3128"
+          - name: HTTP_PROXY
+            value: "http://proxy.dev.dszn.cz:3128"
         resources:
           limits:
             cpu: "20"
@@ -41,8 +47,8 @@ spec:
             nvidia.com/gpu: 1
         volumeMounts:
           - name: network-datastore
-            mountPath: /code/src/utils/batch_size/results_store
+            mountPath: /store
       volumes:
       - name: network-datastore
         hostPath:
-          path: /mnt/home/pechmanp/batch-size
+          path: /mnt/home/

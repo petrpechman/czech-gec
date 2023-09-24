@@ -7,7 +7,7 @@ max_lengths=(32 64 96 128)
 start_batch_size=4
 step_size=4
 max_size=512
-filename="./results/mt5-small-node1.txt"
+filename="./results/mt5-small.txt"
 config="../../mt5-small/config-small.json"
 text_file="./text_shuffled.txt"
 
@@ -15,7 +15,7 @@ text_file="./text_shuffled.txt"
 for max_length in "${max_lengths[@]}"; do
     # Loop over batch sizes
     for batch_size in $(seq $start_batch_size $step_size $max_size); do
-        output=$(../../../venv-envs/.venv/bin/python3.9 try_batch_size.py --batch-size=$batch_size --max-length=$max_length --output=$filename --config=$config --text=$text_file)
+        output=$(python try_batch_size.py --batch-size=$batch_size --max-length=$max_length --output=$filename --config=$config --text=$text_file)
         
         # Check if the output is not empty
         if [ -n "$output" ]; then

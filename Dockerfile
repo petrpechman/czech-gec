@@ -8,7 +8,7 @@ LABEL maintainer="srch.mlops@firma.seznam.cz" \
       org.label-schema.description="Image pro získání LDAP skupin." \
       org.label-schema.url="https://gitlab.seznam.net/relevance/experiments/"
 
-RUN apt-get update && apt-get install -y perl libtool gettext autoconf automake texinfo autopoint git
+RUN apt-get update && apt-get install -y perl libtool gettext autoconf automake texinfo autopoint git vim
 
 ADD aspell /tmp/aspell
 ADD aspell-cs-0.51-0  /tmp/aspell-cs-0.51-0

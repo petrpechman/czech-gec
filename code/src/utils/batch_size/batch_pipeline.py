@@ -128,7 +128,9 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
             model.compile(optimizer=optimizer)
 
     if USE_F16:
-        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+        # model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+        # model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+        model.encoder.embed_scale = tf.cast(model.encoder.embed_scale, tf.float16)
+        model.decoder.embed_scale = tf.cast(model.decoder.embed_scale, tf.float16)
 
     model.fit(dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, verbose=0)

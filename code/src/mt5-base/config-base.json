@@ -13,7 +13,7 @@
     "from_config": false,
     "steps_per_epoch": 96000,
     "epochs": 100000,
-    "use_f16": false,
+    "use_f16": true,
     
     "optimizer":{
         "name": "Adafactor",

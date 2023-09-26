@@ -51,4 +51,4 @@ spec:
       volumes:
       - name: network-datastore
         hostPath:
-          path: /mnt/home/
+          path: /mnt

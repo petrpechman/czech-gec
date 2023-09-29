@@ -6,7 +6,7 @@
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [64, 32, 20, 12],
+    "bucket_batch_sizes_per_gpu": [32, 24, 16, 8],
 
     "model": "google/mt5-base",
     "tokenizer": "google/mt5-base",

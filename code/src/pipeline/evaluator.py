@@ -21,6 +21,7 @@ from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 
 from utils.time_check import timeout
 
+
 def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
@@ -28,7 +29,8 @@ def main(config_filename: str):
     SEED = config['seed']
 
     # data loading
-    M2_DATA = config['m2_data']
+    M2_DATA_DEV = config['m2_data_dev']
+    M2_DATA_TEST = config['m2_data_test']
     # MAX_LENGTH = config['max_length']
     BATCH_SIZE = config['batch_size']
     
@@ -50,10 +52,11 @@ def main(config_filename: str):
     
     MAX_EVAL_LENGTH = config['max_eval_length']
 
-    TIMEOUT = config['timeout']
+    # TIMEOUT = config['timeout']
 
     # OUTPUT_DIR = 'results' # "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
-    OUTPUT_DIR = 'akces-results' # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    OUTPUT_DIR_DEV = 'results-dev' # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    OUTPUT_DIR_TEST = 'results-test' # "m2_data": "../../data/akces-gec/test/test.all.m2",
     
     tf.random.set_seed(SEED)
     
@@ -73,14 +76,21 @@ def main(config_filename: str):
         }
         return dato
 
-    dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA)
-        
-    dataset =  tf.data.Dataset.from_tensor_slices((dev_source_sentences))
-    dataset = dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None]})
-    dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
-    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    
+    def get_dataset_pipeline(dev_source_sentences) -> tf.data.Dataset:
+        dataset = tf.data.Dataset.from_tensor_slices((dev_source_sentences))
+        dataset = dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
+        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        return dataset
+    
+    dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA_DEV)
+    test_source_sentences, test_gold_edits = load_annotation(M2_DATA_TEST)
+
+    dev_dataset = get_dataset_pipeline(dev_source_sentences)
+    test_dataset = get_dataset_pipeline(test_source_sentences)
+    
     
     if USE_F16:
         policy = mixed_precision.Policy('mixed_float16')
@@ -102,7 +112,7 @@ def main(config_filename: str):
 
     udpipe_tokenizer = UDPipeTokenizer("cs")
 
-    @timeout(TIMEOUT)
+    # @timeout(TIMEOUT)
     def compute_metrics(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits):
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
         size = BATCH_SIZE
@@ -129,6 +139,48 @@ def main(config_filename: str):
             print("Recall:\t", r)
             print("F1:\t", f1)
         return total_stat_correct, total_stat_proposed, total_stat_gold
+    
+    def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir):
+        step = int(unevaluated_checkpoint[5:])
+        result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
+
+        model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
+
+        print("Generating...")
+        predicted_sentences = []
+        for i, batch in enumerate(dataset):
+            print(f"Generate {i+1}. batch.") 
+            preds = model.generate(batch['input_ids'], max_length=MAX_EVAL_LENGTH)
+            batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
+            predicted_sentences = predicted_sentences + batch_sentences
+        print("End of generating...")
+
+        print("Udpipe tokenization...")
+        tokenized_predicted_sentences = []
+        for i, line in enumerate(predicted_sentences):
+            if i % BATCH_SIZE == 0:
+                print(f"Tokenize {i+BATCH_SIZE} sentences.")
+            tokenization = udpipe_tokenizer.tokenize(line)
+            sentence = " ".join([token.string for token in tokenization[0]]) if len(tokenization) > 0 else ""
+            tokenized_predicted_sentences.append(sentence)
+        print("End of tokenization...")
+
+        print("Compute metrics...")
+        total_stat_correct, total_stat_proposed, total_stat_gold = compute_metrics(tokenized_predicted_sentences, source_sentences, gold_edits)
+        print("End of computing...")
+
+        print("Write into files...")
+        p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
+        r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
+        f1 = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+        file_writer = tf.summary.create_file_writer(result_dir)
+        with file_writer.as_default():
+            tf.summary.scalar('epoch_precision', p, step)
+            tf.summary.scalar('epoch_recall', r, step)
+            tf.summary.scalar('epoch_f1', f1, step)
+            text = "  \n".join(tokenized_predicted_sentences[0:40])
+            print(text)
+            tf.summary.text("predictions", text, step)
 
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
@@ -136,52 +188,9 @@ def main(config_filename: str):
             
             for unevaluated_checkpoint in unevaluated:
                 try:
-                    step = int(unevaluated_checkpoint[5:])
-                    result_dir = os.path.join(MODEL_CHECKPOINT_PATH, OUTPUT_DIR)
-
-                    model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
-
-                    print("Generating...")
-                    predicted_sentences = []
-
-                    for i, batch in enumerate(dataset):
-                        print(f"Generate {i+1}. batch.") 
-                        preds = model.generate(batch['input_ids'], max_length=MAX_EVAL_LENGTH)
-                        batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
-                        predicted_sentences = predicted_sentences + batch_sentences
+                    generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV)
+                    generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST)
                     
-                    print("End of generating...")
-
-                    print("Udpipe tokenization...")
-                    tokenized_predicted_sentences = []
-
-                    for i, line in enumerate(predicted_sentences):
-                        if i % BATCH_SIZE == 0:
-                            print(f"Tokenize {i+BATCH_SIZE} sentences.")
-                        tokenization = udpipe_tokenizer.tokenize(line)
-                        sentence = " ".join([token.string for token in tokenization[0]]) if len(tokenization) > 0 else ""
-                        tokenized_predicted_sentences.append(sentence)
-
-                    print("End of tokenization...")
-
-                    print("Compute metrics...")
-                    total_stat_correct, total_stat_proposed, total_stat_gold = compute_metrics(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits)
-                    print("End of computing...")
-
-                    print("Write into files...")
-                    p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
-                    r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
-                    f1 = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                    file_writer = tf.summary.create_file_writer(result_dir)
-                    with file_writer.as_default():
-                        tf.summary.scalar('epoch_precision', p, step)
-                        tf.summary.scalar('epoch_recall', r, step)
-                        tf.summary.scalar('epoch_f1', f1, step)
-
-                        text = "  \n".join(tokenized_predicted_sentences[0:40])
-                        print(text)
-                        tf.summary.text("predictions", text, step)
-
                     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except:

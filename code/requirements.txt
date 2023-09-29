@@ -9,3 +9,4 @@ protobuf==3.20.*
 matplotlib
 tensorflow_datasets
 tensorflow_text
+ufal.udpipe

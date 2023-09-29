@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2018-cs-tokenized.txt"],
-    "num_parallel": 12,
+    "num_parallel": 20,
     "max_length": 128,
     "shuffle_buffer": 1000,
     "bucket_boundaries": [32, 64, 96],
@@ -13,7 +13,7 @@
     "from_config": false,
     "steps_per_epoch": 96000,
     "epochs": 100000,
-    "use_f16": true,
+    "use_f16": false,
     
     "optimizer":{
         "name": "Adafactor",
@@ -39,7 +39,8 @@
 
 
 
-    "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    "m2_data_dev": "../../data/akces-gec/dev/dev.all.m2",
+    "m2_data_test": "../../data/akces-gec/test/test.all.m2",
     "batch_size": 16,    
 
     "max_unchanged_words": 2,

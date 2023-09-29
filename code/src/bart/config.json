@@ -13,7 +13,7 @@
     "from_config": true,
     "steps_per_epoch": 128000,
     "epochs": 100000,
-    "use_f16": false,
+    "use_f16": true,
     
     "optimizer":{
         "name": "AdaptiveAdam",
@@ -44,7 +44,8 @@
 
 
 
-    "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    "m2_data_dev": "../../data/akces-gec/dev/dev.all.m2",
+    "m2_data_test": "../../data/akces-gec/test/test.all.m2",
     "batch_size": 16,
     
     "max_unchanged_words": 2,

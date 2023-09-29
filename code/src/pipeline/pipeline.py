@@ -216,7 +216,7 @@ def main(config_filename: str):
 
     ### Train
 
-    if USE_F16:
+    if USE_F16 and MODEL_TYPE == "Bart-mine":
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 

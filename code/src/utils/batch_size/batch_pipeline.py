@@ -130,9 +130,8 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
         else:
             model.compile(optimizer=optimizer)
 
-    if USE_F16:
-        ... # already fixed
-        # model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-        # model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+    if USE_F16 and MODEL_TYPE == "Bart-mine":
+        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     model.fit(dataset, epochs=epochs, steps_per_epoch=steps_per_epoch, verbose=0)

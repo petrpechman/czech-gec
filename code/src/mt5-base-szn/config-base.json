@@ -49,7 +49,7 @@
     "verbose": false,
     "very_verbose": false,
 
-    "max_eval_length": 384,
+    "max_eval_length": 512,
 
     "timeout":  324000
 }

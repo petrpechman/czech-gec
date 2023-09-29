@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: petr-eval
+  name: petr-worker
   labels:
-    app: petr-eval
+    app: petr-worker
     team: srch-mlops
   namespace: mlops-production
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: petr-eval
+      app: petr-worker
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
       labels:
-        app: petr-eval
+        app: petr-worker
         team: srch-mlops
     spec:
       restartPolicy: Always
@@ -26,8 +26,9 @@ spec:
       - name: worker
         image: docker.ops.iszn.cz/mlops/petr/train:base
         # imagePullPolicy: Always
-        command: [ "sleep" ]
-        args: [ "infinity"]
+        # command: [ "sleep" ]
+        # args: [ "infinity"]
+        command: ["/bin/bash", "-c", "source ~/miniconda3/etc/profile.d/conda.sh && conda activate && cd /pechmanp/czech-gec/code/src/bart-szn && python ../pipeline/run.py --config config.json"]
         env:
           - name: https_proxy
             value: "http://proxy.dev.dszn.cz:3128"
@@ -39,13 +40,13 @@ spec:
             value: "http://proxy.dev.dszn.cz:3128"
         resources:
           limits:
-            cpu: "4"
-            memory: 64Gi
-            # nvidia.com/gpu: 1
+            cpu: "24"
+            memory: 352Gi
+            nvidia.com/gpu: 1
           requests:
-            cpu: "4"
-            memory: 64Gi
-            # nvidia.com/gpu: 1
+            cpu: "24"
+            memory: 352Gi
+            nvidia.com/gpu: 1
         volumeMounts:
           - name: network-datastore
             mountPath: /pechmanp

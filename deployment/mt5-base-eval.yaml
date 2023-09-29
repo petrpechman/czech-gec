@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: petr-worker
+  name: petr-mt5-base-eval
   labels:
-    app: petr-worker
+    app: petr-mt5-base-eval
     team: srch-mlops
   namespace: mlops-production
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: petr-worker
+      app: petr-mt5-base-eval
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
       labels:
-        app: petr-worker
+        app: petr-mt5-base-eval
         team: srch-mlops
     spec:
       restartPolicy: Always
@@ -25,9 +25,10 @@ spec:
       containers:
       - name: worker
         image: docker.ops.iszn.cz/mlops/petr/train:base
-        imagePullPolicy: Always
-        command: [ "sleep" ]
-        args: [ "infinity"]
+        # imagePullPolicy: Always
+        command: ["/bin/bash", "-c", "source ~/miniconda3/etc/profile.d/conda.sh && conda activate && cd /pechmanp/czech-gec/code/src/mt5-base-szn && python ../pipeline/run.py --config config-base.json --eval"]
+        # command: [ "sleep" ]
+        # args: [ "infinity"]
         env:
           - name: https_proxy
             value: "http://proxy.dev.dszn.cz:3128"
@@ -39,13 +40,13 @@ spec:
             value: "http://proxy.dev.dszn.cz:3128"
         resources:
           limits:
-            cpu: "24"
-            memory: 352Gi
-            nvidia.com/gpu: 1
+            cpu: "4"
+            memory: 64Gi
+            # nvidia.com/gpu: 1
           requests:
-            cpu: "24"
-            memory: 352Gi
-            nvidia.com/gpu: 1
+            cpu: "4"
+            memory: 64Gi
+            # nvidia.com/gpu: 1
         volumeMounts:
           - name: network-datastore
             mountPath: /pechmanp

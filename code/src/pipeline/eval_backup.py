@@ -2,8 +2,6 @@ import sys
 sys.path.append('..')
 
 import os
-import time
-import shutil
 import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
@@ -11,7 +9,7 @@ from transformers import AutoTokenizer
 from transformers import AutoConfig
 import json
 
-from m2scorer.levenshtein import batch_multi_pre_rec_f1_part, batch_multi_pre_rec_f1
+from m2scorer.levenshtein import batch_multi_pre_rec_f1_part
 from m2scorer.m2scorer import load_annotation
 
 from tensorflow.keras import mixed_precision

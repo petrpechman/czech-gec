@@ -4,7 +4,6 @@ sys.path.append('..')
 
 import os
 import json
-import argparse
 import tensorflow as tf
 
 from transformers import AutoConfig

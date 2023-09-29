@@ -38,12 +38,12 @@ spec:
             value: "http://proxy.dev.dszn.cz:3128"
         resources:
           limits:
-            cpu: "30"
-            memory: 448Gi
+            cpu: "24"
+            memory: 352Gi
             nvidia.com/gpu: 1
           requests:
-            cpu: "30"
-            memory: 448Gi
+            cpu: "24"
+            memory: 352Gi
             nvidia.com/gpu: 1
         volumeMounts:
           - name: network-datastore

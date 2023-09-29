@@ -38,17 +38,17 @@ spec:
             value: "http://proxy.dev.dszn.cz:3128"
         resources:
           limits:
-            cpu: "20"
-            memory: 256Gi
+            cpu: "30"
+            memory: 448Gi
             nvidia.com/gpu: 1
           requests:
-            cpu: "20"
-            memory: 256Gi
+            cpu: "30"
+            memory: 448Gi
             nvidia.com/gpu: 1
         volumeMounts:
           - name: network-datastore
-            mountPath: /store
+            mountPath: /pechmanp
       volumes:
       - name: network-datastore
         hostPath:
-          path: /mnt
+          path: /mnt/home/pechmanp

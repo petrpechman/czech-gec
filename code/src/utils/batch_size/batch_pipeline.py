@@ -70,8 +70,11 @@ def main(batch_size: int, max_length: int, epochs:int, steps_per_epoch:int, conf
         }
         return dato
 
+    # def ensure_shapes(input_dict, max_length):
+    #     return {key: tf.ensure_shape(val, (max_length)) for key, val in input_dict.items()}
+    
     def ensure_shapes(input_dict, max_length):
-        return {key: tf.ensure_shape(val, (max_length)) for key, val in input_dict.items()}
+        return {key: tf.ensure_shape(val, tf.shape(val).shape) for key, val in input_dict.items()}
 
     dataset = tf.data.TextLineDataset([FILENAME])
     dataset = dataset.map(lambda line: tokenize_line(line, max_length), num_parallel_calls=tf.data.experimental.AUTOTUNE)

@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: petr-mt5-base-eval
+  name: petr-bart-eval
   labels:
-    app: petr-mt5-base-eval
+    app: petr-bart-eval
     team: srch-mlops
   namespace: mlops-production
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: petr-mt5-base-eval
+      app: petr-bart-eval
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
       labels:
-        app: petr-mt5-base-eval
+        app: petr-bart-eval
         team: srch-mlops
     spec:
       restartPolicy: Always
@@ -26,7 +26,7 @@ spec:
       - name: worker
         image: docker.ops.iszn.cz/mlops/petr/train:base
         # imagePullPolicy: Always
-        command: ["/bin/bash", "-c", "source ~/miniconda3/etc/profile.d/conda.sh && conda activate && cd /pechmanp/czech-gec/code/src/bart-szn && python ../pipeline/run.py --config config-base.json --eval"]
+        command: ["/bin/bash", "-c", "source ~/miniconda3/etc/profile.d/conda.sh && conda activate && cd /pechmanp/czech-gec/code/src/bart-szn && python ../pipeline/run.py --config config.json --eval"]
         # command: [ "sleep" ]
         # args: [ "infinity"]
         env:
@@ -42,11 +42,11 @@ spec:
           limits:
             cpu: "4"
             memory: 64Gi
-            # nvidia.com/gpu: 1
+            nvidia.com/gpu: 0
           requests:
             cpu: "4"
             memory: 64Gi
-            # nvidia.com/gpu: 1
+            nvidia.com/gpu: 0
         volumeMounts:
           - name: network-datastore
             mountPath: /pechmanp

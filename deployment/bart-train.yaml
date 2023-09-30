@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: petr-worker
+  name: petr-bart-train
   labels:
-    app: petr-worker
+    app: petr-bart-train
     team: srch-mlops
   namespace: mlops-production
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: petr-worker
+      app: petr-bart-train
   template:
     metadata:
       annotations:
         sidecar.istio.io/inject: "false"
       labels:
-        app: petr-worker
+        app: petr-bart-train
         team: srch-mlops
     spec:
       restartPolicy: Always

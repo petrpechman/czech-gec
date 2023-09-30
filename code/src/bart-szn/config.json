@@ -16,16 +16,12 @@
     "use_f16": true,
     
     "optimizer":{
-        "name": "AdaptiveAdam",
+        "name": "Adafactor",
         "params":{
-            "warmup_steps": 32000,
-            "clipvalue": 0.5,
-            "global_clipnorm": 1.0,
-            "beta_1" : 0.9,
-            "beta_2" : 0.98,
-            "epsilon": 1e-9
+            "learning_rate": 0.0005
         }
     },
+
 
     "loss": "SCC",
 

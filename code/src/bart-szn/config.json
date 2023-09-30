@@ -16,9 +16,12 @@
     "use_f16": true,
     
     "optimizer":{
-        "name": "Adafactor",
+        "name": "AdamW",
         "params":{
-            "learning_rate": 0.0005
+            "learning_rate": 5e-5,
+            "weight_decay": 0.01,
+            "epsilon": 1e-6,
+            "global_clipnorm": 1.0
         }
     },
 

@@ -74,21 +74,18 @@ def main(config_filename: str):
         MODEL_TYPE = "Bart-mine"
     print(MODEL_TYPE)
 
-
+    ### Init 
     tf.random.set_seed(SEED)
-
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
-
     tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
     characters = introduce_errors.get_char_vocabulary(LANG)
-
     strategy = tf.distribute.MirroredStrategy()
     num_div = strategy.num_replicas_in_sync
     print('Number of devices: %d' % num_div)
-
     bucket_batch_sizes = [bucket_batch_size * num_div for bucket_batch_size in BUCKET_BATCH_SIZES_PER_GPU]
+    ###
 
-    # loading of dataset:
+    ### Dataset loading:
     manager = Manager()
     queue = manager.Queue(4 * NUM_PARALLEL)
     gel = load_data.GenereteErrorLine(
@@ -126,10 +123,10 @@ def main(config_filename: str):
     )
     dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    ###
 
     # for d in dataset:
     #     break
-
     # print(d[0]['input_ids'][0:2])
     # print(d[0]['attention_mask'][0:2])
     # print(d[0]['decoder_input_ids'][0:2])
@@ -142,6 +139,7 @@ def main(config_filename: str):
         mixed_precision.set_global_policy(policy)
 
     with strategy.scope():
+        ### Optimizer:
         if OPTIMIZER_NAME == 'Adam':
             optimizer = tf.keras.optimizers.Adam(**OPTIMIZER_PARAMS)
         elif OPTIMIZER_NAME == 'AdamW':
@@ -164,16 +162,17 @@ def main(config_filename: str):
         elif OPTIMIZER_NAME == 'CosineDecay':
             cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(**OPTIMIZER_PARAMS)
             optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=cosine_decay_scheduler)
+        ###
 
-
-    with strategy.scope(): 
+        ### Loss:
         loss = None   
         if LOSS == "SCC":
             loss = MaskedSparseCategoricalCrossEntropy()
+        ###
 
-
-    with strategy.scope():
+        ### Model
         if FROM_CONFIG:
+            # means from scratch
             config = AutoConfig.from_pretrained(MODEL)
             model = TFAutoModelForSeq2SeqLM.from_config(config)
         else:
@@ -184,9 +183,9 @@ def main(config_filename: str):
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
+        ###
 
     ### Callbacks
-
     model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
         save_weights_only=True,
@@ -212,9 +211,9 @@ def main(config_filename: str):
         profiler,
         tensorboard_callback
     ]
+    ###
 
     ### Train
-
     if USE_F16 and MODEL_TYPE == "Bart-mine":
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
@@ -232,3 +231,4 @@ def main(config_filename: str):
             initial_epoch=int(initial_epoch),
             callbacks=callbacks, 
             epochs=EPOCHS)
+    ###

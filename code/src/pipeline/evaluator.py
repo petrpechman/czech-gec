@@ -52,7 +52,7 @@ def main(config_filename: str):
     
     MAX_EVAL_LENGTH = config['max_eval_length']
 
-    # TIMEOUT = config['timeout']
+    # TIMEOUT = config['timeout'] # it cat be useful for geccc
 
     # OUTPUT_DIR = 'results' # "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
     OUTPUT_DIR_DEV = 'results-dev' # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
@@ -114,15 +114,24 @@ def main(config_filename: str):
 
     # @timeout(TIMEOUT)
     def compute_metrics(tokenized_predicted_sentences, dev_source_sentences, dev_gold_edits):
+        '''
+        Goes through predicted sentences and computes true positives (stat_correct), 
+        TP+FN (stat_gold), TP+FP (stat_proposed) for every batch.
+        Finally it computes precision, recall and f1. 
+        '''
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
         size = BATCH_SIZE
         for i in range(0, len(tokenized_predicted_sentences), size):
+            ### possible print
+            # print("Batch of sentences:")
+            # for s in tokenized_predicted_sentences[i:i+size]:
+            #     print(s)
+            # print("End of batch")
             ###
-            print("Batch of sentences:")
-            for s in tokenized_predicted_sentences[i:i+size]:
-                print(s)
-            print("End of batch")
-            ###
+
+            # batch_multi_pre_rec_f1_part is created by petr pechman in fork from M2scorer
+            # (https://github.com/petrpechman/m2scorer/blob/cbf794b370be2fc77f98ee9531cf33001572b7ce/m2scorer/levenshtein.py#L866),
+            # it is almost same as batch_multi_pre_rec_f1
             stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
                 tokenized_predicted_sentences[i:i+size], 
                 dev_source_sentences[i:i+size], 

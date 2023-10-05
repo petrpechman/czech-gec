@@ -39,7 +39,7 @@ def main(config_filename: str):
     # model
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
-    FROM_CONFIG = config['from_config']
+    FROM_CONFIG = config['from_config'] # means from scratch
     STEPS_PER_EPOCH = config['steps_per_epoch']
     EPOCHS = config['epochs']
     USE_F16 = config['use_f16']
@@ -119,12 +119,10 @@ def main(config_filename: str):
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
-            element_length_func=lambda x, y: tf.shape(x['input_ids'])[0],
+            element_length_func=lambda x, y: tf.shape(x['input_ids'])[0], # zde asi chyba
             bucket_boundaries=BUCKET_BOUNDARIES,
             bucket_batch_sizes=bucket_batch_sizes
     )
-    # if LABEL_PAD_VALUE:
-    #     dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE))
     dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 

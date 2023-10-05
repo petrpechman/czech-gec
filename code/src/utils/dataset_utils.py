@@ -1,14 +1,31 @@
 import tensorflow as tf
 from transformers.tf_utils import shape_list
 
+###
+#
+# There are two possible types of model: T5 and Bart from scratch (Bart-mine)
+#   If T5 is chosen:
+#   - fix_format - creates input_ids, attention_mask and labels
+#   - change_value - changes labels and creates decoder_input_ids, it changes 0 (pad_value) by -100 for labels 
+#                    and it shifts labels right and change value -100 back into 0  
+#   for example:
+#       > ids = tf.constant([[1, 2, 3, 4, 0, 0]])
+#       > x = {}
+#       > change_value(x, ids, 0 , -100, 'T5')
+#         ({'decoder_input_ids': <tf.Tensor: shape=(1, 6), dtype=int32, numpy=array([[0, 1, 2, 3, 4, 0]], dtype=int32)>}, 
+#          <tf.Tensor: shape=(1, 6), dtype=int32, numpy=array([[   1,    2,    3,    4, -100, -100]], dtype=int32)>)
+#
+#   If Bart-mine is chosen:
+#   - fix_format - creates input_ids, attention_mask, labels and decoder_input_ids
+#   - change_value - only change 0 (pad value) by -100 in labels
+###
+
 def fix_format(input_batch, model_type):
     if model_type == "T5":
         dato = {
                 "input_ids": input_batch["input_ids"],
                 "attention_mask": input_batch["attention_mask"],
                 "labels": input_batch["tokenized_target_line"],
-                # 0 is decoder start token for T5 tokenizer
-                # "decoder_input_ids": tf.concat([[0], input_batch["tokenized_target_line"][:-1]], axis=0)
             }
     elif model_type == "Bart-mine":
         dato = {
@@ -21,7 +38,6 @@ def fix_format(input_batch, model_type):
 
 def split_features_and_labels(input_batch):
     features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask', 'decoder_input_ids']}
-    # features = {key: tensor for key, tensor in input_batch.items() if key in ['input_ids', 'attention_mask']}
     labels = {key: tensor for key, tensor in input_batch.items() if key in ['labels']}
     if len(features) == 1:
         features = list(features.values())[0]
@@ -43,7 +59,7 @@ def change_value(x, y, original_value, new_value, model_type):
 
 def _shift_right_t5(input_ids):
     # taken from https://github.com/huggingface/transformers/blob/6da93f5580e109fad5f7b523cf2b6e8a5bafb623/src/transformers/models/t5/modeling_t5.py#L880
-    decoder_start_token_id = 0
+    decoder_start_token_id = 0 # 0 is decoder start token for T5 tokenizer
     pad_token_id = 0
 
     start_tokens = tf.fill((shape_list(input_ids)[0], 1), decoder_start_token_id)

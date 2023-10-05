@@ -96,6 +96,7 @@ def main(config_filename: str):
             TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
             TOKEN_ERR_PROB, CHAR_ERR_PROB)
 
+    # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
                 args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))

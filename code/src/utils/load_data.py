@@ -14,6 +14,9 @@ from multiprocessing import Manager
 # import dataset_utils 
 
 class GenereteErrorLine():
+    '''
+    Creates synthetic mistakes by aspell_speller and scripts from introduce_errors. 
+    '''
 
     def __init__(self, tokens, characters, lang, token_err_distribution, char_err_distribution, token_err_prob, char_err_prob, token_std_dev=0.2, char_std_dev=0.01):
         self.tokens = tokens
@@ -45,6 +48,8 @@ class GenereteErrorLine():
     
 
 def data_loader(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length):
+    # Starts read from start to end position, line with mistake is created for every read line,
+    # then these lines are tokenized and store into dict that is putted into queue.
     counter = 0
     aspell_speller = aspell.Speller('lang', gel.lang)
     with open(filename, 'r') as f:
@@ -82,6 +87,8 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
 def process_file_in_chunks(
         queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, 
         gel: GenereteErrorLine, tokenizer, max_length):
+    # Computes start index and end index for every process, stores them as arguments,
+    # runs these processes and wait until they finished.
     
     start = random.randint(0, file_size-1)
     process_size = file_size // num_parallel
@@ -104,6 +111,9 @@ def process_file_in_chunks(
 
 
 def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length):
+    # Main methon that is used in pipeline.py
+    # Creates pools and goes iteratively over files (one or more files).
+    # Computes file size and run process_file_in_chunks. 
     index = 0
     pool = Pool(num_parallel)
 

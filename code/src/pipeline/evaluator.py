@@ -31,7 +31,6 @@ def main(config_filename: str):
     # data loading
     M2_DATA_DEV = config['m2_data_dev']
     M2_DATA_TEST = config['m2_data_test']
-    # MAX_LENGTH = config['max_length']
     BATCH_SIZE = config['batch_size']
     
     # model
@@ -62,20 +61,19 @@ def main(config_filename: str):
     
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
     
-    # loading of dataset:
+    ### Dataset loadings:
     def get_tokenized_sentences(line):
+        # only tokenize line
         line = line.decode('utf-8')
         tokenized = tokenizer(line, max_length=MAX_EVAL_LENGTH, truncation=True, return_tensors="tf")
         return tokenized['input_ids'], tokenized['attention_mask']
 
     def tokenize_line(line):
+        # wrapper for tokenize_line
         input_ids, attention_mask = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32])
-        dato = {
-            'input_ids': input_ids[0],
-            'attention_mask': attention_mask[0],
-        }
+        dato = {'input_ids': input_ids[0],
+                'attention_mask': attention_mask[0]}
         return dato
-
     
     def get_dataset_pipeline(dev_source_sentences) -> tf.data.Dataset:
         dataset = tf.data.Dataset.from_tensor_slices((dev_source_sentences))
@@ -90,8 +88,9 @@ def main(config_filename: str):
 
     dev_dataset = get_dataset_pipeline(dev_source_sentences)
     test_dataset = get_dataset_pipeline(test_source_sentences)
+    ###
     
-    
+    ### Prepare right model:
     if USE_F16:
         policy = mixed_precision.Policy('mixed_float16')
         mixed_precision.set_global_policy(policy)
@@ -109,7 +108,9 @@ def main(config_filename: str):
     if USE_F16:
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
         model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+    ###
 
+    # prepare udpipe tokenizer
     udpipe_tokenizer = UDPipeTokenizer("cs")
 
     # @timeout(TIMEOUT)
@@ -153,7 +154,9 @@ def main(config_filename: str):
         step = int(unevaluated_checkpoint[5:])
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
 
+        ### Load model weights for evaluation
         model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
+        ###
 
         print("Generating...")
         predicted_sentences = []

@@ -7,7 +7,8 @@ import aspell
 import random
 import numpy as np
 
-# OPTIMIZED
+# Author: Jakub Náplave
+# a bit optimized, doing same things but a bit faster
 
 allowed_source_delete_tokens = [',', '.', '!', '?']
 

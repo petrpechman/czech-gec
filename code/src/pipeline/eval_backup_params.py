@@ -186,6 +186,9 @@ def main(config_filename: str):
             model.compile(optimizer=optimizer)
 
     def generate_and_score(mybackup, dataset, source_sentences, gold_edits, output_dir, tag):
+
+        # model.load_weights(BACKUP_DIR + "/").expect_partial()
+
         status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint).expect_partial()
         print("STATUS:", status)
         step = mybackup._ckpt_saved_epoch

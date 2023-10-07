@@ -4,6 +4,8 @@ sys.path.append('..')
 import os
 import tensorflow as tf
 
+import argparse
+
 from transformers import TFAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
 from transformers import AutoConfig
@@ -195,7 +197,12 @@ def main(config_filename: str):
         predicted_sentences = []
         for i, batch in enumerate(dataset):
             print(f"Generate {i+1}. batch.") 
-            preds = model.generate(batch['input_ids'], max_length=MAX_EVAL_LENGTH)
+            preds = model.generate(
+                batch['input_ids'], 
+                max_length=MAX_EVAL_LENGTH,
+                min_length=min_length,
+                num_beams=num_beams,
+                )
             batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
             predicted_sentences = predicted_sentences + batch_sentences
         print("End of generating...")
@@ -240,3 +247,11 @@ def main(config_filename: str):
         generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST)
     except:
         print("Something went wrong... Try again...")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--config", type=str, help="Config file.")
+    args = parser.parse_args()
+
+    main(args.config)

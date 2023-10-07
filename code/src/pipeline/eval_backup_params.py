@@ -188,6 +188,7 @@ def main(config_filename: str):
     def generate_and_score(mybackup, dataset, source_sentences, gold_edits, output_dir, tag):
 
         # model.load_weights(BACKUP_DIR + "/").expect_partial()
+        # step = 18
 
         status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint).expect_partial()
         print("STATUS:", status)

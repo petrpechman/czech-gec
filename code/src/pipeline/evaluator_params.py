@@ -25,6 +25,13 @@ from utils.time_check import timeout
 def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
+
+    ###
+    num_beams = 1
+    min_length = 10
+    specific_folder = f"nb-{num_beams}-ml-{min_length}"
+    dump_folder = os.path.join('dumps', specific_folder)
+    ###
     
     SEED = config['seed']
 
@@ -181,6 +188,13 @@ def main(config_filename: str):
         total_stat_correct, total_stat_proposed, total_stat_gold = compute_metrics(tokenized_predicted_sentences, source_sentences, gold_edits)
         print("End of computing...")
 
+        print("Create dump...")
+        with open(os.path.join(dump_folder, 'errors.txt'), 'w') as file:
+            file.writelines(source_sentences)
+        with open(os.path.join(dump_folder, 'corrected.txt'), 'w') as file:
+            file.writelines(tokenized_predicted_sentences)
+        print("End of creating dump...")
+
         print("Write into files...")
         p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
         r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
@@ -203,8 +217,8 @@ def main(config_filename: str):
                     generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV)
                     generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST)
                     
-                    print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    # print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                    # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except:
                     print("Something went wrong... Try again...")
 

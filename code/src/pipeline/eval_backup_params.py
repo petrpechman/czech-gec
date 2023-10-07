@@ -27,9 +27,10 @@ def main(config_filename: str):
         config = json.load(json_file)
 
     ###
-    num_beams = 1
+    num_beams = 4
     min_length = 0
-    specific_folder = f"nb-{num_beams}-minl-{min_length}"
+    length_penalty = 0.6
+    specific_folder = f"nb-{num_beams}-minl-{min_length}-lp-{length_penalty}"
     dump_folder = os.path.join('dumps', specific_folder)
     os.makedirs(dump_folder, exist_ok=True)
     ###
@@ -202,6 +203,7 @@ def main(config_filename: str):
                 max_length=MAX_EVAL_LENGTH,
                 min_length=min_length,
                 num_beams=num_beams,
+                length_penalty=length_penalty,
                 )
             batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
             predicted_sentences = predicted_sentences + batch_sentences

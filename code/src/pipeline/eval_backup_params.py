@@ -223,9 +223,11 @@ def main(config_filename: str):
 
         print("Create dump...")
         with open(os.path.join(dump_folder, f"errors-{tag}.txt"), 'w') as file:
-            file.writelines(source_sentences)
+            source_sentences_w = [sentence + "\n" for sentence in source_sentences]
+            file.writelines(source_sentences_w)
         with open(os.path.join(dump_folder, f"corrected-{tag}.txt"), 'w') as file:
-            file.writelines(tokenized_predicted_sentences)
+            tokenized_predicted_sentences_w = [sentence + "\n" for sentence in tokenized_predicted_sentences]
+            file.writelines(tokenized_predicted_sentences_w)
         print("End of creating dump...")
 
         print("Write metrics into files...")

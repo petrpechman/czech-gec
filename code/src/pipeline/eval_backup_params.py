@@ -254,7 +254,8 @@ def main(config_filename: str):
         mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
         generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV)
         generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST)
-    except:
+    except Exception as e:
+        print(e)
         print("Something went wrong... Try again...")
 
 

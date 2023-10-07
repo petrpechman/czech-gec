@@ -192,16 +192,12 @@ def main(config_filename: str):
         print("INITIAL EPOCH:", int(step))
 
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
+        
         ###
-
-        #
-        print("HERE")
-        print(source_sentences[0])
+        print("Create dump...")
         with open(os.path.join(dump_folder, 'errors.txt'), 'w') as file:
-            for sentence in source_sentences:
-                file.write(sentence + "\n")
-        print("END")
-        #
+            file.writelines(source_sentences)
+        ###
 
         print("Generating...")
         predicted_sentences = []

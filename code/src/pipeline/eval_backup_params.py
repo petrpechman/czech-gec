@@ -28,7 +28,7 @@ def main(config_filename: str):
 
     ###
     num_beams = 1
-    min_length = 10
+    min_length = 0
     specific_folder = f"nb-{num_beams}-minl-{min_length}"
     dump_folder = os.path.join('dumps', specific_folder)
     os.makedirs(dump_folder, exist_ok=True)
@@ -186,10 +186,6 @@ def main(config_filename: str):
             model.compile(optimizer=optimizer)
 
     def generate_and_score(mybackup, dataset, source_sentences, gold_edits, output_dir, tag):
-
-        # model.load_weights(BACKUP_DIR + "/").expect_partial()
-        # step = 18
-
         status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint).expect_partial()
         print("STATUS:", status)
         step = mybackup._ckpt_saved_epoch

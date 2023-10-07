@@ -185,19 +185,13 @@ def main(config_filename: str):
         else:
             model.compile(optimizer=optimizer)
 
-    def generate_and_score(mybackup, dataset, source_sentences, gold_edits, output_dir):
+    def generate_and_score(mybackup, dataset, source_sentences, gold_edits, output_dir, tag):
         status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint).expect_partial()
         print("STATUS:", status)
         step = mybackup._ckpt_saved_epoch
         print("INITIAL EPOCH:", int(step))
 
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
-        
-        ###
-        print("Create dump...")
-        with open(os.path.join(dump_folder, 'errors.txt'), 'w') as file:
-            file.writelines(source_sentences)
-        ###
 
         print("Generating...")
         predicted_sentences = []
@@ -228,9 +222,9 @@ def main(config_filename: str):
         print("End of computing...")
 
         print("Create dump...")
-        with open(os.path.join(dump_folder, 'errors.txt'), 'w') as file:
+        with open(os.path.join(dump_folder, f"errors-{tag}.txt"), 'w') as file:
             file.writelines(source_sentences)
-        with open(os.path.join(dump_folder, 'corrected.txt'), 'w') as file:
+        with open(os.path.join(dump_folder, f"corrected-{tag}.txt"), 'w') as file:
             file.writelines(tokenized_predicted_sentences)
         print("End of creating dump...")
 
@@ -249,8 +243,8 @@ def main(config_filename: str):
 
     try:
         mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
-        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV)
-        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST)
+        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev')
+        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test')
     except Exception as e:
         print(e)
         print("Something went wrong... Try again...")

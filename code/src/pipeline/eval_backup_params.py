@@ -193,6 +193,14 @@ def main(config_filename: str):
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
         ###
 
+        #
+        print("HERE")
+        print(source_sentences[0])
+        with open(os.path.join(dump_folder, 'errors.txt'), 'w') as file:
+            file.writelines(source_sentences)
+        print("END")
+        #
+
         print("Generating...")
         predicted_sentences = []
         for i, batch in enumerate(dataset):

@@ -197,7 +197,8 @@ def main(config_filename: str):
         print("HERE")
         print(source_sentences[0])
         with open(os.path.join(dump_folder, 'errors.txt'), 'w') as file:
-            file.writelines(source_sentences)
+            for sentence in source_sentences:
+                file.write(sentence + "\n")
         print("END")
         #
 

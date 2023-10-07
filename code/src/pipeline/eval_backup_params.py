@@ -31,6 +31,7 @@ def main(config_filename: str):
     min_length = 10
     specific_folder = f"nb-{num_beams}-minl-{min_length}"
     dump_folder = os.path.join('dumps', specific_folder)
+    os.makedirs(dump_folder, exist_ok=True)
     ###
     
     SEED = config['seed']

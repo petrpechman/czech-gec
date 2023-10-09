@@ -29,7 +29,7 @@ def main(config_filename: str):
     ###
     num_beams = 4
     min_length = 0
-    length_penalty = 0.6
+    length_penalty = 1.0
     specific_folder = f"nb-{num_beams}-minl-{min_length}-lp-{length_penalty}"
     dump_folder = os.path.join('dumps', specific_folder)
     os.makedirs(dump_folder, exist_ok=True)
@@ -70,8 +70,8 @@ def main(config_filename: str):
     MAX_EVAL_LENGTH = config['max_eval_length']
 
     # OUTPUT_DIR = 'results' # "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
-    OUTPUT_DIR_DEV = f"results-dev-{specific_folder}" # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
-    OUTPUT_DIR_TEST = f"results-test-{specific_folder}" # "m2_data": "../../data/akces-gec/test/test.all.m2",
+    OUTPUT_DIR_DEV = f"results-geccc-dev-{specific_folder}" # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    OUTPUT_DIR_TEST = f"results-geccc-test-{specific_folder}" # "m2_data": "../../data/akces-gec/test/test.all.m2",
     
     tf.random.set_seed(SEED)
     
@@ -247,8 +247,8 @@ def main(config_filename: str):
 
     try:
         mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
-        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev')
-        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test')
+        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev-geccc')
+        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test-geccc')
     except Exception as e:
         print(e)
         print("Something went wrong... Try again...")

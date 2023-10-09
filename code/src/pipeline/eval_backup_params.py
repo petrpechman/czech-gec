@@ -73,6 +73,12 @@ def main(config_filename: str):
     OUTPUT_DIR_DEV = f"results-geccc-dev-{specific_folder}" # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
     OUTPUT_DIR_TEST = f"results-geccc-test-{specific_folder}" # "m2_data": "../../data/akces-gec/test/test.all.m2",
     
+    MODEL_TYPE = ""
+    if MODEL in ["google/mt5-small", "google/mt5-base"]:
+        MODEL_TYPE = "T5"
+    else:
+        MODEL_TYPE = "Bart-mine"
+
     tf.random.set_seed(SEED)
     
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -185,6 +191,10 @@ def main(config_filename: str):
             model.compile(optimizer=optimizer, loss=loss)
         else:
             model.compile(optimizer=optimizer)
+
+    if USE_F16 and MODEL_TYPE == "Bart-mine":
+        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     def generate_and_score(mybackup, dataset, source_sentences, gold_edits, output_dir, tag):
         status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint).expect_partial()

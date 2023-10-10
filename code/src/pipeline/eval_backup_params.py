@@ -70,8 +70,8 @@ def main(config_filename: str):
     MAX_EVAL_LENGTH = config['max_eval_length']
 
     # OUTPUT_DIR = 'results' # "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
-    OUTPUT_DIR_DEV = f"results-geccc-dev-{specific_folder}" # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
-    OUTPUT_DIR_TEST = f"results-geccc-test-{specific_folder}" # "m2_data": "../../data/akces-gec/test/test.all.m2",
+    OUTPUT_DIR_DEV = f"results-dev-{specific_folder}" # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
+    OUTPUT_DIR_TEST = f"results-test-{specific_folder}" # "m2_data": "../../data/akces-gec/test/test.all.m2",
     
     MODEL_TYPE = ""
     if MODEL in ["google/mt5-small", "google/mt5-base"]:
@@ -225,7 +225,7 @@ def main(config_filename: str):
             if i % BATCH_SIZE == 0:
                 print(f"Tokenize {i+BATCH_SIZE} sentences.")
             tokenization = udpipe_tokenizer.tokenize(line)
-            sentence = " ".join([token.string for token in tokenization[0]]) if len(tokenization) > 0 else ""
+            sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
             tokenized_predicted_sentences.append(sentence)
         print("End of tokenization...")
 
@@ -257,8 +257,8 @@ def main(config_filename: str):
 
     try:
         mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
-        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev-geccc')
-        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test-geccc')
+        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev')
+        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test')
     except Exception as e:
         print(e)
         print("Something went wrong... Try again...")

@@ -47,11 +47,12 @@ class GenereteErrorLine():
         return line
     
 
-def data_loader(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length):
+def data_loader(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool):
     # Starts read from start to end position, line with mistake is created for every read line,
     # then these lines are tokenized and store into dict that is putted into queue.
     counter = 0
-    aspell_speller = aspell.Speller('lang', gel.lang)
+    if not errors_from_file:
+        aspell_speller = aspell.Speller('lang', gel.lang)
     with open(filename, 'r') as f:
         # find start position
         while counter != start_position:
@@ -61,7 +62,10 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
         # read until end position
         while counter != end_position:
             line = f.readline()
-            error_line = gel(line, aspell_speller)
+            if errors_from_file:
+                line, error_line = line.split('\t', 1)
+            else:
+                error_line = gel(line, aspell_speller)
             tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="np")
             
             input_ids = tokenized['input_ids'][0]
@@ -86,7 +90,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
 
 def process_file_in_chunks(
         queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, 
-        gel: GenereteErrorLine, tokenizer, max_length):
+        gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool):
     # Computes start index and end index for every process, stores them as arguments,
     # runs these processes and wait until they finished.
     
@@ -101,16 +105,16 @@ def process_file_in_chunks(
     for i in range(num_parallel):
         current = (current + process_size) % file_size
         end_position = current
-        arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length,))
+        arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file,))
         start_position = current
     end_position = start
-    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length,))
+    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file,))
 
     # start processes and wait until they finished
     pool.starmap(data_loader, arguments)
 
 
-def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length):
+def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool = False):
     # Main methon that is used in pipeline.py
     # Creates pools and goes iteratively over files (one or more files).
     # Computes file size and run process_file_in_chunks. 
@@ -126,7 +130,7 @@ def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: Gener
                 pass
         file_size = count + 1
         
-        process_file_in_chunks(queue, pool, num_parallel, file, file_size, gel, tokenizer, max_length)
+        process_file_in_chunks(queue, pool, num_parallel, file, file_size, gel, tokenizer, max_length, errors_from_file)
 
         index += 1
         if index == len(files):

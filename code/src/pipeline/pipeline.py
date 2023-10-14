@@ -35,6 +35,8 @@ def main(config_filename: str):
     SHUFFLE_BUFFER = config['shuffle_buffer']
     BUCKET_BOUNDARIES = config['bucket_boundaries']
     BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
+    # data from file
+    ERRORS_FROM_FILE = config.get('errors_from_file', False)
 
     # model
     MODEL = config['model']
@@ -88,15 +90,18 @@ def main(config_filename: str):
     ### Dataset loading:
     manager = Manager()
     queue = manager.Queue(4 * NUM_PARALLEL)
-    gel = load_data.GenereteErrorLine(
+    if not ERRORS_FROM_FILE:
+        gel = load_data.GenereteErrorLine(
             tokens, characters, LANG, 
             TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
             TOKEN_ERR_PROB, CHAR_ERR_PROB)
+    else:
+        gel = None
 
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH,))
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, ))
 
     process.start()
 

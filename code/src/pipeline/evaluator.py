@@ -25,6 +25,11 @@ from utils.time_check import timeout
 def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
+    ### Params:
+    num_beams = 4
+    min_length = 0
+    length_penalty = 1.0
+    ###
     
     SEED = config['seed']
 
@@ -162,7 +167,13 @@ def main(config_filename: str):
         predicted_sentences = []
         for i, batch in enumerate(dataset):
             print(f"Generate {i+1}. batch.") 
-            preds = model.generate(batch['input_ids'], max_length=MAX_EVAL_LENGTH)
+            preds = model.generate(
+                batch['input_ids'], 
+                max_length=MAX_EVAL_LENGTH,
+                min_length=min_length,
+                num_beams=num_beams,
+                length_penalty=length_penalty,
+                )
             batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
             predicted_sentences = predicted_sentences + batch_sentences
         print("End of generating...")
@@ -173,7 +184,7 @@ def main(config_filename: str):
             if i % BATCH_SIZE == 0:
                 print(f"Tokenize {i+BATCH_SIZE} sentences.")
             tokenization = udpipe_tokenizer.tokenize(line)
-            sentence = " ".join([token.string for token in tokenization[0]]) if len(tokenization) > 0 else ""
+            sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
             tokenized_predicted_sentences.append(sentence)
         print("End of tokenization...")
 

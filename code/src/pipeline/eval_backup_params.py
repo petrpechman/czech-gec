@@ -30,7 +30,7 @@ def main(config_filename: str):
     num_beams = 4
     min_length = 0
     length_penalty = 1.0
-    specific_folder = f"nb-{num_beams}-minl-{min_length}-lp-{length_penalty}"
+    specific_folder = f"nb-{num_beams}-minl-{min_length}-lp-{length_penalty}-no-udpipe"
     dump_folder = os.path.join('dumps', specific_folder)
     os.makedirs(dump_folder, exist_ok=True)
     ###
@@ -224,9 +224,10 @@ def main(config_filename: str):
         for i, line in enumerate(predicted_sentences):
             if i % BATCH_SIZE == 0:
                 print(f"Tokenize {i+BATCH_SIZE} sentences.")
-            tokenization = udpipe_tokenizer.tokenize(line)
-            sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
-            tokenized_predicted_sentences.append(sentence)
+            # tokenization = udpipe_tokenizer.tokenize(line)
+            # sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
+            # tokenized_predicted_sentences.append(sentence)
+            tokenized_predicted_sentences.append(line)
         print("End of tokenization...")
 
         print("Compute metrics...")
@@ -257,8 +258,8 @@ def main(config_filename: str):
 
     try:
         mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
-        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev')
-        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test')
+        generate_and_score(mybackup, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV, 'dev-no-udpipe')
+        generate_and_score(mybackup, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST, 'test-no-udpipe')
     except Exception as e:
         print(e)
         print("Something went wrong... Try again...")

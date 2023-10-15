@@ -62,24 +62,26 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
         # read until end position
         while counter != end_position:
             line = f.readline()
-            if errors_from_file:
-                line, error_line = line.split('\t', 1)
-            else:
-                error_line = gel(line, aspell_speller)
-            tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="np")
+            try:
+                if errors_from_file:
+                    line, error_line = line.split('\t', 1)
+                else:
+                    error_line = gel(line, aspell_speller)
+                tokenized = tokenizer(error_line, text_target=line, max_length=max_length, truncation=True, return_tensors="np")
             
-            input_ids = tokenized['input_ids'][0]
-            attention_mask = tokenized['attention_mask'][0]
-            tokenized_target_line = tokenized['labels'][0]
+                input_ids = tokenized['input_ids'][0]
+                attention_mask = tokenized['attention_mask'][0]
+                tokenized_target_line = tokenized['labels'][0]
 
-            dato = {
-                "input_ids": input_ids,
-                "attention_mask": attention_mask,
-                "tokenized_target_line": tokenized_target_line,
-            }
+                dato = {
+                    "input_ids": input_ids,
+                    "attention_mask": attention_mask,
+                    "tokenized_target_line": tokenized_target_line,
+                }
             
-            
-            queue.put(dato)
+                queue.put(dato)
+            except:
+                print(f"skip line: {line}")
 
             counter += 1
 

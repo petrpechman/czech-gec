@@ -42,7 +42,8 @@ def main(config_filename: str):
     MODEL = config['model']
     TOKENIZER = config['tokenizer']
     FROM_CONFIG = config['from_config']
-    USE_F16 = config['use_f16']
+    # USE_F16 = config['use_f16']
+    USE_F16 = False
     
     # logs
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']

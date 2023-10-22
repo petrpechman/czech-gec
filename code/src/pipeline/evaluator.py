@@ -209,6 +209,7 @@ def main(config_filename: str):
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
+            unevaluated = sorted(unevaluated)
             
             for unevaluated_checkpoint in unevaluated:
                 try:

@@ -53,6 +53,12 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
     counter = 0
     if not errors_from_file:
         aspell_speller = aspell.Speller('lang', gel.lang)
+
+    print("NNNNN")
+    print(end_position)
+    print(start_position)
+    print("NNNNN")
+
     with open(filename, 'r') as f:
         # find start position
         while counter != start_position:
@@ -87,6 +93,10 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
             counter += 1
 
             if not line: # EOF
+                print("AAAA")
+                print(end_position)
+                print(start_position)
+                print("AAAA")
                 f.seek(0) 
                 counter = 0
 

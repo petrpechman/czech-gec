@@ -62,6 +62,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
         # read until end position
         while counter != end_position:
             line = f.readline()
+            line = line[:-1] if line[-1] == "\n" else line
             try:
                 if errors_from_file:
                     line, error_line = line.split('\t', 1)

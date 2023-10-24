@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/akces-gec/train/train.tsv"],
-    "num_parallel": 1,
+    "num_parallel": 2,
     "max_length": 128,
     "shuffle_buffer": 1,
     "bucket_boundaries": [32, 64, 96],

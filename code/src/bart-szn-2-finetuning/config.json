@@ -2,9 +2,9 @@
     "seed": 42,
 
     "data_paths": ["../../data/akces-gec/train/train.tsv"],
-    "num_parallel": 4,
+    "num_parallel": 2,
     "max_length": 128,
-    "shuffle_buffer": 4,
+    "shuffle_buffer": 8,
     "bucket_boundaries": [32, 64, 96],
     "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
     "errors_from_file": true,

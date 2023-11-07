@@ -15,6 +15,7 @@ from tensorflow.keras import mixed_precision
 from utils import load_data
 from utils import dataset_utils
 from utils import introduce_errors
+from utils import error_checker
 
 from utils.components.callbacks import MyBackupAndRestore
 from utils.components.losses import MaskedSparseCategoricalCrossEntropy
@@ -23,6 +24,8 @@ from multiprocessing import Process, Manager
 
 
 def main(config_filename: str):
+    ec = error_checker.ErrorChecker('./typical_errors.tsv', 1)
+
     with open(config_filename) as json_file:
         config = json.load(json_file)
 
@@ -123,8 +126,9 @@ def main(config_filename: str):
                 })
     
     def my_func(x):
-        print(x.pop('original_sentence'))
-        print(x.pop('correct_sentence'))
+        orig = x.pop('original_sentence')
+        cor = x.pop('correct_sentence')
+        ec(orig, cor)
         return x
     
     dataset = dataset.map(my_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)

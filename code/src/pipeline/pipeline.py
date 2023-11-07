@@ -126,6 +126,7 @@ def main(config_filename: str):
                 })
     
     def my_func(x):
+        print(x)
         orig = x.pop('original_sentence')
         cor = x.pop('correct_sentence')
         print()

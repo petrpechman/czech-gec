@@ -111,12 +111,21 @@ def main(config_filename: str):
                     "input_ids": tf.int32,
                     "attention_mask": tf.int32,
                     "tokenized_target_line": tf.int32,
+                    "original_sentence": str,
+                    "correct_sentence": str,
                 },
         output_shapes={
                     "input_ids": (None, ),
                     "attention_mask": (None, ),
                     "tokenized_target_line": (None, ),
+                    "original_sentence": (None, ),
+                    "correct_sentence": (None, ),
                 })
+    
+    for d in dataset:
+        break
+    print(d)
+    return
 
     dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)

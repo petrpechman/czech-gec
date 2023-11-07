@@ -80,6 +80,8 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                     "input_ids": input_ids,
                     "attention_mask": attention_mask,
                     "tokenized_target_line": tokenized_target_line,
+                    "original_sentence": error_line,
+                    "correct_sentence": line,
                 }
             
                 queue.put(dato)

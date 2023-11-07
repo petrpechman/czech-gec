@@ -125,30 +125,30 @@ def main(config_filename: str):
                     "correct_sentence": (),
                 })
     
-    def my_func(x):
-        print(x)
-        orig = x.pop('original_sentence')
-        cor = x.pop('correct_sentence')
-        print()
-        print(orig)
-        print(cor)
-        print()
-        orig = orig.numpy().decode('UTF-8')
-        cor = cor.numpy().decode('UTF-8')
-        print()
-        print(orig)
-        print(cor)
-        print()
-        ec(orig, cor)
-        return x
+    # def my_func(x):
+    #     print(x)
+    #     orig = x.pop('original_sentence')
+    #     cor = x.pop('correct_sentence')
+    #     print()
+    #     print(orig)
+    #     print(cor)
+    #     print()
+    #     orig = orig.numpy().decode('UTF-8')
+    #     cor = cor.numpy().decode('UTF-8')
+    #     print()
+    #     print(orig)
+    #     print(cor)
+    #     print()
+    #     ec(orig, cor)
+    #     return x
     
-    dataset = dataset.map(my_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # dataset = dataset.map(my_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     for d in dataset:
         break
     print(d)
-    # print(d['original_sentence'].numpy().decode('UTF-8'))
-    # print(d['correct_sentence'].numpy().decode('UTF-8'))
+    print(d['original_sentence'].numpy().decode('UTF-8'))
+    print(d['correct_sentence'].numpy().decode('UTF-8'))
     return
 
     dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)

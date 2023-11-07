@@ -122,10 +122,18 @@ def main(config_filename: str):
                     "correct_sentence": (),
                 })
     
+    def my_func(x):
+        print(x.pop('original_sentence'))
+        print(x.pop('correct_sentence'))
+        return x
+    
+    dataset = dataset.map(my_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
     for d in dataset:
         break
-    print(d['original_sentence'].numpy().decode('UTF-8'))
-    print(d['correct_sentence'].numpy().decode('UTF-8'))
+    print(d)
+    # print(d['original_sentence'].numpy().decode('UTF-8'))
+    # print(d['correct_sentence'].numpy().decode('UTF-8'))
     return
 
     dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)

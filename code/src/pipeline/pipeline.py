@@ -125,7 +125,7 @@ def main(config_filename: str):
                     "correct_sentence": (),
                 })
     
-    @tf.numpy_function()
+    # @tf.numpy_function()
     def my_func(x):
         print(x)
         orig = x.pop('original_sentence')

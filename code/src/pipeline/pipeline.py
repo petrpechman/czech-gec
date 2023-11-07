@@ -126,8 +126,12 @@ def main(config_filename: str):
                 })
     
     def my_func(x):
-        orig = x.pop('original_sentence')
-        cor = x.pop('correct_sentence')
+        orig = x.pop('original_sentence').numpy().decode('UTF-8')
+        cor = x.pop('correct_sentence').numpy().decode('UTF-8')
+        print()
+        print(orig)
+        print(cor)
+        print()
         ec(orig, cor)
         return x
     

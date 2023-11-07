@@ -151,7 +151,7 @@ def main(config_filename: str):
         ec(orig, cor)
         return x
     
-    dataset = dataset.map(lambda input_batch: my_func(input_batch['original_sentence']), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(my_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     for d in dataset:
         break

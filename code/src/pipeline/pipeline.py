@@ -125,7 +125,15 @@ def main(config_filename: str):
                     "correct_sentence": (),
                 })
     
-    @tf.function(input_signature=[tf.TensorSpec(None, tf.string)])
+    signature_dict ={
+                    "input_ids": tf.TensorSpec(shape=(None, ), dtype=tf.int32),
+                    "attention_mask": tf.TensorSpec(shape=(None, ), dtype=tf.int32),
+                    "tokenized_target_line": tf.TensorSpec(shape=(None, ), dtype=tf.int32),
+                    "original_sentence": tf.TensorSpec(shape=(),  dtype=tf.string),
+                    "correct_sentence": tf.TensorSpec(shape=(),  dtype=tf.string),
+                } 
+    
+    @tf.function(input_signature = [signature_dict])
     def my_func(x):
         print(x)
         orig = x.pop('original_sentence')

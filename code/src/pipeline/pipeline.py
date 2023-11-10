@@ -24,7 +24,7 @@ from multiprocessing import Process, Manager
 
 
 def main(config_filename: str):
-    ec = error_checker.ErrorChecker('./typical_errors.tsv', 1)
+    # ec = error_checker.ErrorChecker('./typical_errors.tsv', 1)
 
     with open(config_filename) as json_file:
         config = json.load(json_file)

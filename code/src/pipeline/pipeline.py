@@ -15,7 +15,7 @@ from tensorflow.keras import mixed_precision
 from utils import load_data
 from utils import dataset_utils
 from utils import introduce_errors
-from utils import error_checker
+# from utils import error_checker
 
 from utils.components.callbacks import MyBackupAndRestore
 from utils.components.losses import MaskedSparseCategoricalCrossEntropy

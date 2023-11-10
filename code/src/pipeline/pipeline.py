@@ -124,41 +124,6 @@ def main(config_filename: str):
                     "original_sentence": (),
                     "correct_sentence": (),
                 })
-    
-    signature_dict ={
-                    "input_ids": tf.TensorSpec(shape=(None, ), dtype=tf.int32),
-                    "attention_mask": tf.TensorSpec(shape=(None, ), dtype=tf.int32),
-                    "tokenized_target_line": tf.TensorSpec(shape=(None, ), dtype=tf.int32),
-                    "original_sentence": tf.TensorSpec(shape=(),  dtype=tf.string),
-                    "correct_sentence": tf.TensorSpec(shape=(),  dtype=tf.string),
-                } 
-    
-    @tf.function(input_signature = [signature_dict])
-    def my_func(x):
-        print(x)
-        orig = x.pop('original_sentence')
-        cor = x.pop('correct_sentence')
-        print()
-        print(orig)
-        print(cor)
-        print()
-        orig = orig.numpy().decode('UTF-8')
-        cor = cor.numpy().decode('UTF-8')
-        print()
-        print(orig)
-        print(cor)
-        print()
-        ec(orig, cor)
-        return x
-    
-    dataset = dataset.map(lambda x: my_func(x), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-    for d in dataset:
-        break
-    # print(d)
-    # print(d['original_sentence'].numpy().decode('UTF-8'))
-    # print(d['correct_sentence'].numpy().decode('UTF-8'))
-    return
 
     dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -170,16 +135,6 @@ def main(config_filename: str):
     )
     dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-    ###
-
-    # for d in dataset:
-    #     break
-    # print(d[0]['input_ids'][0:2])
-    # print(d[0]['attention_mask'][0:2])
-    # print(d[0]['decoder_input_ids'][0:2])
-    # print("SPLIT")
-    # print(d[1][0:2])
-    # return
 
     if USE_F16:
         policy = mixed_precision.Policy('mixed_float16')

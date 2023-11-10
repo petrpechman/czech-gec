@@ -1,4 +1,4 @@
-| **Error** | **Recognition** | **Creating** | **Example - correct** | **Example - error** | Useful |
+| **Error** | **Recognition** | **Creating** | **Example - correct** | **Example - error** | **Useful** |
 |---|---|---|---|---|---|
 | Chybějící . | Chybí . v chybové větě | Smazat . | Oblast připadla Sovětskému svazu po 2 . světové válce . | Oblast připadla Sovětskému svazu po 2 světové válce . | Yes |
 | Chybějící , | Chybí , v chybové větě | Smazat , | Myslel si , že už neprší . | Myslel si že už neprší. | Yes |

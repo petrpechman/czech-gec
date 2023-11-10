@@ -10,3 +10,4 @@ matplotlib
 tensorflow_datasets
 tensorflow_text
 ufal.udpipe
+# spacy # error_checker

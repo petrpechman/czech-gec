@@ -56,28 +56,28 @@ class ErrorChecker:
            edit.o_start + 1 == edit.o_end:
             self._add_error_type('mne')
 
-origins = [
-    "Přijď ke mě",
-    "Přijď ke mě",
-    "Přijď ke mě",
-    "Přijď ke mě",
-    "Přijď ke mě",
-    "Přijď ke mě",
-    "Přijď ke mě",
-    "Přijď ke mě",
-]
+# origins = [
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+#     "Přijď ke mě",
+# ]
 
-corrects = [
-    "Přijď ke mně",
-    "Přijď ke mně",
-    "Přijď ke mně",
-    "Přijď ke mně",
-    "Přijď ke mě taky",
-    "Přijď ke mě taky",
-    "Přijď ke mě taky",
-    "Přijď ke mě taky",
-]
+# corrects = [
+#     "Přijď ke mně",
+#     "Přijď ke mně",
+#     "Přijď ke mně",
+#     "Přijď ke mně",
+#     "Přijď ke mě taky",
+#     "Přijď ke mě taky",
+#     "Přijď ke mě taky",
+#     "Přijď ke mě taky",
+# ]
 
-ec = ErrorChecker('./file.tsv')
-for o, c in zip(origins, corrects):
-    ec(o, c)
+# ec = ErrorChecker('./file.tsv')
+# for o, c in zip(origins, corrects):
+#     ec(o, c)

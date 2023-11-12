@@ -218,6 +218,8 @@ def main(config_filename: str):
     if lr:
         print("LEARNING RATE:")
         print(lr)
+        optimizer.learning_rate = tf.Variable(lr)
+        optimizer._learning_rate = tf.Variable(lr)
         print(optimizer.learning_rate)
         print(optimizer._learning_rate)
         print("--------------")

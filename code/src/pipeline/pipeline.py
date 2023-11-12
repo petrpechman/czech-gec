@@ -215,6 +215,14 @@ def main(config_filename: str):
     ]
     ###
 
+    OPTIMIZER_PARAMS = dict()
+    lr = OPTIMIZER_PARAMS.get('learning_rate', None)
+    if lr:
+        print("LEARNING RATE:")
+        print(optimizer.learning_rate)
+        print(optimizer._learning_rate)
+        print("--------------")
+
     ### Train
     if USE_F16 and MODEL_TYPE == "Bart-mine":
         model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)

@@ -52,6 +52,7 @@ def main(config_filename: str):
     # optimizer
     OPTIMIZER_NAME = config['optimizer']['name']
     OPTIMIZER_PARAMS = config['optimizer']['params']
+    LR = OPTIMIZER_PARAMS.get('learning_rate', None)
 
     # loss
     LOSS = config['loss']
@@ -214,12 +215,12 @@ def main(config_filename: str):
         tensorboard_callback
     ]
     ###
-    lr = OPTIMIZER_PARAMS.get('learning_rate', None)
-    if lr:
+
+    if LR:
         print("LEARNING RATE:")
-        print(lr)
-        optimizer.learning_rate = tf.Variable(lr)
-        optimizer._learning_rate = tf.Variable(lr)
+        print(LR)
+        optimizer.learning_rate = tf.Variable(LR)
+        optimizer._learning_rate = tf.Variable(LR)
         print(optimizer.learning_rate)
         print(optimizer._learning_rate)
         print("--------------")

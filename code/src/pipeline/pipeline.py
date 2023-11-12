@@ -214,11 +214,10 @@ def main(config_filename: str):
         tensorboard_callback
     ]
     ###
-
-    OPTIMIZER_PARAMS = dict()
     lr = OPTIMIZER_PARAMS.get('learning_rate', None)
     if lr:
         print("LEARNING RATE:")
+        print(lr)
         print(optimizer.learning_rate)
         print(optimizer._learning_rate)
         print("--------------")

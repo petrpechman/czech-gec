@@ -210,7 +210,8 @@ def main(config_filename: str):
             tf.summary.text("predictions", text, step)
         print("write predictions")
         with open(predictions_filepath, "w") as file:
-            file.writelines(tokenized_predicted_sentences)
+            for sentence in tokenized_predicted_sentences:
+                file.write(sentence + "\n")
         print("End of writing into files...")
 
     while True:

@@ -40,6 +40,7 @@ def main(config_filename: str):
     BUCKET_BATCH_SIZES_PER_GPU = config['bucket_batch_sizes_per_gpu']
     # data from file
     ERRORS_FROM_FILE = config.get('errors_from_file', False)
+    REVERTED_PIPELINE = config.get('reverted_pipeline', False)
 
     # model
     MODEL = config['model']
@@ -89,6 +90,8 @@ def main(config_filename: str):
     num_div = strategy.num_replicas_in_sync
     print('Number of devices: %d' % num_div)
     bucket_batch_sizes = [bucket_batch_size * num_div for bucket_batch_size in BUCKET_BATCH_SIZES_PER_GPU]
+    if REVERTED_PIPELINE:
+        print('It is used REVERTED_PIPELINE.')
     ###
 
     ### Dataset loading:
@@ -105,7 +108,7 @@ def main(config_filename: str):
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, ))
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, ))
 
     process.start()
 

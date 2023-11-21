@@ -161,7 +161,7 @@ def main(config_filename: str):
     def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, predictions_file):
         step = int(unevaluated_checkpoint[5:])
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
-        predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, step + "-" + predictions_file)
+        predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, str(step) + "-" + predictions_file)
 
         ### Load model weights for evaluation
         model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
@@ -227,8 +227,7 @@ def main(config_filename: str):
                     
                     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
-                except Exception as e:
-                    print(e)
+                except Exception:
                     print("Something went wrong... Try again...")
 
         time.sleep(10)

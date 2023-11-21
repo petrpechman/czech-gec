@@ -62,6 +62,8 @@ def main(config_filename: str):
     # OUTPUT_DIR = 'results' # "m2_data": "../../data/geccc/dev/sorted_sentence.m2",
     OUTPUT_DIR_DEV = 'results-dev' # "m2_data": "../../data/akces-gec/dev/dev.all.m2",
     OUTPUT_DIR_TEST = 'results-test' # "m2_data": "../../data/akces-gec/test/test.all.m2",
+    FILE_DEV_PREDICTIONS = 'predictions_dev.txt'
+    FILE_TEST_PREDICTIONS = 'predictions_test.txt'
     
     tf.random.set_seed(SEED)
     
@@ -156,9 +158,10 @@ def main(config_filename: str):
             print("F1:\t", f1)
         return total_stat_correct, total_stat_proposed, total_stat_gold
     
-    def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir):
+    def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, predictions_file):
         step = int(unevaluated_checkpoint[5:])
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
+        predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, predictions_file)
 
         ### Load model weights for evaluation
         model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
@@ -205,6 +208,10 @@ def main(config_filename: str):
             text = "  \n".join(tokenized_predicted_sentences[0:40])
             print(text)
             tf.summary.text("predictions", text, step)
+        print("write predictions")
+        with open(predictions_filepath, "w") as file:
+            file.writelines(tokenized_predicted_sentences)
+        print("End of writing into files...")
 
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
@@ -213,8 +220,10 @@ def main(config_filename: str):
             
             for unevaluated_checkpoint in unevaluated:
                 try:
-                    generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV)
-                    generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST)
+                    generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV,
+                                       FILE_DEV_PREDICTIONS)
+                    generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST,
+                                       FILE_TEST_PREDICTIONS)
                     
                     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))

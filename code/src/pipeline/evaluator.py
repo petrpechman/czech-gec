@@ -83,8 +83,8 @@ def main(config_filename: str):
                 'attention_mask': attention_mask[0]}
         return dato
     
-    def get_dataset_pipeline(dev_source_sentences) -> tf.data.Dataset:
-        dataset = tf.data.Dataset.from_tensor_slices((dev_source_sentences))
+    def get_dataset_pipeline(source_sentences) -> tf.data.Dataset:
+        dataset = tf.data.Dataset.from_tensor_slices((source_sentences))
         dataset = dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})

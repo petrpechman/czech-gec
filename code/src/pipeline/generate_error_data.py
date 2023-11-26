@@ -4,6 +4,7 @@ sys.path.append('..')
 import os
 import time
 import json
+import shutil
 import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
@@ -139,8 +140,8 @@ def main(config_filename: str):
                 try:
                     generate_and_score(unevaluated_checkpoint, dataset, FILE_PREDICTIONS)
                     
-                    # print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except:
                     print("Something went wrong... Try again...")
 

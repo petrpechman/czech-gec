@@ -126,6 +126,8 @@ def main(config_filename: str):
                     )
                 batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
                 for i, line in enumerate(batch_sentences):
+                    if i % 2 == 0:
+                        print("Write into file...")
                     tokenization = udpipe_tokenizer.tokenize(line)
                     sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
                     file.write(sentence + '\n')

@@ -107,7 +107,7 @@ def main(config_filename: str):
     
     def generate_and_score(unevaluated_checkpoint, dataset, predictions_file):
         step = int(unevaluated_checkpoint[5:])
-        predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, predictions_file + "-" + step)
+        predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, str(step) + "-" + predictions_file)
 
         ### Load model weights for evaluation
         model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()

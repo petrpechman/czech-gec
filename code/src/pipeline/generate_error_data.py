@@ -27,7 +27,6 @@ def main(config_filename: str):
     SEED = config['seed']
 
     # data loading
-    config = dict()
     DATA_FILEPATH = config.get('data_filepath', None) # tokenized data by udpipe tokenizer
     if not DATA_FILEPATH:
         print("Need to specify filepath...")

@@ -7,6 +7,7 @@ def main(config_filename: str, eval: bool, generate: bool = False):
     if eval and generate:
         print("It is not possible to use eval and generate together...")
     if generate:
+        print("USE GENERATE...")
         generate_error_data.main(config_filename)
     elif eval:
         evaluator.main(config_filename)
@@ -21,4 +22,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print(args.eval)
-    main(args.config, args.eval)
+    main(args.config, args.eval, args.generate)

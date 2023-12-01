@@ -56,5 +56,7 @@
 
     "max_eval_length": 512,
 
-    "timeout":  324000
+    "timeout":  324000,
+
+    "best_ckpt_filename": "./best_checkpoint.json"
 }

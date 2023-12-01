@@ -65,6 +65,13 @@ def main(config_filename: str):
     FILE_DEV_PREDICTIONS = 'predictions_dev.txt'
     FILE_TEST_PREDICTIONS = 'predictions_test.txt'
     
+    BEST_CKPT_FILENAME = config.get("best_ckpt_filename", None)
+    if BEST_CKPT_FILENAME:
+        with open(BEST_CKPT_FILENAME) as json_file:
+            best_ckpt = json.load(json_file)
+        BEST_CKPT_NAME = best_ckpt['name']
+        BEST_CKPT_F1 = best_ckpt['f1']
+
     tf.random.set_seed(SEED)
     
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -158,7 +165,7 @@ def main(config_filename: str):
             print("F1:\t", f1)
         return total_stat_correct, total_stat_proposed, total_stat_gold
     
-    def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, predictions_file):
+    def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, predictions_file) -> float:
         step = int(unevaluated_checkpoint[5:])
         result_dir = os.path.join(MODEL_CHECKPOINT_PATH, output_dir)
         predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, str(step) + "-" + predictions_file)
@@ -214,6 +221,8 @@ def main(config_filename: str):
                 file.write(sentence + "\n")
         print("End of writing into files...")
 
+        return f1
+
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
@@ -221,13 +230,24 @@ def main(config_filename: str):
             
             for unevaluated_checkpoint in unevaluated:
                 try:
-                    generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV,
+                    f1_dev = generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV,
                                        FILE_DEV_PREDICTIONS)
-                    generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST,
+                    f1_test = generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST,
                                        FILE_TEST_PREDICTIONS)
-                    
-                    print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    if BEST_CKPT_FILENAME and f1_test > BEST_CKPT_F1:
+                        BEST_CKPT_NAME = unevaluated_checkpoint
+                        BEST_CKPT_F1 = f1_test
+                        
+                        json_object = json.dumps({
+                             "name": BEST_CKPT_NAME,
+                             "f1": BEST_CKPT_F1
+                        })
+
+                        with open(BEST_CKPT_FILENAME, "w") as outfile:
+                            outfile.write(json_object)
+                    else:
+                        print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                        shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except Exception:
                     print("Something went wrong... Try again...")
 

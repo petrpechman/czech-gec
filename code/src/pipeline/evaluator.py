@@ -246,8 +246,9 @@ def main(config_filename: str):
                         with open(BEST_CKPT_FILENAME, "w") as outfile:
                             outfile.write(json_object)
                     else:
-                        print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                        shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                        print("Here should be delete")
+                        # print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                        # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except Exception:
                     print("Something went wrong... Try again...")
 

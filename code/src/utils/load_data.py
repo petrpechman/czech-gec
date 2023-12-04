@@ -85,8 +85,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                 }
             
                 queue.put(dato)
-            except Exception as e:
-                print(e)
+            except:
                 print(f"skip line: {line}")
 
             counter += 1

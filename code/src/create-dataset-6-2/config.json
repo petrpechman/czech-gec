@@ -1,0 +1,18 @@
+{
+    "seed": 42,
+
+    "data_paths": ["../../data/tokenized/news-2017-cs-tokenized.txt"],
+    "num_parallel": 20,
+    "max_length": 128,
+
+    "tokenizer": "../../models/bart-tokenizer-data-jakub/",
+
+    "lang": "cs",
+    "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",
+    "token_err_distribution": [0.7, 0.1, 0.05, 0.1, 0.05],
+    "char_err_distribution": [0.2, 0.2, 0.2, 0.2, 0.2],
+    "token_err_prob": 0.15,   
+    "char_err_prob": 0.02,
+
+    "dataset_filepath": "./dataset.tsv"
+}

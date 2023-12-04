@@ -130,7 +130,7 @@ def main(config_filename: str):
                     tokenization = udpipe_tokenizer.tokenize(line)
                     sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
                     file.write(sentence + '\n')
-            print("End of predicting...")
+        print("End of predicting...")
 
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):

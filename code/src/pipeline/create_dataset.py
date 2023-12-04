@@ -86,8 +86,8 @@ def main(config_filename: str):
     print("Predicting...")
     for i, batch in enumerate(dataset):
         with open(DATASET_FILEPATH, "a+") as file:
-            correct_sentence = str(batch['correct_sentence']).decode("utf-8")
-            original_sentence = str(batch['original_sentence']).decode("utf-8")
+            correct_sentence = batch['correct_sentence'].numpy().decode("utf-8")
+            original_sentence = batch['original_sentence'].numpy().decode("utf-8")
 
             line = correct_sentence + "\t" + original_sentence + "\n"
             file.write(line)

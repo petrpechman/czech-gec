@@ -1,42 +1,35 @@
-from typing import List
 import numpy as np
 
+# def g(samples):
+#     if len(samples) > 0:
+#         return sum(samples) / len(samples)
+#     else:
+#         return 0.5
 
-def get_edits(sentence) -> List:
-    if np.random.uniform() < 0.5:
-        if np.random.uniform() < 0.1:
-            return ["edit", "edit"]
-        else:
-            return ["edit"]
+target_prob = 0.04
+samples = []
+allowed = 0
+
+for i in range(10_000):
+    x = 0
+    allow = False
+    if np.random.uniform(0, 1) < 0.5:
+        allow = True
+        allowed += 1
+
+
+    # acceptance_prob = f() / (2 * (g(samples) + 1e-10))
+    # if allow and target_prob > g(samples):
+    if len(samples) > 0:
+        g = allowed / len(samples)
     else:
-        return []
+        g = 0.5
     
-def get_tokens(sentence: str) -> List:
-    return sentence.split(' ')
-
-gen_prob = 0.5
-tar_prob = 0.014
-
-total_tokens = 0
-num_errors = 0
-
-
-sentences = ["Moje krasne super veta"] * 100000
-
-
-for i, sentence in enumerate(sentences):
-    edits = get_edits(sentence)
-    tokens = get_tokens(sentence)
-
-    for edit in edits:
-        if tar_prob > gen_prob:
-            num_errors += 1
+    acceptance_prob = target_prob / (g + 1e-10)
+    if allow and np.random.uniform(0, 1) < acceptance_prob:
+        x = 1
     
-    total_tokens += len(tokens)
+    samples.append(x)
 
-    gen_prob = num_errors / total_tokens
-        
-print(gen_prob)
-
-print("TOT", total_tokens)
-print("ERR", num_errors)
+print(sum(samples) / len(samples))
+# print(samples)

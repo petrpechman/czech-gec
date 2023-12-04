@@ -83,7 +83,7 @@ def main(config_filename: str):
                     "correct_sentence": (),
                 })
     
-    print("Predicting...")
+    print("Generating...")
     for i, batch in enumerate(dataset):
         with open(DATASET_FILEPATH, "a+") as file:
             correct_sentence = batch['correct_sentence'].numpy().decode("utf-8")

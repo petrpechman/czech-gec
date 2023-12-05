@@ -4,6 +4,7 @@ import numpy as np
 
 from edit import Edit
 from typing import List
+from itertools import compress
 from abc import ABC, abstractmethod
 from errant.annotator import Annotator
 
@@ -35,30 +36,85 @@ class ErrorMeMne(Error):
 
 class ErrorGenerator:
     def __init__(self, lang: str) -> None:
-        self.annotator = errant.load(args.lang)
+        self.annotator = errant.load(lang)
         self.total_tokens = 0
         self.error_instances = [
             ErrorMeMne(0.125)
         ]
 
+    # def get_edits(self, parsed_sentence) -> List[Edit]:
+    #     self.total_tokens += len(parsed_sentence)
+    #     all_edits = []
+    #     for error_instance in self.error_instances:
+    #         edits = error_instance(parsed_sentence, self.annotator)
+    #         ## rejection sampling
+    #         selected_edits = []
+    #         for edit in edits:
+    #             gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
+    #             acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
+    #             if np.random.uniform(0, 1) < acceptance_prob:
+    #                 selected_edits.append(edit)
+    #                 error_instance.num_errors += 1
+    #         error_instance.num_possible_edits += len(edits)
+    #         ##
+    #         all_edits = all_edits + selected_edits
+    #     # TODO: Do not accept all edits.
+    #     return all_edits
+
     def get_edits(self, parsed_sentence) -> List[Edit]:
         self.total_tokens += len(parsed_sentence)
-        all_edits = []
+        edits_errors = []
         for error_instance in self.error_instances:
             edits = error_instance(parsed_sentence, self.annotator)
-            ## rejection sampling
-            selected_edits = []
-            for edit in edits:
-                gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
-                acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
-                if np.random.uniform(0, 1) < acceptance_prob:
-                    selected_edits.append(edit)
-                    error_instance.num_errors += 1
-            error_instance.num_possible_edits += len(edits)
-            ##
-            all_edits = all_edits + selected_edits
-        # TODO: Do not accept all edits.
-        return all_edits
+            edits_errors = edits_errors + [(edit, error_instance) for edit in edits]
+        
+        # Overlaping:
+        mask = self.get_remove_mask(list(zip(*edits_errors))[0])
+        edits_errors = list(compress(edits_errors, mask))
+        
+        ## Rejection Sampling:
+        selected_edits = []
+        for edit, error_instance in edits_errors:
+            gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
+            acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
+            if np.random.uniform(0, 1) < acceptance_prob:
+                selected_edits.append(edit)
+                error_instance.num_errors += 1
+        error_instance.num_possible_edits += len(edits_errors)
+        ##
+
+        # Sorting:
+        sorted_edits = self.sort_edits_reverse(selected_edits)
+        return sorted_edits
+    
+    def sort_edits_reverse(self, edits: List[Edit]) -> List[Edit]:
+        minus_start_indices = [(-1) * edit.o_start for edit in edits]
+        sorted_edits = np.array(edits)
+        sorted_edits = sorted_edits[np.argsort(minus_start_indices)]
+        return sorted_edits.tolist()
+
+
+    def get_remove_mask(self, edits: List[Edit]) -> List[bool]:
+        ranges = [(edit.o_start, edit.o_end) for edit in edits]
+        removed = [not any([self.is_overlap(current_range, r) if j < i else False for j, r in enumerate(ranges)]) for i, current_range in enumerate(ranges)]
+        # filtered_edits = list(compress(edits, removed))
+        return removed
+
+    def is_overlap(self, range_1: tuple, range_2: tuple) -> bool:
+        start_1 = range_1[0]
+        end_1 = range_1[1]
+        start_2 = range_2[0]
+        end_2 = range_2[1]
+
+        if start_1 <= start_2:
+            if end_1 > start_2:
+                return True
+        else:
+            if end_2 > start_1:
+                return True
+        return False
+            
+
     
     def get_m2_edits_text(self, sentence: str) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)

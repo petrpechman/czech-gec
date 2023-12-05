@@ -113,8 +113,6 @@ class ErrorGenerator:
             if end_2 > start_1:
                 return True
         return False
-            
-
     
     def get_m2_edits_text(self, sentence: str) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)

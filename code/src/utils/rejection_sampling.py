@@ -1,10 +1,6 @@
-import numpy as np
+# Example of simple Rejection Sampling
 
-# def g(samples):
-#     if len(samples) > 0:
-#         return sum(samples) / len(samples)
-#     else:
-#         return 0.5
+import numpy as np
 
 target_prob = 0.04
 samples = []
@@ -17,9 +13,6 @@ for i in range(10_000):
         allow = True
         allowed += 1
 
-
-    # acceptance_prob = f() / (2 * (g(samples) + 1e-10))
-    # if allow and target_prob > g(samples):
     if len(samples) > 0:
         g = allowed / len(samples)
     else:
@@ -32,4 +25,3 @@ for i in range(10_000):
     samples.append(x)
 
 print(sum(samples) / len(samples))
-# print(samples)

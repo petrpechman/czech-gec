@@ -234,6 +234,7 @@ def main(config_filename: str):
                                        FILE_DEV_PREDICTIONS)
                     f1_test = generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST,
                                        FILE_TEST_PREDICTIONS)
+                    
                     if BEST_CKPT_FILENAME and f1_test > BEST_CKPT_F1:
                         BEST_CKPT_NAME = unevaluated_checkpoint
                         BEST_CKPT_F1 = f1_test
@@ -246,9 +247,9 @@ def main(config_filename: str):
                         with open(BEST_CKPT_FILENAME, "w") as outfile:
                             outfile.write(json_object)
                     else:
-                        print("Here should be delete")
-                        # print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                        # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                        # print("Here should be delete")
+                        print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                        shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except Exception:
                     print("Something went wrong... Try again...")
 

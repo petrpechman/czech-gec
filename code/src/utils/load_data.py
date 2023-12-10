@@ -52,7 +52,6 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
     if not errors_from_file:
         aspell_speller = aspell.Speller('lang', lang)
         annotator = errant.load(lang)
-        print("USE ERRRRRRRRRRRRRRRR")
 
     with open(filename, 'r') as f:
         # find start position
@@ -70,10 +69,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                     line, error_line = line.split('\t', 1)
                 else:
                     if error_generator is not None:
-                        print(line)
-                        print(annotator)
-                        print(aspell_speller)
-                        error_line = error_generator.create_error_sentence(line, annotator, aspell_speller, False)
+                        error_line = error_generator.create_error_sentence(line, annotator, aspell_speller, True)
                     else:
                         error_line = gel(line, aspell_speller)
                     

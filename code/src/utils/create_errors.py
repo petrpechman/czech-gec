@@ -19,81 +19,78 @@ czech_diacritizables_chars = [char for sublist in czech_diacritics_tuples for ch
 
 
 class Error(ABC):
-    def __init__(self, target_prob: float) -> None:
+    def __init__(self, target_prob: float, annotator: Annotator) -> None:
         self.target_prob = target_prob
         self.num_errors = 0
         self.num_possible_edits = 0
+        self.annotator = annotator
 
     @abstractmethod
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller = None) -> List[Edit]:
         pass
 
 
 class ErrorMeMne(Error):
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller = None) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
             if token.text == "mně":
-                c_toks = annotator.parse("mě")
+                c_toks = self.annotator.parse("mě")
                 edit = Edit(token, c_toks, [i, i+1, i, i+1], type="MeMne")
                 edits.append(edit)
             if token.text == "mě":
-                c_toks = annotator.parse("mně")
+                c_toks = self.annotator.parse("mně")
                 edit = Edit(token, c_toks, [i, i+1, i, i+1], type="MeMne")
                 edits.append(edit)
         return edits
 
 
 class ErrorReplace(Error):
-    def __init__(self, target_prob: float, aspell_speller) -> None:
-        super().__init__(target_prob)
-        self.aspell_speller = aspell_speller
-
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
             if token.text.isalpha():
-                proposals = self.aspell_speller.suggest(token.text)[:10]
+                proposals = aspell_speller.suggest(token.text)[:10]
                 if len(proposals) > 0:
                     new_token_text = np.random.choice(proposals)
-                    c_toks = annotator.parse(new_token_text)
+                    c_toks = self.annotator.parse(new_token_text)
                     edit = Edit(token, c_toks, [i, i+1, i, i+1], type="Replace")
                     edits.append(edit)
         return edits
 
 
 class ErrorInsert(Error):
-    def __init__(self, target_prob: float, word_vocabulary) -> None:
-        super().__init__(target_prob)
+    def __init__(self, target_prob: float, annotator: Annotator, word_vocabulary) -> None:
+        super().__init__(target_prob, annotator)
         self.word_vocabulary = word_vocabulary
 
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller = None) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
             new_token_text = np.random.choice(self.word_vocabulary)
-            c_toks = annotator.parse(new_token_text)
+            c_toks = self.annotator.parse(new_token_text)
             edit = Edit(token, c_toks, [i, i, i, i+1], type="Insert")
             edits.append(edit)
         return edits
 
 
 class ErrorDelete(Error):
-    def __init__(self, target_prob: float) -> None:
-        super().__init__(target_prob)
+    def __init__(self, target_prob: float, annotator: Annotator) -> None:
+        super().__init__(target_prob, annotator)
         self.allowed_source_delete_tokens = [',', '.', '!', '?']
 
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller = None) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
             if token.text.isalpha() and token.text not in self.allowed_source_delete_tokens:
-                c_toks = annotator.parse("")
+                c_toks = self.annotator.parse("")
                 edit = Edit(token, c_toks, [i, i+1, i, i], type="Remove")
                 edits.append(edit)
         return edits
 
 
 class ErrorRecase(Error):
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller = None) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
             if token.text.islower():
@@ -110,20 +107,20 @@ class ErrorRecase(Error):
                             new_token_text += char.upper()
                     else:
                         new_token_text += char
-            c_toks = annotator.parse(new_token_text)
+            c_toks = self.annotator.parse(new_token_text)
             edit = Edit(token, c_toks, [i, i+1, i, i+1], type="Recase")
             edits.append(edit)
         return edits
 
 
 class ErrorSwap(Error):
-    def __call__(self, parsed_sentence, annotator: Annotator) -> List[Edit]:
+    def __call__(self, parsed_sentence, aspell_speller = None) -> List[Edit]:
         edits = []
         if len(parsed_sentence) > 1:
             previous_token = parsed_sentence[0]
             for i, token in enumerate(parsed_sentence[1:]):
                 i = i + 1
-                c_toks = annotator.parse(token.text + " " + previous_token.text)
+                c_toks = self.annotator.parse(token.text + " " + previous_token.text)
                 edit = Edit(token, c_toks, [i-1, i+1, i-1, i+1], type="Swap")
                 edits.append(edit)
                 previous_token = token
@@ -132,7 +129,7 @@ class ErrorSwap(Error):
 
 # MAIN:
 class ErrorGenerator:
-    def __init__(self, lang: str, char_level_params, aspell_speller, word_vocabulary) -> None:
+    def __init__(self, lang: str, char_level_params, word_vocabulary) -> None:
         self.replace_prob = char_level_params[0]
         self.insert_prob = char_level_params[1]
         self.delete_prob = char_level_params[2]
@@ -145,12 +142,18 @@ class ErrorGenerator:
         self.annotator = errant.load(lang)
         self.total_tokens = 0
         self.error_instances = [
-            ErrorMeMne(0.125),
-            ErrorReplace(0.02, aspell_speller),
-            ErrorInsert(0.02, word_vocabulary),
-            ErrorDelete(0.02),
-            ErrorRecase(0.02),
-            ErrorSwap(0.02)
+            ErrorMeMne(
+                0.0000, self.annotator),
+            ErrorReplace(
+                0.1050, self.annotator),
+            ErrorInsert(
+                0.0150, self.annotator, word_vocabulary),
+            ErrorDelete(
+                0.0075, self.annotator),
+            ErrorRecase(
+                0.0150, self.annotator),
+            ErrorSwap(
+                0.0075, self.annotator)
         ]
 
     # def get_edits(self, parsed_sentence) -> List[Edit]:
@@ -172,11 +175,11 @@ class ErrorGenerator:
     #     # TODO: Do not accept all edits.
     #     return all_edits
 
-    def get_edits(self, parsed_sentence) -> List[Edit]:
+    def get_edits(self, parsed_sentence, aspell_speller) -> List[Edit]:
         self.total_tokens += len(parsed_sentence)
         edits_errors = []
         for error_instance in self.error_instances:
-            edits = error_instance(parsed_sentence, self.annotator)
+            edits = error_instance(parsed_sentence, aspell_speller)
             edits_errors = edits_errors + [(edit, error_instance) for edit in edits]
         
         if len(edits_errors) == 0:
@@ -234,9 +237,9 @@ class ErrorGenerator:
                 return True
         return False
     
-    def get_m2_edits_text(self, sentence: str) -> List[str]:
+    def get_m2_edits_text(self, sentence: str, aspell_speller) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
-        edits = self.get_edits(parsed_sentence)
+        edits = self.get_edits(parsed_sentence, aspell_speller)
         m2_edits = [edit.to_m2() for edit in edits]
         return m2_edits
     
@@ -293,9 +296,10 @@ class ErrorGenerator:
             new_sentence += new_char
         return new_sentence
     
-    def create_error_sentence(self, sentence: str, use_char_level: bool = False) -> List[str]:
+    def create_error_sentence(self, sentence: str, aspell_speller, use_char_level: bool = False) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
-        edits = self.get_edits(parsed_sentence)
+        edits = self.get_edits(parsed_sentence, aspell_speller)
+        # TODO: sort sem (aby m3 format byl spravne)
         for edit in edits:
             start, end = edit.o_start, edit.o_end
             cor_toks_str = " ".join([tok.text for tok in edit.c_toks])
@@ -336,7 +340,7 @@ def main(args):
     )
     word_vocabulary = get_token_vocabulary("../../data/vocabluraries/vocabulary_cs.tsv")
     aspell_speller = aspell.Speller('lang', args.lang)
-    error_generator = ErrorGenerator(args.lang, char_level_params, aspell_speller, word_vocabulary)
+    error_generator = ErrorGenerator(args.lang, char_level_params, word_vocabulary)
     input_path = args.input
     output_path = args.output
     with open(input_path, "r") as f:
@@ -345,15 +349,17 @@ def main(args):
             if not line:
                 break
             line = line.strip()
-            m2_lines = error_generator.get_m2_edits_text(line)
-            with open(output_path, "a+") as output_file:
-                output_file.write("S " + line + "\n")
-                for m2_line in m2_lines:
-                    output_file.write(m2_line + "\n")
-                output_file.write("\n")
-            # error_line = error_generator.create_error_sentence(line, True)
+
+            # m2_lines = error_generator.get_m2_edits_text(line, aspell_speller)
             # with open(output_path, "a+") as output_file:
-            #     output_file.write(error_line + "\n")
+            #     output_file.write("S " + line + "\n")
+            #     for m2_line in m2_lines:
+            #         output_file.write(m2_line + "\n")
+            #     output_file.write("\n")
+
+            error_line = error_generator.create_error_sentence(line, aspell_speller, True)
+            with open(output_path, "a+") as output_file:
+                output_file.write(error_line + "\n")
 
 
 if __name__ == "__main__":

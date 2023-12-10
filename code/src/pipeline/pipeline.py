@@ -15,6 +15,7 @@ from tensorflow.keras import mixed_precision
 from utils import load_data
 from utils import dataset_utils
 from utils import introduce_errors
+from utils import create_errors
 # from utils import error_checker
 
 from utils.components.callbacks import MyBackupAndRestore
@@ -98,17 +99,23 @@ def main(config_filename: str):
     manager = Manager()
     queue = manager.Queue(4 * NUM_PARALLEL)
     if not ERRORS_FROM_FILE:
-        gel = load_data.GenereteErrorLine(
-            tokens, characters, LANG, 
-            TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
-            TOKEN_ERR_PROB, CHAR_ERR_PROB)
+        char_level_params = [prob for prob in CHAR_ERR_DISTRIBUTION]
+        char_level_params.append(CHAR_ERR_PROB)
+        char_level_params.append(0.01)
+        char_level_params.append(characters)
+        error_generator = create_errors.ErrorGenerator(LANG, char_level_params, tokens)
+        gel = None
+        # gel = load_data.GenereteErrorLine(
+        #     tokens, characters, LANG, 
+        #     TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
+        #     TOKEN_ERR_PROB, CHAR_ERR_PROB)
     else:
         gel = None
 
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, ))
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, ))
 
     process.start()
 

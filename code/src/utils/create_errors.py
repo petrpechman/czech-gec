@@ -297,6 +297,7 @@ class ErrorGenerator:
         return new_sentence
     
     def create_error_sentence(self, sentence: str, annotator: Annotator, aspell_speller, use_char_level: bool = False) -> List[str]:
+        annotator = errant.load(args.lang)
         try:
             print("BEFORE")
             parsed_sentence = annotator.parse(sentence)

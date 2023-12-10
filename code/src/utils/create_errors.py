@@ -297,11 +297,11 @@ class ErrorGenerator:
         return new_sentence
     
     def create_error_sentence(self, sentence: str, annotator: Annotator, aspell_speller, use_char_level: bool = False) -> List[str]:
-        parsed_sentence = annotator.parse(sentence)
         try:
-            edits = self.get_edits(parsed_sentence, annotator, aspell_speller)
+            parsed_sentence = annotator.parse(sentence)
         except Exception as e:
             print("HERW:", e)
+        edits = self.get_edits(parsed_sentence, annotator, aspell_speller)
         # TODO: sort sem (aby m3 format byl spravne)
         for edit in edits:
             start, end = edit.o_start, edit.o_end

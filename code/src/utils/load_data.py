@@ -6,6 +6,7 @@ from . import create_errors
 # import introduce_errors
 import aspell
 from multiprocessing import Pool
+import errant
 
 # import dataset_utils 
 
@@ -50,6 +51,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
     counter = 0
     if not errors_from_file:
         aspell_speller = aspell.Speller('lang', lang)
+        annotator = errant.load(lang)
 
     with open(filename, 'r') as f:
         # find start position
@@ -66,8 +68,8 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                 if errors_from_file:
                     line, error_line = line.split('\t', 1)
                 else:
-                    if error_generator:
-                        error_line = error_generator.create_error_sentence(line, aspell_speller, True)
+                    if error_generator is not None:
+                        error_line = error_generator.create_error_sentence(line, annotator, aspell_speller, True)
                     else:
                         error_line = gel(line, aspell_speller)
                     
@@ -121,7 +123,7 @@ def process_file_in_chunks(
         arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang,))
         start_position = current
     end_position = start
-    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang,))
+    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, ))
 
     # start processes and wait until they finished
     pool.starmap(data_loader, arguments)

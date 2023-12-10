@@ -5,8 +5,8 @@ import random
 import argparse
 import numpy as np
 
-from edit import Edit
-# from .edit import Edit
+# from edit import Edit
+from .edit import Edit
 from typing import List
 from itertools import compress
 from abc import ABC, abstractmethod

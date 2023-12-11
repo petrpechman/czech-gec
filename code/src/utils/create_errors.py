@@ -303,12 +303,7 @@ class ErrorGenerator:
     
     def create_error_sentence(self, sentence: str, aspell_speller, use_char_level: bool = False) -> List[str]:
         # annotator = errant.load('cs')
-        try:
-            print("BEFORE")
-            parsed_sentence = self.annotator.parse(sentence)
-            print("AFTER")
-        except Exception as e:
-            print(e)
+        parsed_sentence = self.annotator.parse(sentence)
         edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
         # TODO: sort sem (aby m3 format byl spravne)
         for edit in edits:

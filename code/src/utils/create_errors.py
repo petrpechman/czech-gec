@@ -139,7 +139,8 @@ class ErrorGenerator:
         self.std_dev = char_level_params[6]
         self.char_vocabulary = char_level_params[7]
 
-        # self.annotator = errant.load(lang)
+        self.annotator = None
+
         self.total_tokens = 0
         self.error_instances = [
             ErrorMeMne(
@@ -174,6 +175,10 @@ class ErrorGenerator:
     #         all_edits = all_edits + selected_edits
     #     # TODO: Do not accept all edits.
     #     return all_edits
+
+    def _init_annotator(self, lang: str = 'cs'):
+        if self.annotator is None:
+            self.annotator = errant.load(lang)
 
     def get_edits(self, parsed_sentence, annotator: Annotator, aspell_speller) -> List[Edit]:
         self.total_tokens += len(parsed_sentence)
@@ -296,22 +301,22 @@ class ErrorGenerator:
             new_sentence += new_char
         return new_sentence
     
-    def create_error_sentence(self, sentence: str, annotator, aspell_speller, use_char_level: bool = False) -> List[str]:
+    def create_error_sentence(self, sentence: str, aspell_speller, use_char_level: bool = False) -> List[str]:
         # annotator = errant.load('cs')
         try:
             print("BEFORE")
-            parsed_sentence = annotator.parse(sentence)
+            parsed_sentence = self.annotator.parse(sentence)
             print("AFTER")
         except Exception as e:
             print(e)
-        edits = self.get_edits(parsed_sentence, annotator, aspell_speller)
+        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
         # TODO: sort sem (aby m3 format byl spravne)
         for edit in edits:
             start, end = edit.o_start, edit.o_end
             cor_toks_str = " ".join([tok.text for tok in edit.c_toks])
             # TODO: Do it better
             sentence = parsed_sentence[:start].text + " " + cor_toks_str + " " + parsed_sentence[end:].text
-            parsed_sentence = annotator.parse(sentence)
+            parsed_sentence = self.annotator.parse(sentence)
         sentence = parsed_sentence.text
         
         if use_char_level:

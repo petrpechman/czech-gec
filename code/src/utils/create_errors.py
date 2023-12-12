@@ -8,10 +8,12 @@ import numpy as np
 # from edit import Edit
 from .edit import Edit
 from typing import List
+from spacy.tokens import Doc
 from itertools import compress
 from abc import ABC, abstractmethod
 from errant.annotator import Annotator
 
+allowed_source_delete_tokens = [',', '.', '!', '?']
 czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
                            ('t', 'ť'), ('u', 'ů', 'ú'), ('y', 'ý'), ('z', 'ž')]
 czech_diacritizables_chars = [char for sublist in czech_diacritics_tuples for char in sublist] + [char.upper() for sublist in
@@ -125,36 +127,48 @@ class ErrorSwap(Error):
                 edits.append(edit)
                 previous_token = token
         return edits
+    
+class GeneralWordError(Error):
+    def __init__(self, target_prob: float, word_vocabulary) -> None:
+        super().__init__(target_prob)
+        self.word_vocabulary = word_vocabulary
 
+    def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
+        # TODO: dodelat rychlejsi
+        ...
 
 # MAIN:
 class ErrorGenerator:
-    def __init__(self, lang: str, char_level_params, word_vocabulary) -> None:
-        self.replace_prob = char_level_params[0]
-        self.insert_prob = char_level_params[1]
-        self.delete_prob = char_level_params[2]
-        self.swap_prob = char_level_params[3]
-        self.change_diacritics_prob = char_level_params[4]
-        self.err_prob = char_level_params[5]
-        self.std_dev = char_level_params[6]
-        self.char_vocabulary = char_level_params[7]
+    def __init__(self, word_vocabulary, char_vocabulary,
+                 char_err_distribution, char_err_prob, char_err_std,
+                 token_err_distribution, token_err_prob, token_err_std) -> None:
+        self.char_err_distribution = char_err_distribution
+        self.char_err_prob = char_err_prob
+        self.char_err_std = char_err_std
+        self.char_vocabulary = char_vocabulary
+
+        self.token_err_distribution = token_err_distribution
+        self.token_err_prob = token_err_prob
+        self.token_err_std = token_err_std
+        self.word_vocabulary = word_vocabulary
 
         self.annotator = None
 
         self.total_tokens = 0
         self.error_instances = [
             ErrorMeMne(
-                0.0000),
-            ErrorReplace(
-                0.1050),
-            ErrorInsert(
-                0.0150, word_vocabulary),
-            ErrorDelete(
-                0.0075),
-            ErrorRecase(
-                0.0150),
-            ErrorSwap(
-                0.0075)
+                0.01)
+            # ErrorReplace(
+            #     0.1050),
+            # ErrorInsert(
+            #     0.0150, word_vocabulary),
+            # ErrorDelete(
+            #     0.0075),
+            # ErrorRecase(
+            #     0.0150),
+            # ErrorSwap(
+            #     0.0075),
+            # GeneralWordError(word_vocabulary)
         ]
 
     # def get_edits(self, parsed_sentence) -> List[Edit]:
@@ -207,15 +221,16 @@ class ErrorGenerator:
         ##
 
         # Sorting:
-        sorted_edits = self.sort_edits_reverse(selected_edits)
+        sorted_edits = self.sort_edits(selected_edits)
         return sorted_edits
     
-    def sort_edits_reverse(self, edits: List[Edit]) -> List[Edit]:
-        minus_start_indices = [(-1) * edit.o_end for edit in edits]
+    def sort_edits(self, edits: List[Edit], reverse: bool = False) -> List[Edit]:
+        reverse_index = -1 if reverse else 1
+        minus_start_indices = [reverse_index * edit.o_end for edit in edits]
         sorted_edits = np.array(edits)
         sorted_edits = sorted_edits[np.argsort(minus_start_indices)]
 
-        minus_start_indices = [(-1) * edit.o_start for edit in sorted_edits]
+        minus_start_indices = [reverse_index * edit.o_start for edit in sorted_edits]
         sorted_edits = np.array(sorted_edits)
         sorted_edits = sorted_edits[np.argsort(minus_start_indices)]
 
@@ -248,18 +263,79 @@ class ErrorGenerator:
         m2_edits = [edit.to_m2() for edit in edits]
         return m2_edits
     
-    def introduce_char_level_errors_on_sentence(self, sentence):
-        replace_prob = self.replace_prob
-        insert_prob = self.insert_prob
-        delete_prob = self.delete_prob
-        swap_prob = self.swap_prob
-        change_diacritics_prob = self.change_diacritics_prob
-        err_prob = self.err_prob
-        std_dev = self.std_dev
-        char_vocabulary = self.char_vocabulary
+    def introduce_token_level_errors_on_sentence(self, tokens, aspell_speller):
+        num_errors = int(np.round(np.random.normal(self.token_err_prob, self.token_err_std) * len(tokens)))
+        num_errors = min(max(0, num_errors), len(tokens))  # num_errors \in [0; len(tokens)]
 
+        if num_errors == 0:
+            return ' '.join(tokens)
+        token_ids_to_modify = np.random.choice(len(tokens), num_errors, replace=False)
+
+        new_sentence = ''
+        for token_id in range(len(tokens)):
+            if token_id not in token_ids_to_modify:
+                if new_sentence:
+                    new_sentence += ' '
+                new_sentence += tokens[token_id]
+                continue
+
+            current_token = tokens[token_id]
+            operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=self.token_err_distribution)
+            new_token = ''
+            if operation == 'replace':
+                if not current_token.isalpha():
+                    new_token = current_token
+                else:
+                    proposals = aspell_speller.suggest(current_token)[:10]
+                    if len(proposals) > 0:
+                        new_token = np.random.choice(proposals)  # [np.random.randint(0, len(proposals))]
+                    else:
+                        new_token = current_token
+            elif operation == 'insert':
+                new_token = current_token + ' ' + np.random.choice(self.word_vocabulary)
+            elif operation == 'delete':
+                if not current_token.isalpha() or current_token in allowed_source_delete_tokens:
+                    new_token = current_token
+                else:
+                    new_token = ''
+            elif operation == 'recase':
+                if not current_token.isalpha():
+                    new_token = current_token
+                elif current_token.islower():
+                    new_token = current_token[0].upper() + current_token[1:]
+                else:
+                    # either whole word is upper-case or mixed-case
+                    if np.random.random() < 0.5:
+                        new_token = current_token.lower()
+                    else:
+                        num_recase = min(len(current_token), max(1, int(np.round(np.random.normal(0.3, 0.4) * len(current_token)))))
+                        char_ids_to_recase = np.random.choice(len(current_token), num_recase, replace=False)
+                        new_token = ''
+                        for char_i, char in enumerate(current_token):
+                            if char_i in char_ids_to_recase:
+                                if char.isupper():
+                                    new_token += char.lower()
+                                else:
+                                    new_token += char.upper()
+                            else:
+                                new_token += char
+
+            elif operation == 'swap':
+                if token_id == len(tokens) - 1:
+                    continue
+
+                new_token = tokens[token_id + 1]
+                tokens[token_id + 1] = tokens[token_id]
+
+            if new_sentence and new_token:
+                new_sentence += ' '
+            new_sentence = new_sentence + new_token
+
+        return new_sentence
+    
+    def introduce_char_level_errors_on_sentence(self, sentence):
         sentence = list(sentence)
-        num_errors = int(np.round(np.random.normal(err_prob, std_dev) * len(sentence)))
+        num_errors = int(np.round(np.random.normal(self.char_err_prob, self.char_err_std) * len(sentence)))
         num_errors = min(max(0, num_errors), len(sentence))  # num_errors \in [0; len(sentence)]
         if num_errors == 0:
             return ''.join(sentence)
@@ -270,16 +346,16 @@ class ErrorGenerator:
                 new_sentence += sentence[char_id]
                 continue
             operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'change_diacritics'], 1,
-                                         p=[replace_prob, insert_prob, delete_prob, swap_prob, change_diacritics_prob])
+                                         p=self.char_err_distribution)
             current_char = sentence[char_id]
             new_char = ''
             if operation == 'replace':
                 if current_char.isalpha():
-                    new_char = np.random.choice(char_vocabulary)
+                    new_char = np.random.choice(self.char_vocabulary)
                 else:
                     new_char = current_char
             elif operation == 'insert':
-                new_char = current_char + np.random.choice(char_vocabulary)
+                new_char = current_char + np.random.choice(self.char_vocabulary)
             elif operation == 'delete':
                 if current_char.isalpha():
                     new_char = ''
@@ -301,24 +377,41 @@ class ErrorGenerator:
             new_sentence += new_char
         return new_sentence
     
-    def create_error_sentence(self, sentence: str, aspell_speller, use_char_level: bool = False) -> List[str]:
-        # annotator = errant.load('cs')
+    def create_error_sentence(self, sentence: str, aspell_speller, use_token_level: bool = False, use_char_level: bool = False) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
         edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
-        # TODO: sort sem (aby m3 format byl spravne)
-        for edit in edits:
-            start, end = edit.o_start, edit.o_end
-            cor_toks_str = " ".join([tok.text for tok in edit.c_toks])
-            # TODO: Do it better
-            sentence = parsed_sentence[:start].text + " " + cor_toks_str + " " + parsed_sentence[end:].text
-            parsed_sentence = self.annotator.parse(sentence)
-        sentence = parsed_sentence.text
         
+        edits = self.sort_edits(edits, reverse=True)
+
+        sentence = self._use_edits(edits, parsed_sentence)
+        
+        if use_token_level:
+            sentence = self.introduce_token_level_errors_on_sentence(sentence.split(' '), aspell_speller)
+
         if use_char_level:
             sentence = self.introduce_char_level_errors_on_sentence(sentence)
 
         return sentence
+    
+    def _use_edits(self, edits: List[Edit], parsed_sentence) -> str:
+        if len(edits) == 0:
+            return parsed_sentence.text
+        docs = [edits[0].c_toks]
+        prev_edit = edits[0]
+        for edit in edits[1:]:
+            next_docs = self._merge(prev_edit, edit, parsed_sentence)
+            docs = next_docs + docs
+            prev_edit = edit
+        subtexts = [doc.text for doc in docs]
+        sentence = parsed_sentence[:edits[-1].o_start].text + " " + " ".join(subtexts) + " " + parsed_sentence[edits[0].o_end:].text
+        return sentence
 
+    def _merge(self, prev_edit: Edit, next_edit: Edit, parsed_sentence) -> List:
+        if prev_edit.o_start > next_edit.o_end:
+            docs = [next_edit.c_toks, parsed_sentence[next_edit.o_end:prev_edit.o_start]]
+        else:
+            docs = [next_edit.c_toks]
+        return docs
 
 def get_token_vocabulary(tsv_token_file):
     tokens = []
@@ -340,14 +433,13 @@ def get_char_vocabulary(lang):
 
 
 def main(args):
-    characters = get_char_vocabulary(args.lang)
-    char_level_params = (
-        0.2, 0.2, 0.2, 0.2, 0.2, 0.02, 0.01, characters
-    )
+    char_vocabulary = get_char_vocabulary(args.lang)
     word_vocabulary = get_token_vocabulary("../../data/vocabluraries/vocabulary_cs.tsv")
     aspell_speller = aspell.Speller('lang', args.lang)
-    annotator = errant.load(args.lang)
-    error_generator = ErrorGenerator(args.lang, char_level_params, word_vocabulary)
+    error_generator = ErrorGenerator(word_vocabulary, char_vocabulary,
+                                     [0.2, 0.2, 0.2, 0.2, 0.2], 0.02, 0.01,
+                                     [0.7, 0.1, 0.05, 0.1, 0.05], 0.15, 0.2)
+    error_generator._init_annotator()
     input_path = args.input
     output_path = args.output
     with open(input_path, "r") as f:
@@ -364,7 +456,7 @@ def main(args):
             #         output_file.write(m2_line + "\n")
             #     output_file.write("\n")
 
-            error_line = error_generator.create_error_sentence(line, annotator, aspell_speller, True)
+            error_line = error_generator.create_error_sentence(line, aspell_speller, True, True)
             with open(output_path, "a+") as output_file:
                 output_file.write(error_line + "\n")
 

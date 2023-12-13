@@ -36,6 +36,7 @@ def main(config_filename: str):
     # data loading
     M2_DATA_DEV = config['m2_data_dev']
     M2_DATA_TEST = config['m2_data_test']
+    OTHER_DATASETS = config.get('other_datasets', [])
     BATCH_SIZE = config['batch_size']
     
     # model
@@ -100,6 +101,11 @@ def main(config_filename: str):
     
     dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA_DEV)
     test_source_sentences, test_gold_edits = load_annotation(M2_DATA_TEST)
+    
+    datasets = []
+    for dataset in OTHER_DATASETS:
+        source_sentences, gold_edits = load_annotation(dataset)
+        datasets.append((source_sentences, gold_edits, dataset))
 
     dev_dataset = get_dataset_pipeline(dev_source_sentences)
     test_dataset = get_dataset_pipeline(test_source_sentences)
@@ -234,6 +240,13 @@ def main(config_filename: str):
                                        FILE_DEV_PREDICTIONS)
                     f1_test = generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST,
                                        FILE_TEST_PREDICTIONS)
+                    
+                    for i, dataset_zip in enumerate(datasets):
+                        source_sentences, gold_edits, dataset_path = dataset_zip
+                        dataset = get_dataset_pipeline(source_sentences)
+                        output_dir = os.path.splitext(os.path.basename(dataset_path))[0]
+                        file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
+                        f1 = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions)
                     
                     if BEST_CKPT_FILENAME and f1_test > BEST_CKPT_F1:
                         BEST_CKPT_NAME = unevaluated_checkpoint

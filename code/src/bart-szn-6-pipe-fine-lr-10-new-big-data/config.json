@@ -46,7 +46,13 @@
 
     "m2_data_dev": "../../data/akces-gec/dev/dev.all.m2",
     "m2_data_test": "../../data/akces-gec/test/test.all.m2",
-    "other_datasets": ["../../data/geccc-split/data/dev-splits/natives-formal-dev.m2","../../data/geccc-split/data/dev-splits/romani-dev.m2","../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2","../../data/geccc-split/data/dev-splits/second-learners-dev.m2"],
+    "other_datasets": [
+        "../../data/geccc-split/data/dev-splits/natives-formal-dev.m2",
+        "../../data/geccc-split/data/dev-splits/romani-dev.m2",
+        "../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2",
+        "../../data/geccc-split/data/dev-splits/second-learners-dev.m2",
+        "../../data/geccc/data/dev/sentence.m2"
+    ],
     "batch_size": 16,
     
     "max_unchanged_words": 2,

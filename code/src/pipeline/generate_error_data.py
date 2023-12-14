@@ -23,7 +23,7 @@ def main(config_filename: str):
     num_beams = 5
     min_length = 0
     length_penalty = 1.0
-    diversity_penalty = 1.0
+    diversity_penalty = 5.0
     ###
     
     SEED = config['seed']

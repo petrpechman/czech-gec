@@ -20,9 +20,10 @@ def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
     ### Params:
-    num_beams = 4
+    num_beams = 5
     min_length = 0
     length_penalty = 1.0
+    diversity_penalty = 1.0
     ###
     
     SEED = config['seed']
@@ -123,6 +124,7 @@ def main(config_filename: str):
                     min_length=min_length,
                     num_beams=num_beams,
                     length_penalty=length_penalty,
+                    diversity_penalty=diversity_penalty,
                     )
                 batch_sentences = tokenizer.batch_decode(preds, skip_special_tokens=True)
                 print("Write into file...")
@@ -141,9 +143,10 @@ def main(config_filename: str):
                 try:
                     generate_and_score(unevaluated_checkpoint, dataset, FILE_PREDICTIONS)
                     
-                    print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    # print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                    # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                 except:
                     print("Something went wrong... Try again...")
-
+            
+            break        
         time.sleep(10)

@@ -108,13 +108,13 @@ def main(config_filename: str):
         #     CHAR_ERR_DISTRIBUTION, CHAR_ERR_PROB, 0.01,
         #     TOKEN_ERR_DISTRIBUTION, TOKEN_ERR_PROB, 0.2)
         # gel = None
-        error_generator = None
         gel = load_data.GenereteErrorLine(
             tokens, characters, LANG, 
             TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
             TOKEN_ERR_PROB, CHAR_ERR_PROB)
     else:
         gel = None
+        error_generator = None
 
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(

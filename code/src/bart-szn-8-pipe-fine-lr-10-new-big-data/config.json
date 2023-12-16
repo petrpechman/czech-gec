@@ -51,7 +51,13 @@
         "../../data/geccc-split/data/dev-splits/romani-dev.m2",
         "../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2",
         "../../data/geccc-split/data/dev-splits/second-learners-dev.m2",
-        "../../data/geccc/data/dev/sentence.m2"
+        "../../data/geccc/data/dev/sentence.m2",
+
+        "../../data/geccc-split/data/test-splits/natives-formal-test.m2",
+        "../../data/geccc-split/data/test-splits/romani-test.m2",
+        "../../data/geccc-split/data/test-splits/natives-web-informal-test.m2",
+        "../../data/geccc-split/data/test-splits/second-learners-test.m2",
+        "../../data/geccc/data/test/sentence.m2"
     ],
     "batch_size": 16,
     

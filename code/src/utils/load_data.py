@@ -53,7 +53,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
     if not errors_from_file:
         if use_morfodita:
             aspell_speller = None
-            morfodita = GenerateForms()
+            morfodita = GenerateForms("../utils/MorphoDiTa/czech-morfflex2.0-220710.dict")
         else:
             aspell_speller = aspell.Speller('lang', lang)
             morfodita = None

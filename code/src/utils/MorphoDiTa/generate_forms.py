@@ -3,8 +3,8 @@ import ufal.morphodita
 
 
 class GenerateForms:
-    def __init__(self) -> None:
-        self._morpho = ufal.morphodita.Morpho.load("./czech-morfflex2.0-220710.dict")
+    def __init__(self, path: str = "./czech-morfflex2.0-220710.dict") -> None:
+        self._morpho = ufal.morphodita.Morpho.load(path)
 
     def forms(self, form: str, derinet_distance: int = 0) -> set[str]:
         lemmas, tagged_lemmas = set(), ufal.morphodita.TaggedLemmas()

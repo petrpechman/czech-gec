@@ -3,7 +3,7 @@ from typing import List
 import random
 from . import introduce_errors
 from . import create_errors
-from .MorphoDiTa import GenerateForms
+from .MorphoDiTa.generate_forms import GenerateForms
 # import introduce_errors
 import aspell
 from multiprocessing import Pool

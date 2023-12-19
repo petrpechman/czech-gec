@@ -70,7 +70,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                     line, error_line = line.split('\t', 1)
                 else:
                     if error_generator is not None:
-                        error_line = error_generator.create_error_sentence(line, aspell_speller, True, True)
+                        error_line = error_generator.create_error_sentence(line.strip(), aspell_speller, True, True)
                     else:
                         error_line = gel(line, aspell_speller)
                     

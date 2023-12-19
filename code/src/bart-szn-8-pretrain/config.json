@@ -36,6 +36,8 @@
     "token_err_prob": 0.15,   
     "char_err_prob": 0.02,
 
+    "use_morfodita": true,
+
     
     "log_file": "./tmp/logs",
     "profile_batch": [2000, 2500],

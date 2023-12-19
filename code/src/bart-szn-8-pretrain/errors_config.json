@@ -1,0 +1,14 @@
+{
+    "MeMne": 0.001,
+    "MeMneSuffix": 0.001,
+    "MeMneIn": 0.001,
+    "IY": 0.001,
+    "UU": 0.001,
+    "Conditional": 0.001,
+    "SpecificWords": 0.001,
+    "SZPrefix": 0.001,
+    "Numerals": 0.001,
+    "MyMi": 0.001,
+    "BeBjeIn": 0.001,
+    "Sebou": 0.001
+}

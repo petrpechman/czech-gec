@@ -30,6 +30,9 @@ def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
 
+    with open(config['errors_config']) as json_file:
+        errors_config = json.load(json_file)
+
     SEED = config['seed']
 
     # data loading
@@ -103,15 +106,15 @@ def main(config_filename: str):
         char_level_params.append(CHAR_ERR_PROB)
         char_level_params.append(0.01)
         char_level_params.append(characters)
-        # error_generator = create_errors.ErrorGenerator(
-        #     tokens, characters, 
-        #     CHAR_ERR_DISTRIBUTION, CHAR_ERR_PROB, 0.01,
-        #     TOKEN_ERR_DISTRIBUTION, TOKEN_ERR_PROB, 0.2)
-        # gel = None
-        gel = load_data.GenereteErrorLine(
-            tokens, characters, LANG, 
-            TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
-            TOKEN_ERR_PROB, CHAR_ERR_PROB)
+        error_generator = create_errors.ErrorGenerator(
+            errors_config, tokens, characters, 
+            CHAR_ERR_DISTRIBUTION, CHAR_ERR_PROB, 0.01,
+            TOKEN_ERR_DISTRIBUTION, TOKEN_ERR_PROB, 0.2)
+        gel = None
+        # gel = load_data.GenereteErrorLine(
+        #     tokens, characters, LANG, 
+        #     TOKEN_ERR_DISTRIBUTION, CHAR_ERR_DISTRIBUTION, 
+        #     TOKEN_ERR_PROB, CHAR_ERR_PROB)
     else:
         gel = None
         error_generator = None

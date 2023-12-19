@@ -5,8 +5,8 @@ import random
 import argparse
 import numpy as np
 
-# from edit import Edit
-from .edit import Edit
+from edit import Edit
+# from .edit import Edit
 from typing import List
 from spacy.tokens import Doc
 from itertools import compress
@@ -127,15 +127,7 @@ class ErrorSwap(Error):
                 edits.append(edit)
                 previous_token = token
         return edits
-    
-class GeneralWordError(Error):
-    def __init__(self, target_prob: float, word_vocabulary) -> None:
-        super().__init__(target_prob)
-        self.word_vocabulary = word_vocabulary
 
-    def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
-        # TODO: dodelat rychlejsi
-        ...
 
 # MAIN:
 class ErrorGenerator:
@@ -167,8 +159,7 @@ class ErrorGenerator:
             # ErrorRecase(
             #     0.0150),
             # ErrorSwap(
-            #     0.0075),
-            # GeneralWordError(word_vocabulary)
+            #     0.0075)
         ]
 
     # def get_edits(self, parsed_sentence) -> List[Edit]:
@@ -257,9 +248,9 @@ class ErrorGenerator:
                 return True
         return False
     
-    def get_m2_edits_text(self, sentence: str, annotator: Annotator, aspell_speller) -> List[str]:
-        parsed_sentence = annotator.parse(sentence)
-        edits = self.get_edits(parsed_sentence, annotator, aspell_speller)
+    def get_m2_edits_text(self, sentence: str, aspell_speller) -> List[str]:
+        parsed_sentence = self.annotator.parse(sentence)
+        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
         m2_edits = [edit.to_m2() for edit in edits]
         return m2_edits
     
@@ -449,21 +440,23 @@ def main(args):
                 break
             line = line.strip()
 
-            # m2_lines = error_generator.get_m2_edits_text(line, annotator, aspell_speller)
-            # with open(output_path, "a+") as output_file:
-            #     output_file.write("S " + line + "\n")
-            #     for m2_line in m2_lines:
-            #         output_file.write(m2_line + "\n")
-            #     output_file.write("\n")
-
-            error_line = error_generator.create_error_sentence(line, aspell_speller, True, True)
-            with open(output_path, "a+") as output_file:
-                output_file.write(error_line + "\n")
+            if args.format == "m2":
+                m2_lines = error_generator.get_m2_edits_text(line, aspell_speller)
+                with open(output_path, "a+") as output_file:
+                    output_file.write("S " + line + "\n")
+                    for m2_line in m2_lines:
+                        output_file.write(m2_line + "\n")
+                    output_file.write("\n")
+            else:
+                error_line = error_generator.create_error_sentence(line, aspell_speller, True, True)
+                with open(output_path, "a+") as output_file:
+                    output_file.write(error_line + "\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create m2 file with errors.")
     parser.add_argument('-i', '--input', type=str)
+    parser.add_argument('-f', '--format', type=str, default="m2")
     parser.add_argument('-o', '--output', type=str, default="output.m2")
     parser.add_argument('-l', '--lang', type=str)
 

@@ -70,6 +70,8 @@ def main(config_filename: str):
     TOKEN_ERR_PROB = config['token_err_prob']   
     CHAR_ERR_PROB = config['char_err_prob']
 
+    USE_MORFODITA = config.get('use_morfodita', False)
+
     # logs
     LOG_FILE = config['log_file']
     PROFILE_BATCH = config['profile_batch']
@@ -122,7 +124,7 @@ def main(config_filename: str):
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, ))
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, USE_MORFODITA, ))
 
     process.start()
 

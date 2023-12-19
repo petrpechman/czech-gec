@@ -28,7 +28,8 @@ class ErrorGenerator:
     def __init__(self, config: dict, 
                  word_vocabulary, char_vocabulary,
                  char_err_distribution, char_err_prob, char_err_std,
-                 token_err_distribution, token_err_prob, token_err_std) -> None:
+                 token_err_distribution, token_err_prob, token_err_std,
+                 derinet_distance = 0) -> None:
         self.char_err_distribution = char_err_distribution
         self.char_err_prob = char_err_prob
         self.char_err_std = char_err_std
@@ -38,6 +39,8 @@ class ErrorGenerator:
         self.token_err_prob = token_err_prob
         self.token_err_std = token_err_std
         self.word_vocabulary = word_vocabulary
+
+        self.derinet_distance = derinet_distance
 
         self.annotator = None
 
@@ -130,7 +133,7 @@ class ErrorGenerator:
         m2_edits = [edit.to_m2() for edit in edits]
         return error_sentence, m2_edits
     
-    def introduce_token_level_errors_on_sentence(self, tokens, aspell_speller):
+    def introduce_token_level_errors_on_sentence(self, tokens, aspell_speller, morfodita):
         num_errors = int(np.round(np.random.normal(self.token_err_prob, self.token_err_std) * len(tokens)))
         num_errors = min(max(0, num_errors), len(tokens))  # num_errors \in [0; len(tokens)]
 
@@ -153,7 +156,11 @@ class ErrorGenerator:
                 if not current_token.isalpha():
                     new_token = current_token
                 else:
-                    proposals = aspell_speller.suggest(current_token)[:10]
+                    if morfodita:
+                        proposals = list(morfodita.forms(current_token, self.derinet_distance))
+                    else:
+                        aspell_speller.suggest(current_token)
+                    proposals = proposals[:10]
                     if len(proposals) > 0:
                         new_token = np.random.choice(proposals)  # [np.random.randint(0, len(proposals))]
                     else:
@@ -244,14 +251,14 @@ class ErrorGenerator:
             new_sentence += new_char
         return new_sentence
     
-    def create_error_sentence(self, sentence: str, aspell_speller, use_token_level: bool = False, use_char_level: bool = False) -> List[str]:
+    def create_error_sentence(self, sentence: str, aspell_speller, use_token_level: bool = False, use_char_level: bool = False, morfodita=None) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
         edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
 
         sentence = self._use_edits(edits, parsed_sentence)
         
         if use_token_level:
-            sentence = self.introduce_token_level_errors_on_sentence(sentence.split(' '), aspell_speller)
+            sentence = self.introduce_token_level_errors_on_sentence(sentence.split(' '), aspell_speller, morfodita)
 
         if use_char_level:
             sentence = self.introduce_char_level_errors_on_sentence(sentence)

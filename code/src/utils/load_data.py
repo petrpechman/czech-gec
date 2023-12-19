@@ -3,6 +3,7 @@ from typing import List
 import random
 from . import introduce_errors
 from . import create_errors
+from .MorphoDiTa import GenerateForms
 # import introduce_errors
 import aspell
 from multiprocessing import Pool
@@ -45,12 +46,17 @@ class GenereteErrorLine():
     
 
 def data_loader(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool,
-                reverted_pipeline: bool, error_generator: create_errors.ErrorGenerator, lang: str):
+                reverted_pipeline: bool, error_generator: create_errors.ErrorGenerator, lang: str, use_morfodita: bool):
     # Starts read from start to end position, line with mistake is created for every read line,
     # then these lines are tokenized and store into dict that is putted into queue.
     counter = 0
     if not errors_from_file:
-        aspell_speller = aspell.Speller('lang', lang)
+        if use_morfodita:
+            aspell_speller = None
+            morfodita = GenerateForms()
+        else:
+            aspell_speller = aspell.Speller('lang', lang)
+            morfodita = None
     
     if error_generator:
         error_generator._init_annotator()
@@ -71,7 +77,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
                     line, error_line = line.split('\t', 1)
                 else:
                     if error_generator is not None:
-                        error_line = error_generator.create_error_sentence(line.strip(), aspell_speller, True, True)
+                        error_line = error_generator.create_error_sentence(line.strip(), aspell_speller, True, True, morfodita)
                     else:
                         error_line = gel(line, aspell_speller)
                     
@@ -108,7 +114,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
 def process_file_in_chunks(
         queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, 
         gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool, reverted_pipeline: bool,
-        error_generator: create_errors.ErrorGenerator, lang: str):
+        error_generator: create_errors.ErrorGenerator, lang: str, use_morfodita: bool):
     # Computes start index and end index for every process, stores them as arguments,
     # runs these processes and wait until they finished.
     
@@ -123,17 +129,17 @@ def process_file_in_chunks(
     for i in range(num_parallel):
         current = (current + process_size) % file_size
         end_position = current
-        arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang,))
+        arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, use_morfodita, ))
         start_position = current
     end_position = start
-    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, ))
+    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, use_morfodita, ))
 
     # start processes and wait until they finished
     pool.starmap(data_loader, arguments)
 
 
 def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool = False,
-                   reverted_pipeline: bool = False, error_generator: create_errors.ErrorGenerator = None, lang: str = "cs"):
+                   reverted_pipeline: bool = False, error_generator: create_errors.ErrorGenerator = None, lang: str = "cs", use_morfodita: bool = False):
     # Main methon that is used in pipeline.py
     # Creates pools and goes iteratively over files (one or more files).
     # Computes file size and run process_file_in_chunks. 
@@ -151,7 +157,7 @@ def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: Gener
         
         process_file_in_chunks(
             queue, pool, num_parallel, file, file_size, gel, tokenizer, max_length, 
-            errors_from_file, reverted_pipeline, error_generator, lang)
+            errors_from_file, reverted_pipeline, error_generator, lang, use_morfodita)
 
         index += 1
         if index == len(files):

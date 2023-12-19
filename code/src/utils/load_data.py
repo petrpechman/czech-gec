@@ -52,8 +52,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
     if not errors_from_file:
         aspell_speller = aspell.Speller('lang', lang)
     
-    if error_generator is not None:
-        error_generator._init_annotator()
+    error_generator._init_annotator()
 
     with open(filename, 'r') as f:
         # find start position

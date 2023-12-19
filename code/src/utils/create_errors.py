@@ -6,11 +6,11 @@ import random
 import argparse
 import numpy as np
 
-from edit import Edit
-from errors import ERRORS
-
-# from .edit import Edit
+# from edit import Edit
 # from errors import ERRORS
+
+from .edit import Edit
+from .errors import ERRORS
 
 from typing import List
 from itertools import compress

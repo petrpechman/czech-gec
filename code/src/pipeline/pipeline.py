@@ -66,11 +66,10 @@ def main(config_filename: str):
     LANG = config['lang']
     TOKEN_FILE = config['token_file']
     TOKEN_ERR_DISTRIBUTION = config['token_err_distribution']
+    DERINET_DIST = config['derinet_dist']
     CHAR_ERR_DISTRIBUTION = config['char_err_distribution']
     TOKEN_ERR_PROB = config['token_err_prob']   
     CHAR_ERR_PROB = config['char_err_prob']
-
-    USE_MORFODITA = config.get('use_morfodita', False)
 
     # logs
     LOG_FILE = config['log_file']
@@ -111,7 +110,8 @@ def main(config_filename: str):
         error_generator = create_errors.ErrorGenerator(
             errors_config, tokens, characters, 
             CHAR_ERR_DISTRIBUTION, CHAR_ERR_PROB, 0.01,
-            TOKEN_ERR_DISTRIBUTION, TOKEN_ERR_PROB, 0.2)
+            TOKEN_ERR_DISTRIBUTION, TOKEN_ERR_PROB, 0.2,
+            DERINET_DIST)
         gel = None
         # gel = load_data.GenereteErrorLine(
         #     tokens, characters, LANG, 
@@ -124,7 +124,7 @@ def main(config_filename: str):
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, USE_MORFODITA, ))
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, ))
 
     process.start()
 

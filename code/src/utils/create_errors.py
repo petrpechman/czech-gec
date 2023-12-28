@@ -6,15 +6,17 @@ import random
 import argparse
 import numpy as np
 
-# from edit import Edit
-# from errors import ERRORS
+from edit import Edit
+from errors import ERRORS
 
-from .edit import Edit
-from .errors import ERRORS
+# from .edit import Edit
+# from .errors import ERRORS
 
 from typing import List
 from itertools import compress
 from errant.annotator import Annotator
+
+from MorphoDiTa.generate_forms import GenerateForms
 
 allowed_source_delete_tokens = [',', '.', '!', '?']
 czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
@@ -47,8 +49,8 @@ class ErrorGenerator:
         self.total_tokens = 0
 
         self.error_instances = []
-        for error_name, prob_per_tok in config.items():
-            self.error_instances.append(ERRORS[error_name](prob_per_tok))
+        for error_name, [prob_per_tok, abs_prob, use_abs] in config.items():
+            self.error_instances.append(ERRORS[error_name](prob_per_tok, abs_prob, use_abs))
 
     def _init_annotator(self, lang: str = 'cs'):
         if self.annotator is None:
@@ -69,15 +71,23 @@ class ErrorGenerator:
         mask = self.get_remove_mask(list(zip(*edits_errors))[0])
         edits_errors = list(compress(edits_errors, mask))
         
-        ## Rejection Sampling:
         selected_edits = []
+        ## Rejection Sampling:
         for edit, error_instance in edits_errors:
-            gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
-            acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
-            if np.random.uniform(0, 1) < acceptance_prob:
-                selected_edits.append(edit)
-                error_instance.num_errors += 1
-        error_instance.num_possible_edits += len(edits_errors)
+            if not error_instance.use_absolute_prob:
+                gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
+                acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
+                if np.random.uniform(0, 1) < acceptance_prob:
+                    selected_edits.append(edit)
+                    error_instance.num_errors += 1
+            error_instance.num_possible_edits += len(edits_errors)
+        ##
+
+        ## Absolute probability:
+        for edit, error_instance in edits_errors:
+            if error_instance.use_absolute_prob:
+                if np.random.uniform(0, 1) < error_instance.absolute_prob:
+                    selected_edits.append(edit)
         ##
 
         # Sorting:
@@ -133,7 +143,7 @@ class ErrorGenerator:
         m2_edits = [edit.to_m2() for edit in edits]
         return error_sentence, m2_edits
     
-    def introduce_token_level_errors_on_sentence(self, tokens, aspell_speller, morfodita):
+    def introduce_token_level_errors_on_sentence(self, tokens, aspell_speller = None, morphodita = None):
         num_errors = int(np.round(np.random.normal(self.token_err_prob, self.token_err_std) * len(tokens)))
         num_errors = min(max(0, num_errors), len(tokens))  # num_errors \in [0; len(tokens)]
 
@@ -150,16 +160,26 @@ class ErrorGenerator:
                 continue
 
             current_token = tokens[token_id]
-            operation = np.random.choice(['replace', 'insert', 'delete', 'swap', 'recase'], p=self.token_err_distribution)
+            operation = np.random.choice(['replace_aspell', 'replace_morphodita', 'insert', 'delete', 'swap', 'recase'], p=self.token_err_distribution)
             new_token = ''
-            if operation == 'replace':
+            if operation == 'replace_aspell':
+                if not aspell_speller:
+                    raise Exception("Aspell speller is not loaded...")
                 if not current_token.isalpha():
                     new_token = current_token
                 else:
-                    if morfodita:
-                        proposals = list(morfodita.forms(current_token, self.derinet_distance))
+                    proposals = aspell_speller.suggest(current_token)[:10]
+                    if len(proposals) > 0:
+                        new_token = np.random.choice(proposals)  # [np.random.randint(0, len(proposals))]
                     else:
-                        aspell_speller.suggest(current_token)
+                        new_token = current_token
+            elif operation == 'replace_morphodita':
+                if not morphodita:
+                    raise Exception("Morphodita is not loaded...")
+                if not current_token.isalpha():
+                    new_token = current_token
+                else:
+                    proposals = list(morphodita.forms(current_token, self.derinet_distance))
                     proposals = proposals[:10]
                     if len(proposals) > 0:
                         new_token = np.random.choice(proposals)  # [np.random.randint(0, len(proposals))]
@@ -275,7 +295,9 @@ class ErrorGenerator:
             docs = next_docs + docs
             prev_edit = edit
         subtexts = [doc.text for doc in docs]
+
         sentence = parsed_sentence[:edits[-1].o_start].text + " " + " ".join(subtexts) + " " + parsed_sentence[edits[0].o_end:].text
+        sentence = sentence.strip()
         return sentence
 
     def _merge(self, prev_edit: Edit, next_edit: Edit, parsed_sentence) -> List:
@@ -308,11 +330,12 @@ def main(args):
     char_vocabulary = get_char_vocabulary(args.lang)
     word_vocabulary = get_token_vocabulary("../../data/vocabluraries/vocabulary_cs.tsv")
     aspell_speller = aspell.Speller('lang', args.lang)
+    morfodita = GenerateForms("./MorphoDiTa/czech-morfflex2.0-220710.dict")
     with open("./defaul_errors.json") as f:
         config = json.load(f)
     error_generator = ErrorGenerator(config, word_vocabulary, char_vocabulary,
                                      [0.2, 0.2, 0.2, 0.2, 0.2], 0.02, 0.01,
-                                     [0.7, 0.1, 0.05, 0.1, 0.05], 0.15, 0.2)
+                                     [0.5, 0.2, 0.1, 0.05, 0.1, 0.05], 0.15, 0.2)
     error_generator._init_annotator()
     input_path = args.input
     output_path = args.output
@@ -331,7 +354,7 @@ def main(args):
                         output_file.write(m2_line + "\n")
                     output_file.write("\n")
             else:
-                error_line = error_generator.create_error_sentence(line, aspell_speller, True, True)
+                error_line = error_generator.create_error_sentence(line, aspell_speller, True, True, morfodita)
                 with open(output_path, "a+") as output_file:
                     output_file.write(error_line + "\n")
 

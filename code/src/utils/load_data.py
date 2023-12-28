@@ -46,17 +46,13 @@ class GenereteErrorLine():
     
 
 def data_loader(filename, queue, start_position, end_position, gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool,
-                reverted_pipeline: bool, error_generator: create_errors.ErrorGenerator, lang: str, use_morfodita: bool):
+                reverted_pipeline: bool, error_generator: create_errors.ErrorGenerator, lang: str):
     # Starts read from start to end position, line with mistake is created for every read line,
     # then these lines are tokenized and store into dict that is putted into queue.
     counter = 0
     if not errors_from_file:
-        if use_morfodita:
-            aspell_speller = None
-            morfodita = GenerateForms("../utils/MorphoDiTa/czech-morfflex2.0-220710.dict")
-        else:
-            aspell_speller = aspell.Speller('lang', lang)
-            morfodita = None
+        aspell_speller = aspell.Speller('lang', lang)
+        morfodita = GenerateForms("../utils/MorphoDiTa/czech-morfflex2.0-220710.dict")
     
     if error_generator:
         error_generator._init_annotator()
@@ -114,7 +110,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
 def process_file_in_chunks(
         queue: Queue, pool: Pool, num_parallel: int, filename: str, file_size: int, 
         gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool, reverted_pipeline: bool,
-        error_generator: create_errors.ErrorGenerator, lang: str, use_morfodita: bool):
+        error_generator: create_errors.ErrorGenerator, lang: str):
     # Computes start index and end index for every process, stores them as arguments,
     # runs these processes and wait until they finished.
     
@@ -129,17 +125,17 @@ def process_file_in_chunks(
     for i in range(num_parallel):
         current = (current + process_size) % file_size
         end_position = current
-        arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, use_morfodita, ))
+        arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, ))
         start_position = current
     end_position = start
-    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, use_morfodita, ))
+    arguments.append((filename, queue, start_position, end_position, gel, tokenizer, max_length, errors_from_file, reverted_pipeline, error_generator, lang, ))
 
     # start processes and wait until they finished
     pool.starmap(data_loader, arguments)
 
 
 def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: GenereteErrorLine, tokenizer, max_length, errors_from_file: bool = False,
-                   reverted_pipeline: bool = False, error_generator: create_errors.ErrorGenerator = None, lang: str = "cs", use_morfodita: bool = False):
+                   reverted_pipeline: bool = False, error_generator: create_errors.ErrorGenerator = None, lang: str = "cs"):
     # Main methon that is used in pipeline.py
     # Creates pools and goes iteratively over files (one or more files).
     # Computes file size and run process_file_in_chunks. 
@@ -157,7 +153,7 @@ def data_generator(queue: Queue, files: List[str], num_parallel: int, gel: Gener
         
         process_file_in_chunks(
             queue, pool, num_parallel, file, file_size, gel, tokenizer, max_length, 
-            errors_from_file, reverted_pipeline, error_generator, lang, use_morfodita)
+            errors_from_file, reverted_pipeline, error_generator, lang)
 
         index += 1
         if index == len(files):

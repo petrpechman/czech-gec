@@ -31,7 +31,7 @@
 
     "lang": "cs",
     "token_file": "../../data/vocabluraries/vocabulary_cs.tsv",
-    "token_err_distribution": [0.7, 0.1, 0.05, 0.1, 0.05],
+    "token_err_distribution": [0.7, 0.0, 0.1, 0.05, 0.1, 0.05],
     "char_err_distribution": [0.2, 0.2, 0.2, 0.2, 0.2],
     "token_err_prob": 0.15,   
     "char_err_prob": 0.02,
@@ -69,5 +69,7 @@
 
     "max_eval_length": 512,
 
-    "timeout":  324000
+    "timeout":  324000,
+
+    "errors_config": "./errors_config.json"
 }

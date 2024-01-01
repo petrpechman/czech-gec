@@ -17,7 +17,7 @@ from typing import Optional
 from itertools import compress
 from errant.annotator import Annotator
 
-from MorphoDiTa.generate_forms import GenerateForms
+# from MorphoDiTa.generate_forms import GenerateForms
 
 allowed_source_delete_tokens = [',', '.', '!', '?']
 czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),

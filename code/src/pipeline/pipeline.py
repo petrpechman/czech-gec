@@ -76,6 +76,7 @@ def main(config_filename: str):
     PROFILE_BATCH = config['profile_batch']
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
     BACKUP_DIR =  config['backup_dir']
+    COUNT_OUTPUT = config.get('count_output', None)
 
     # input edits
     LABEL_PAD_VALUE = -100
@@ -124,7 +125,9 @@ def main(config_filename: str):
     # main process that creates pool, goes over possible files and manage other read processes
     process = Process(
                 target=load_data.data_generator, 
-                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, ))
+                args=(queue, DATA_PATHS, NUM_PARALLEL, gel, tokenizer, MAX_LENGTH, 
+                      ERRORS_FROM_FILE, REVERTED_PIPELINE, error_generator, LANG, 
+                      COUNT_OUTPUT, ))
 
     process.start()
 

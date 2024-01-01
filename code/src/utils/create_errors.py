@@ -32,6 +32,10 @@ class ErrorGenerator:
                  char_err_distribution, char_err_prob, char_err_std,
                  token_err_distribution, token_err_prob, token_err_std,
                  derinet_distance = 0) -> None:
+        self.inner_iterator = 0
+        self.annotator = None
+        self.total_tokens = 0
+
         self.char_err_distribution = char_err_distribution
         self.char_err_prob = char_err_prob
         self.char_err_std = char_err_std
@@ -44,10 +48,6 @@ class ErrorGenerator:
 
         self.derinet_distance = derinet_distance
 
-        self.annotator = None
-
-        self.total_tokens = 0
-
         self.error_instances = []
         for error_name, [prob_per_tok, abs_prob, use_abs] in config.items():
             self.error_instances.append(ERRORS[error_name](prob_per_tok, abs_prob, use_abs))
@@ -56,7 +56,9 @@ class ErrorGenerator:
         if self.annotator is None:
             self.annotator = errant.load(lang)
 
-    def get_edits(self, parsed_sentence, annotator: Annotator, aspell_speller) -> List[Edit]:
+    def get_edits(self, parsed_sentence, annotator: Annotator, aspell_speller,
+                  count: bool = False) -> List[Edit]:
+        self.inner_iterator += 1
         self.total_tokens += len(parsed_sentence)
         edits_errors = []
         for error_instance in self.error_instances:
@@ -88,6 +90,19 @@ class ErrorGenerator:
             if error_instance.use_absolute_prob:
                 if np.random.uniform(0, 1) < error_instance.absolute_prob:
                     selected_edits.append(edit)
+                    error_instance.num_errors += 1
+            error_instance.num_possible_edits += 1
+        ##
+            
+        ## Write counts:
+        if count:
+            if self.inner_iterator % 100 == 0:
+                with open('counts.txt', "w") as file:
+                    file.write("Counts:")
+                    for error_instance in self.error_instances:
+                        error_name = error_instance.__class__.__name__
+                        pos_errors = error_instance.num_possible_edits
+                        file.write(error_name + '\t' + pos_errors + '\t' + self.total_tokens)
         ##
 
         # Sorting:
@@ -271,9 +286,11 @@ class ErrorGenerator:
             new_sentence += new_char
         return new_sentence
     
-    def create_error_sentence(self, sentence: str, aspell_speller, use_token_level: bool = False, use_char_level: bool = False, morfodita=None) -> List[str]:
+    def create_error_sentence(self, sentence: str, aspell_speller, 
+                              use_token_level: bool = False, use_char_level: bool = False, 
+                              morfodita=None, count: bool = False) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
-        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
+        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count)
 
         sentence = self._use_edits(edits, parsed_sentence)
         
@@ -354,7 +371,8 @@ def main(args):
                         output_file.write(m2_line + "\n")
                     output_file.write("\n")
             else:
-                error_line = error_generator.create_error_sentence(line, aspell_speller, True, True, morfodita)
+                error_line = error_generator.create_error_sentence(
+                    line, aspell_speller, True, True, morfodita, args.count)
                 with open(output_path, "a+") as output_file:
                     output_file.write(error_line + "\n")
 
@@ -365,6 +383,8 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--format', type=str, default="m2")
     parser.add_argument('-o', '--output', type=str, default="output.m2")
     parser.add_argument('-l', '--lang', type=str)
+    
+    parser.add_argument('-c', '--count', action='store_true')
 
     args = parser.parse_args()
     main(args)

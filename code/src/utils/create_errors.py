@@ -16,7 +16,7 @@ from typing import List
 from itertools import compress
 from errant.annotator import Annotator
 
-# from MorphoDiTa.generate_forms import GenerateForms
+from MorphoDiTa.generate_forms import GenerateForms
 
 allowed_source_delete_tokens = [',', '.', '!', '?']
 czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
@@ -82,7 +82,7 @@ class ErrorGenerator:
                 if np.random.uniform(0, 1) < acceptance_prob:
                     selected_edits.append(edit)
                     error_instance.num_errors += 1
-            error_instance.num_possible_edits += 1
+                error_instance.num_possible_edits += 1
         ##
 
         ## Absolute probability:
@@ -91,18 +91,23 @@ class ErrorGenerator:
                 if np.random.uniform(0, 1) < error_instance.absolute_prob:
                     selected_edits.append(edit)
                     error_instance.num_errors += 1
-            error_instance.num_possible_edits += 1
+                error_instance.num_possible_edits += 1
         ##
             
         ## Write counts:
         if count:
             if self.inner_iterator % 100 == 0:
                 with open('counts.txt', "w") as file:
-                    file.write("Counts:")
+                    file.write("Counts:\n")
                     for error_instance in self.error_instances:
                         error_name = error_instance.__class__.__name__
                         pos_errors = error_instance.num_possible_edits
-                        file.write(error_name + '\t' + pos_errors + '\t' + self.total_tokens)
+                        num_errors = error_instance.num_errors
+                        abs_prob = round(num_errors / (pos_errors + 1e-10), 2)
+                        ratio = round(pos_errors / (self.total_tokens + 1e-10), 5)
+                        file.write(error_name + '\n' + \
+                                   str(abs_prob) + '\t' + str(pos_errors) + '\t' + str(num_errors) + '\t' + \
+                                   str(self.total_tokens) + "\t" + str(ratio) + "\n")
         ##
 
         # Sorting:

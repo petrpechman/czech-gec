@@ -13,6 +13,7 @@ from .edit import Edit
 from .errors import ERRORS
 
 from typing import List
+from typing import Optional
 from itertools import compress
 from errant.annotator import Annotator
 
@@ -57,7 +58,7 @@ class ErrorGenerator:
             self.annotator = errant.load(lang)
 
     def get_edits(self, parsed_sentence, annotator: Annotator, aspell_speller,
-                  count: bool = False) -> List[Edit]:
+                  count_output: Optional[str] = None) -> List[Edit]:
         self.inner_iterator += 1
         self.total_tokens += len(parsed_sentence)
         edits_errors = []
@@ -95,9 +96,9 @@ class ErrorGenerator:
         ##
             
         ## Write counts:
-        if count:
+        if count_output:
             if self.inner_iterator % 100 == 0:
-                with open('counts.txt', "w") as file:
+                with open(count_output, "w") as file:
                     file.write("Counts:\n")
                     for error_instance in self.error_instances:
                         error_name = error_instance.__class__.__name__
@@ -293,9 +294,9 @@ class ErrorGenerator:
     
     def create_error_sentence(self, sentence: str, aspell_speller, 
                               use_token_level: bool = False, use_char_level: bool = False, 
-                              morfodita=None, count: bool = False) -> List[str]:
+                              morfodita=None, count_output: Optional[str] = None) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
-        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count)
+        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output)
 
         sentence = self._use_edits(edits, parsed_sentence)
         
@@ -377,7 +378,7 @@ def main(args):
                     output_file.write("\n")
             else:
                 error_line = error_generator.create_error_sentence(
-                    line, aspell_speller, True, True, morfodita, args.count)
+                    line, aspell_speller, True, True, morfodita, "counts.txt")
                 with open(output_path, "a+") as output_file:
                     output_file.write(error_line + "\n")
 

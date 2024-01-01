@@ -80,7 +80,7 @@ class ErrorGenerator:
                 if np.random.uniform(0, 1) < acceptance_prob:
                     selected_edits.append(edit)
                     error_instance.num_errors += 1
-            error_instance.num_possible_edits += len(edits_errors)
+            error_instance.num_possible_edits += 1
         ##
 
         ## Absolute probability:

@@ -18,7 +18,8 @@ class Error(ABC):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         pass
 
-    def _capitalize_words(self, variants: List) -> List:
+    @staticmethod
+    def _capitalize_words(variants: List) -> List:
         capital_variants = []
         for word, possible_errors, use_capital in variants:
             if use_capital:
@@ -28,7 +29,7 @@ class Error(ABC):
                 capital_variants.append((word.capitalize(), capital_possible_errors))
         return capital_variants
 
-    def _general(self, variants: List, parsed_sentence, annotator: Annotator, type: str) -> List[Edit]:
+    def _general(self, variants: List, parsed_sentence, annotator: Annotator, type_name: str) -> List[Edit]:
         first_word_variants = self._capitalize_words(variants)
         edits = []
         for i, token in enumerate(parsed_sentence):
@@ -38,16 +39,36 @@ class Error(ABC):
                         o_toks = annotator.parse(token.text)
                         for possible_error in possible_errors:
                             c_toks = annotator.parse(possible_error)
-                            edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type=type)
+                            edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type=type_name)
                             edits.append(edit)
             for (right, possible_errors, _) in variants:
                 if token.text == right:
                     o_toks = annotator.parse(token.text)
                     for possible_error in possible_errors:
                         c_toks = annotator.parse(possible_error)
-                        edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type=type)
+                        edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type=type_name)
                         edits.append(edit)
         return edits
+    
+    @staticmethod
+    def _general_try_retag(variants: List, edit: Edit, type_name: str) -> Edit:
+        first_word_variants = Error._capitalize_words(variants)
+        for (right, possible_errors) in first_word_variants:
+            if edit.c_toks.text == right:
+                for possible_error in possible_errors:
+                    if edit.o_toks.text == possible_error:
+                        edit.type = type_name
+        for (right, possible_errors, _) in variants:
+            if edit.c_toks.text == right:
+                for possible_error in possible_errors:
+                    if edit.o_toks.text == possible_error:
+                        edit.type = type_name
+        return edit
+    
+    @staticmethod
+    # @abstractmethod
+    def try_retag_edit(edit: Edit) -> Edit:
+        pass
 
 
 class ErrorMeMne(Error):
@@ -77,6 +98,17 @@ class ErrorMeMne(Error):
                     edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_toks.text == "mně" and edit.c_toks.text == "mě":
+            edit.type = "MeMne"
+        if edit.o_toks.text == "mě" and edit.c_toks.text == "mně":
+            edit.type = "MeMne"
+        if edit.o_toks.text == "Mě" and edit.c_toks.text == "Mně":
+            edit.type = "MeMne"
+        if edit.o_toks.text == "Mně" and edit.c_toks.text == "Mě":
+            edit.type = "MeMne"
+        return edit
+    
 class ErrorMeMneSuffix(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
@@ -93,6 +125,15 @@ class ErrorMeMneSuffix(Error):
                 edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        if len(edit.o_toks.text) > 3 and edit.o_toks.text.endswith("mně") and \
+            len(edit.c_toks.text) > 2 and edit.c_toks.text.endswith("mě"):
+            edit.type = "MeMneSuffix"
+        if len(edit.o_toks.text) > 2 and edit.o_toks.text.endswith("mě") and \
+            len(edit.c_toks.text) > 3 and edit.c_toks.text.endswith("mně"):
+            edit.type = "MeMneSuffix"
+        return edit
+
 class ErrorMeMneIn(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
@@ -121,12 +162,29 @@ class ErrorMeMneIn(Error):
                 edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        if len(edit.o_toks.text) > 3 and 'mně' in edit.o_toks.text and not edit.o_toks.text.endswith("mně") and \
+            len(edit.c_toks.text) > 2 and 'mě' in edit.c_toks.text and not edit.c_toks.text.endswith("mě"):
+            edit.type = "MeMneIn"
+        if len(edit.o_toks.text) > 2 and 'mě' in edit.o_toks.text and not edit.o_toks.text.endswith("mě") and \
+            len(edit.c_toks.text) > 3 and 'mně' in edit.c_toks.text and not edit.c_toks.text.endswith("mně"):
+            edit.type = "MeMneIn"
+        if len(edit.o_toks.text) > 3 and 'Mně' in edit.o_toks.text and not edit.o_toks.text.endswith("Mně") and \
+            len(edit.c_toks.text) > 2 and 'Mě' in edit.c_toks.text and not edit.c_toks.text.endswith("Mě"):
+            edit.type = "MeMneIn"
+        if len(edit.o_toks.text) > 2 and 'Mě' in edit.o_toks.text and not edit.o_toks.text.endswith("Mě") and \
+            len(edit.c_toks.text) > 3 and 'Mně' in edit.c_toks.text and not edit.c_toks.text.endswith("Mně"):
+            edit.type = "MeMneIn"
+        return edit
+    
 class ErrorDNT(Error):
+    specific_chars = ['d', 't', 'n']
+
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
-        specific_chars = ['d', 't', 'n']
+        # specific_chars = ['d', 't', 'n']
         edits = []
         for i, token in enumerate(parsed_sentence):
-            for specific_char in specific_chars:
+            for specific_char in self.specific_chars:
                 if specific_char + 'i' in token.text:
                     index = token.text.find(specific_char + 'i')
                     o_toks = annotator.parse(token.text)
@@ -153,12 +211,38 @@ class ErrorDNT(Error):
                     edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        for specific_char in ErrorDNT.specific_chars:
+            if specific_char + 'i' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'i')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'y' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "DNT"
+            if specific_char + 'í' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'í')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'ý' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "DNT"
+            if specific_char + 'y' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'y')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'i' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "DNT"
+            if specific_char + 'ý' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'ý')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'í' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "DNT"
+        return edit
+    
 class ErrorEnumeratedWord(Error):
+    specific_chars = ['b', 'f', 'l', 'm', 'p', 's', 'v', 'z']
+
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
-        specific_chars = ['b', 'f', 'l', 'm', 'p', 's', 'v', 'z']
+        # specific_chars = ['b', 'f', 'l', 'm', 'p', 's', 'v', 'z']
         edits = []
         for i, token in enumerate(parsed_sentence):
-            for specific_char in specific_chars:
+            for specific_char in self.specific_chars:
                 if specific_char + 'i' in token.text:
                     index = token.text.find(specific_char + 'i')
                     o_toks = annotator.parse(token.text)
@@ -184,17 +268,41 @@ class ErrorEnumeratedWord(Error):
                     edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="EnumeratedWord")
                     edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        for specific_char in ErrorEnumeratedWord.specific_chars:
+            if specific_char + 'i' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'i')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'y' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "EnumeratedWord"
+            if specific_char + 'í' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'í')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'ý' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "EnumeratedWord"
+            if specific_char + 'y' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'y')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'i' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "EnumeratedWord"
+            if specific_char + 'ý' in edit.o_toks.text:
+                index = edit.o_toks.text.find(specific_char + 'ý')
+                pos_c_toks = edit.o_toks.text[:index] + specific_char + 'í' + edit.o_toks.text[index+2:]
+                if pos_c_toks == edit.c_toks.text:
+                    edit.type = "EnumeratedWord"
+        return edit
 
 class ErrorSuffixIY(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
-            if token.text.endswith("y"):
+            if token.text.endswith("y") and len(token.text) > 1:
                 o_toks = annotator.parse(token.text)
                 c_toks = annotator.parse(token.text[:-1] + "i")
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="SuffixIY")
                 edits.append(edit)
-            elif token.text.endswith("ý"):
+            elif token.text.endswith("ý") and len(token.text) > 1:
                 o_toks = annotator.parse(token.text)
                 c_toks = annotator.parse(token.text[:-1] + "í")
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="SuffixIY")
@@ -204,12 +312,31 @@ class ErrorSuffixIY(Error):
                 c_toks = annotator.parse(token.text[:-1] + "y")
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="SuffixIY")
                 edits.append(edit)
-            elif token.text.endswith("í"):
+            elif token.text.endswith("í") and len(token.text) > 1:
                 o_toks = annotator.parse(token.text)
                 c_toks = annotator.parse(token.text[:-1] + "ý")
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="SuffixIY")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_toks.text.endswith('y') and len(edit.o_toks.text) > 1:
+            pos_c_toks = edit.o_toks.text[:-1] + 'i'
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SuffixIY"
+        if edit.o_toks.text.endswith('ý') and len(edit.o_toks.text) > 1:
+            pos_c_toks = edit.o_toks.text[:-1] + 'í'
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SuffixIY"
+        if edit.o_toks.text.endswith('i') and len(edit.o_toks.text) > 1:
+            pos_c_toks = edit.o_toks.text[:-1] + 'y'
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SuffixIY"
+        if edit.o_toks.text.endswith('í') and len(edit.o_toks.text) > 1:
+            pos_c_toks = edit.o_toks.text[:-1] + 'ý'
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SuffixIY"
+        return edit
     
 class ErrorUU(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -233,37 +360,82 @@ class ErrorUU(Error):
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="UU")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if 'ů' in edit.o_toks.text:
+            index = edit.o_toks.text.find('ů')
+            pos_c_toks = edit.o_toks.text[:index] + "ú" + edit.o_toks.text[index+1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "UU"
+        if 'ú' in edit.o_toks.text:
+            index = edit.o_toks.text.find('ú')
+            pos_c_toks = edit.o_toks.text[:index] + "ů" + edit.o_toks.text[index+1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "UU"
+        if edit.o_toks.text.startswith('Ů'):
+            pos_c_toks = "Ú" + edit.o_toks.text[1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "UU"
+        return edit
+    
 
 class ErrorCondional(Error):
-    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
-        super().__init__(target_prob, absolute_prob, use_absolute_prob)
-        self.variants = [
+    variants = [
             ("bychom", ["bysme", "by jsme"], True),
             ("byste", ["by ste", "by jste", "by jsi"], True),
             ("bych", ["by jsem", "bysem"], True),
             ("bys", ["by jsi", "by si"], True),
-            ("abybychom", ["abybysme", "aby jsme"], True),
-            ("abybyste", ["aby ste", "aby jste", "aby jsi"], True),
-            ("abybych", ["aby jsem", "abysem"], True),
-            ("abybys", ["aby jsi", "aby si"], True),
+            ("abychom", ["abybysme", "aby jsme"], True),
+            ("abyste", ["aby ste", "aby jste", "aby jsi"], True),
+            ("abych", ["aby jsem", "abysem"], True),
+            ("abys", ["aby jsi", "aby si"], True),
             ("kdybychom", ["kdybysme", "kdyby jsme"], True),
             ("kdybyste", ["kdyby ste", "kdyby jste", "kdyby jsi"], True),
             ("kdybych", ["kdyby jsem", "kdybysem"], True),
             ("kdybys", ["kdyby jsi", "kdyby si"], True),
         ]
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        # self.variants = [
+        #     ("bychom", ["bysme", "by jsme"], True),
+        #     ("byste", ["by ste", "by jste", "by jsi"], True),
+        #     ("bych", ["by jsem", "bysem"], True),
+        #     ("bys", ["by jsi", "by si"], True),
+        #     ("abychom", ["abybysme", "aby jsme"], True),
+        #     ("abyste", ["aby ste", "aby jste", "aby jsi"], True),
+        #     ("abych", ["aby jsem", "abysem"], True),
+        #     ("abys", ["aby jsi", "aby si"], True),
+        #     ("kdybychom", ["kdybysme", "kdyby jsme"], True),
+        #     ("kdybyste", ["kdyby ste", "kdyby jste", "kdyby jsi"], True),
+        #     ("kdybych", ["kdyby jsem", "kdybysem"], True),
+        #     ("kdybys", ["kdyby jsi", "kdyby si"], True),
+        # ]
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         return self._general(self.variants, parsed_sentence, annotator, "Conditional")
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        edit = Error._general_try_retag(ErrorCondional.variants, edit, "Conditional")
+        return edit
+    
 class ErrorSpecificWords(Error):
-    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
-        super().__init__(target_prob, absolute_prob, use_absolute_prob)
-        self.variants = [
+    variants = [
             ("viz", ["viz."], False),
             ("výjimka", ["vyjímka"], True),
             ("seshora", ["zeshora", "zezhora"], True),
         ]
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        # self.variants = [
+        #     ("viz", ["viz."], False),
+        #     ("výjimka", ["vyjímka"], True),
+        #     ("seshora", ["zeshora", "zezhora"], True),
+        # ]
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         return self._general(self.variants, parsed_sentence, annotator, "SpecificWords")
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        edit = Error._general_try_retag(ErrorSpecificWords.variants, edit, "SpecificWords")
+        return edit
     
 class ErrorSZPrefix(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -290,18 +462,47 @@ class ErrorSZPrefix(Error):
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="SZPrefix")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if len(edit.o_toks.text) > 1 and edit.o_toks.text.startswith("s") and edit.o_toks.text != "se":
+            pos_c_toks = "z" + edit.o_toks.text[1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SZPrefix"
+        if len(edit.o_toks.text) > 1 and edit.o_toks.text.startswith("z") and edit.o_toks.text != "ze":
+            pos_c_toks = "s" + edit.o_toks.text[1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SZPrefix"
+        if len(edit.o_toks.text) > 1 and edit.o_toks.text.startswith("S") and edit.o_toks.text != "Se":
+            pos_c_toks = "Z" + edit.o_toks.text[1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SZPrefix"
+        if len(edit.o_toks.text) > 1 and edit.o_toks.text.startswith("Z") and edit.o_toks.text != "Ze":
+            pos_c_toks = "S" + edit.o_toks.text[1:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "SZPrefix"
+        return edit
 
 class ErrorNumerals(Error):
-    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
-        super().__init__(target_prob, absolute_prob, use_absolute_prob)
-        self.variants = [
+    variants = [
             ("oběma", ["oběmi, oboumi", "obouma"], True),
             ("dvěma", ["dvěmi", "dvouma"], True),
             ("třemi", ["třema"], True),
             ("čtyřmi", ["čtyřma"], True),
         ]
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        # self.variants = [
+        #     ("oběma", ["oběmi, oboumi", "obouma"], True),
+        #     ("dvěma", ["dvěmi", "dvouma"], True),
+        #     ("třemi", ["třema"], True),
+        #     ("čtyřmi", ["čtyřma"], True),
+        # ]
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         return self._general(self.variants, parsed_sentence, annotator, "Numerals")
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        edit = Error._general_try_retag(ErrorNumerals.variants, edit, "Numerals")
+        return edit
     
 class ErrorMyMi(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -330,6 +531,17 @@ class ErrorMyMi(Error):
                     edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_toks.text == "mi" and edit.c_toks.text == "my":
+            edit.type = "MyMi"
+        if edit.o_toks.text == "my" and edit.c_toks.text == "mi":
+            edit.type = "MyMi"
+        if edit.o_toks.text == "Mi" and edit.c_toks.text == "My":
+            edit.type = "MyMi"
+        if edit.o_toks.text == "My" and edit.c_toks.text == "Mi":
+            edit.type = "MyMi"
+        return edit
+    
 class ErrorBeBjeSuffix(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
@@ -345,6 +557,17 @@ class ErrorBeBjeSuffix(Error):
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="BeBjeSuffix")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if len(edit.o_toks.text) > 3 and edit.o_toks.text.endswith("bje"):
+            pos_c_toks = edit.o_toks.text[:-3] + "bě"
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "BeBjeSuffix"
+        if len(edit.o_toks.text) > 2 and edit.o_toks.text.endswith("bě"):
+            pos_c_toks = edit.o_toks.text[:-2] + "bje"
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "BeBjeSuffix"
+        return edit
     
 class ErrorBeBjeIn(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -373,6 +596,29 @@ class ErrorBeBjeIn(Error):
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="BeBjeIn")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if len(edit.o_toks.text) > 3 and 'bje' in edit.o_toks.text and not edit.o_toks.text.endswith("bje"):
+            index = edit.o_toks.text.find('bje')
+            pos_c_toks = edit.o_toks.text[:index] + "bě" + edit.o_toks.text[index+3:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "BeBjeIn"
+        if len(edit.o_toks.text) > 2 and 'bě' in edit.o_toks.text and not edit.o_toks.text.endswith("bě"):
+            index = edit.o_toks.text.find('bě')
+            pos_c_toks = edit.o_toks.text[:index] + "bje" + edit.o_toks.text[index+2:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "BeBjeIn"
+        if len(edit.o_toks.text) > 3 and edit.o_toks.text.startswith("Bje"):
+            index = edit.o_toks.text.find('Bje')
+            pos_c_toks = "Bě" + edit.o_toks.text[3:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "BeBjeIn"
+        if len(edit.o_toks.text) > 2 and 'Bě' and edit.o_toks.text.startswith("Bě"):
+            index = edit.o_toks.text.find('Bě')
+            pos_c_toks = "Bje" + edit.o_toks.text[2:]
+            if pos_c_toks == edit.c_toks.text:
+                edit.type = "BeBjeIn"
+        return edit
     
 class ErrorSebou(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -403,6 +649,17 @@ class ErrorSebou(Error):
                     edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="Sebou")
                     edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_toks.text == "sebou" and edit.c_toks.text == "s sebou":
+            edit.type = "Sebou"
+        if edit.o_toks.text == "s sebou" and edit.c_toks.text == "sebou":
+            edit.type = "Sebou"
+        if edit.o_toks.text == "Sebou" and edit.c_toks.text == "S sebou":
+            edit.type = "Sebou"
+        if edit.o_toks.text == "S sebou" and edit.c_toks.text == "Sebou":
+            edit.type = "Sebou"
+        return edit
 
 class ErrorSentenceFirstUpper(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -415,6 +672,11 @@ class ErrorSentenceFirstUpper(Error):
                 edit = Edit(o_toks, c_toks, [0, len(o_toks), 0, len(c_toks)], type="SentenceFirstUpper")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start == 0 and edit.o_end == 1 and edit.o_toks.text.islower() and edit.o_toks.text.title() == edit.c_toks.text:
+            edit.type = "SentenceFirstUpper"
+        return edit
 
 class ErrorSentenceFirstLower(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
@@ -428,6 +690,11 @@ class ErrorSentenceFirstLower(Error):
                 edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start == 0 and edit.o_end == 1 and edit.o_toks.text.istitle() and edit.o_toks.text.lower() == edit.c_toks.text:
+            edit.type = "SentenceFirstLower"
+        return edit
+    
 class ErrorTitleToLower(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
@@ -439,6 +706,11 @@ class ErrorTitleToLower(Error):
                 edits.append(edit)
         return edits
     
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start != 0 and edit.o_end != 1 and edit.o_toks.text.islower() and edit.o_toks.text.title() == edit.c_toks.text:
+            edit.type = "TitleToLower"
+        return edit
+    
 class ErrorLowerToTitle(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
@@ -449,25 +721,41 @@ class ErrorLowerToTitle(Error):
                 edit = Edit(o_toks, c_toks, [i, i+len(o_toks), i, i+len(c_toks)], type="LowerToTitle")
                 edits.append(edit)
         return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start != 0 and edit.o_end != 1 and edit.o_toks.text.istitle() and edit.o_toks.text.lower() == edit.c_toks.text:
+            edit.type = "LowerToTitle"
+        return edit
 
 class ErrorPrepositionSZ(Error):
-    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
-        super().__init__(target_prob, absolute_prob, use_absolute_prob)
-        self.variants = [
+    variants = [
             ("s", ["se"], True),
             ("z", ["ze"], True),
             ("se", ["s"], True),
             ("ze", ["z"], True),
         ]
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        # self.variants = [
+        #     ("s", ["se"], True),
+        #     ("z", ["ze"], True),
+        #     ("se", ["s"], True),
+        #     ("ze", ["z"], True),
+        # ]
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         return self._general(self.variants, parsed_sentence, annotator, "PrepositionSZ")
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        edit = Error._general_try_retag(ErrorPrepositionSZ.variants, edit, "PrepositionSZ")
+        return edit
 
 ERRORS = {
     "MeMne": ErrorMeMne,
     "MeMneSuffix": ErrorMeMneSuffix,
     "MeMneIn": ErrorMeMneIn,
-    "DTN": ErrorDNT,
     "SuffixIY": ErrorSuffixIY,
+    "DTN": ErrorDNT,
+    "EnumeratedWord": ErrorEnumeratedWord,
     "UU": ErrorUU,
     "Conditional": ErrorCondional,
     "SpecificWords": ErrorSpecificWords,

@@ -115,7 +115,8 @@ class ErrorGenerator:
         sorted_edits = self.sort_edits(selected_edits, True)
         return sorted_edits
     
-    def sort_edits(self, edits: List[Edit], reverse: bool = False) -> List[Edit]:
+    @staticmethod
+    def sort_edits(edits: List[Edit], reverse: bool = False) -> List[Edit]:
         reverse_index = -1 if reverse else 1
         minus_start_indices = [reverse_index * edit.o_end for edit in edits]
         sorted_edits = np.array(edits)
@@ -127,14 +128,15 @@ class ErrorGenerator:
 
         return sorted_edits.tolist()
 
-
-    def get_remove_mask(self, edits: List[Edit]) -> List[bool]:
+    @staticmethod
+    def get_remove_mask(edits: List[Edit]) -> List[bool]:
         ranges = [(edit.o_start, edit.o_end) for edit in edits]
-        removed = [not any([self.is_overlap(current_range, r) if j < i else False for j, r in enumerate(ranges)]) for i, current_range in enumerate(ranges)]
+        removed = [not any([ErrorGenerator.is_overlap(current_range, r) if j < i else False for j, r in enumerate(ranges)]) for i, current_range in enumerate(ranges)]
         # filtered_edits = list(compress(edits, removed))
         return removed
 
-    def is_overlap(self, range_1: tuple, range_2: tuple) -> bool:
+    @staticmethod
+    def is_overlap(range_1: tuple, range_2: tuple) -> bool:
         start_1 = range_1[0]
         end_1 = range_1[1]
         start_2 = range_2[0]

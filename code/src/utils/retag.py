@@ -1,10 +1,8 @@
 import errant
 import argparse
-
+from itertools import compress
 
 from edit import Edit
-
-from itertools import compress
 from create_errors import ErrorGenerator
 from errors import ERRORS
 
@@ -38,15 +36,15 @@ def retag_edits(line_edits: list[str]) -> list[Edit]:
         edits = simplify_edits(sentence, source_edits, selected_coder)
         edits = ErrorGenerator.sort_edits(edits, True)
 
-        mask = ErrorGenerator.get_remove_mask(edits,)
+        # mask = ErrorGenerator.get_remove_mask(edits,)
 
-        if not all(mask):
-            print(edits)
-            print("Edits are overlaped!")
-            if False:
-                edits = list(compress(edits, mask))
-            else:
-                raise Exception("Edits are overlaped!")
+        # if not all(mask):
+        #     print(edits)
+        #     print("Edits are overlaped!")
+        #     if False:
+        #         edits = list(compress(edits, mask))
+        #     else:
+        #         raise Exception("Edits are overlaped!")
 
         for edit in edits:
             for error_class  in ERRORS.values():

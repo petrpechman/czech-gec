@@ -2,6 +2,7 @@ import numpy as np
 
 # from edit import Edit
 from .edit import Edit
+
 from typing import List
 from abc import ABC, abstractmethod
 from errant.annotator import Annotator

@@ -67,7 +67,7 @@ def main(config_filename: str):
     if not isinstance(M2_DATA_DEV, str):
         M2_DATA_DEV, EVAL_TYPE_DEV = M2_DATA_DEV
 
-    M2_DATA_TEST = config['m2_data_dev']
+    M2_DATA_TEST = config['m2_data_test']
     if not isinstance(M2_DATA_TEST, str):
         M2_DATA_TEST, EVAL_TYPE_TEST = M2_DATA_TEST  
     OTHER_DATASETS = config.get('other_datasets', [])
@@ -186,7 +186,7 @@ def main(config_filename: str):
     # prepare udpipe tokenizer
     udpipe_tokenizer = UDPipeTokenizer("cs")
 
-    def compute_metrics_m2scorer(tokenized_predicted_sentences, source_sentences, dev_gold_edits):
+    def compute_metrics_m2scorer(tokenized_predicted_sentences, source_sentences, gold_edits):
         '''
         Goes through predicted sentences and computes true positives (stat_correct), 
         TP+FN (stat_gold), TP+FP (stat_proposed) for every batch.
@@ -201,7 +201,7 @@ def main(config_filename: str):
             stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
                 tokenized_predicted_sentences[i:i+size], 
                 source_sentences[i:i+size], 
-                dev_gold_edits[i:i+size],
+                gold_edits[i:i+size],
                 MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
             total_stat_correct += stat_correct
             total_stat_proposed += stat_proposed

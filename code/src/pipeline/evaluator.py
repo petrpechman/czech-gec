@@ -5,6 +5,7 @@ import os
 import time
 import shutil
 import errant
+import numpy as np
 import tensorflow as tf
 
 from transformers import TFAutoModelForSeq2SeqLM
@@ -320,7 +321,10 @@ def main(config_filename: str):
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
-            unevaluated = sorted(unevaluated)
+            numbers = np.array([int(u[5:]) for u in unevaluated])
+            indices = np.argsort(numbers)
+            unevaluated = np.array(unevaluated)
+            unevaluated = unevaluated[indices].tolist()
             
             for unevaluated_checkpoint in unevaluated:
                 try:

@@ -322,9 +322,8 @@ def main(config_filename: str):
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
             numbers = np.array([int(u[5:]) for u in unevaluated])
-            indices = np.argsort(numbers)
-            unevaluated = np.array(unevaluated)
-            unevaluated = unevaluated[indices].tolist()
+            numbers = sorted(numbers)
+            unevaluated = ["ckpt-" + str(number) for number in numbers]
             
             for unevaluated_checkpoint in unevaluated:
                 try:

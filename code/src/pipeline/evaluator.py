@@ -279,7 +279,6 @@ def main(config_filename: str):
                 # Simplify the edits into lists of lists
                 hyp_edits = simplify_edits(sent[0])
                 ref_edits = simplify_edits(sent[1])
-                print("Simplified edits...")
                 # Process the edits for detection/correction based on args
                 class Args:
                     def __init__(self) -> None:
@@ -290,6 +289,7 @@ def main(config_filename: str):
                         self.multi = None
                         self.filt = None
                         self.cse = None
+                        self.verbose = None
                 args = Args()
                 hyp_dict = process_edits(hyp_edits, args)
                 ref_dict = process_edits(ref_edits, args)

@@ -293,18 +293,17 @@ def main(config_filename: str):
                 args = Args()
                 hyp_dict = process_edits(hyp_edits, args)
                 ref_dict = process_edits(ref_edits, args)
-                print("Processed edits...")
                 # Evaluate edits and get best TP, FP, FN hyp+ref combo.
                 count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, best_dict, sent_id, args)
-                print("Evaluated edits...")
+                print(cat_dict)
                 best_dict += Counter(count_dict)
             
             tp = best_dict['tp']
             fp = best_dict['fp']
             fn = best_dict['fn']
 
-            p  = (1.0 * tp) / (tp + fp) if total_stat_proposed > 0 else 0
-            r  = (1.0 * tp) / (tp + fn)  if total_stat_gold > 0 else 0
+            p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
+            r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
             f_score = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
 
             print("Write into files...")

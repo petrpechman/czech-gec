@@ -296,10 +296,10 @@ def main(config_filename: str):
                 ref_dict = process_edits(ref_edits, args)
                 # Evaluate edits and get best TP, FP, FN hyp+ref combo.
                 count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, best_dict, sent_id, args)
-                print(cat_dict)
                 best_dict += Counter(count_dict)
                 best_cats = merge_dict(best_cats, cat_dict)
             
+            print(best_cats)
             tp = best_dict['tp']
             fp = best_dict['fp']
             fn = best_dict['fn']

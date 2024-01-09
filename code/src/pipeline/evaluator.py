@@ -299,7 +299,6 @@ def main(config_filename: str):
                 best_dict += Counter(count_dict)
                 best_cats = merge_dict(best_cats, cat_dict)
             
-            print(best_cats)
             tp = best_dict['tp']
             fp = best_dict['fp']
             fn = best_dict['fn']
@@ -315,6 +314,14 @@ def main(config_filename: str):
                 tf.summary.scalar('epoch_errant_f_score', f_score, step)
             print("End of writing into files...")
             
+
+        print("Write errors...")
+        with file_writer.as_default():
+            text_lines = [k + ": " + str(best_cats[k]) + '\n' for k in best_cats.keys()]
+            text = "".join(text_lines)
+            print(text)
+            tf.summary.text("errors", text, step)
+        print("End of writing errors...")
 
         print("Write predictions...")
         with file_writer.as_default():

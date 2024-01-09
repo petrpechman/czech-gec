@@ -29,7 +29,7 @@ def simplify_edits(sentence, edits: list[str], selected_coder: int = 0) -> list[
     return out_edits
 
 def retag_edits(line_edits: list[str]) -> list[Edit]:
-    sentence = annotator.parse(line_edits[0][3:])
+    sentence = annotator.parse(line_edits[0][2:])
     source_edits = line_edits[1:]
     all_edits = []
     for selected_coder in range(5):

@@ -17,5 +17,9 @@
     "SentenceFirstLower": [0.001, 0.5, true],
     "TitleToLower": [0.001, 0.5, true],
     "LowerToTitle": [0.001, 0.5, true],
-    "PrepositionSZ": [0.001, 0.5, true]
+    "PrepositionSZ": [0.001, 0.5, true],
+    "EnumeratedWord": [0.001, 0.5, true],
+    "CommaAdd": [0.001, 0.01, true],
+    "CommaRemove": [0.001, 0.5, true],
+    "Diacritics": [0.001, 0.5, true]
 }

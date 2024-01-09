@@ -7,6 +7,8 @@ from typing import List
 from abc import ABC, abstractmethod
 from errant.annotator import Annotator
 
+from unidecode import unidecode
+
 class Error(ABC):
     def __init__(self, target_prob: float, absolute_prob: float = 0.0, use_absolute_prob: bool = False) -> None:
         self.target_prob = target_prob
@@ -750,6 +752,89 @@ class ErrorPrepositionSZ(Error):
         edit = Error._general_try_retag(ErrorPrepositionSZ.variants, edit, "PrepositionSZ")
         return edit
 
+class ErrorCommaAdd(Error):
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        self.forbidden_neighbors = [',', '.']
+
+    def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
+        edits = []
+        prev_token = None
+        for i, token in enumerate(parsed_sentence):
+            if i > 0:
+                if prev_token.text not in self.forbidden_neighbors and token.text not in self.forbidden_neighbors:
+                    o_toks = annotator.parse("")
+                    c_toks = annotator.parse(',')
+                    edit = Edit(o_toks, c_toks, [i, i, i, i+1], type="CommaAdd")
+                    edits.append(edit)
+            prev_token = token
+        return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start == edit.o_end + 1 and edit.o_toks.text == ',' and edit.c_toks.text == "":
+            edit.type = "CommaAdd"
+        return edit
+
+class ErrorCommaRemove(Error):
+    def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
+        edits = []
+        for i, token in enumerate(parsed_sentence):
+            if token.text == ',':
+                o_toks = annotator.parse(",")
+                c_toks = annotator.parse('')
+                edit = Edit(o_toks, c_toks, [i, i+1, i, i], type="CommaRemove")
+                edits.append(edit)
+        return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start == edit.o_end and edit.c_toks.text == ',':
+            edit.type = "CommaRemove"
+        return edit
+    
+class ErrorDiacritics(Error):
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        self.czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), 
+                                   ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
+                                   ('t', 'ť'), ('u', 'ů', 'ú'), ('y', 'ý'), ('z', 'ž')]
+        self.czech_diacritizables_chars = [char for sublist in self.czech_diacritics_tuples for char in sublist] + \
+              [char.upper() for sublist in self.czech_diacritics_tuples for char in sublist]
+
+    def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
+        edits = []
+        for i, token in enumerate(parsed_sentence):
+            word = token.text
+            indices = []
+            for j, c in enumerate(word):
+                if c in self.czech_diacritizables_chars:
+                    indices.append(j)
+            if len(indices) == 0:
+                continue
+            
+            index = np.random.choice(indices)
+            current_char = word[index]
+            
+            is_lower = current_char.islower()
+            current_char = current_char.lower()
+            char_diacr_group = [group for group in self.czech_diacritics_tuples if current_char in group][0]
+            new_char = np.random.choice(char_diacr_group)
+            if not is_lower:
+                new_char = new_char.upper()
+
+            o_toks = annotator.parse(word)
+            c_toks = annotator.parse(word[:index] + new_char + word[index+1:])
+            edit = Edit(o_toks, c_toks, [i, i+1, i, i+1], type="Diacritics")
+            edits.append(edit)
+        return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start == edit.c_start and \
+           edit.o_end == edit.c_end and \
+           unidecode(edit.o_toks.text) == unidecode(edit.c_toks.text):
+            edit.type = "Diacritics"
+        return edit
+
+
 ERRORS = {
     "MeMne": ErrorMeMne,
     "MeMneSuffix": ErrorMeMneSuffix,
@@ -771,6 +856,9 @@ ERRORS = {
     "TitleToLower": ErrorTitleToLower,
     "LowerToTitle": ErrorLowerToTitle,
     "PrepositionSZ": ErrorPrepositionSZ,
+    "CommaAdd": ErrorCommaAdd,
+    "CommaRemove": ErrorCommaRemove,
+    "Diacritics": ErrorDiacritics,
 }
 
 ### NO USED:

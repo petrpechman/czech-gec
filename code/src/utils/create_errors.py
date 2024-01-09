@@ -8,6 +8,7 @@ import numpy as np
 
 # from edit import Edit
 # from errors import ERRORS
+# from MorphoDiTa.generate_forms import GenerateForms
 
 from .edit import Edit
 from .errors import ERRORS
@@ -17,7 +18,7 @@ from typing import Optional
 from itertools import compress
 from errant.annotator import Annotator
 
-# from MorphoDiTa.generate_forms import GenerateForms
+
 
 allowed_source_delete_tokens = [',', '.', '!', '?']
 czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
@@ -380,7 +381,7 @@ def main(args):
                     output_file.write("\n")
             else:
                 error_line = error_generator.create_error_sentence(
-                    line, aspell_speller, True, True, morfodita, "counts.txt")
+                    line, aspell_speller, False, False, morfodita, "counts.txt")
                 with open(output_path, "a+") as output_file:
                     output_file.write(error_line + "\n")
 

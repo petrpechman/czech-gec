@@ -24,27 +24,25 @@ from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 from collections import Counter
 from errant.commands.compare_m2 import simplify_edits, process_edits, evaluate_edits, merge_dict
 
-def noop_edit(id=0):
-    return "A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||"+str(id)
+def noop_edit(id: int = 0):
+    result = "A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||" + str(id)
+    return result
 
 def create_m2(annotator, source_sentence, predicted_sentence):
-    print("INIT")
     orig = source_sentence
     cor = predicted_sentence
     cor_id = 0
 
     lev = False
     merge = "all-split"
-    print("PARSE")
+
     orig = annotator.parse(orig)
-    output = " ".join(["S"]+[token.text for token in orig]) + "\n"
+    output = " ".join(["S"] + [token.text for token in orig]) + "\n"
 
     cor = cor.strip()
     if orig.text.strip() == cor:
-        print("IF")
-        output = output + noop_edit(cor_id + "\n")
+        output = output + noop_edit(cor_id) + "\n"
     else:
-        print("ELSE")
         cor = annotator.parse(cor)
         edits = annotator.annotate(orig, cor, lev, merge)
         for edit in edits:

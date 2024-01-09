@@ -28,21 +28,23 @@ def noop_edit(id=0):
     return "A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||"+str(id)
 
 def create_m2(annotator, source_sentence, predicted_sentence):
+    print("INIT")
     orig = source_sentence
     cor = predicted_sentence
     cor_id = 0
 
     lev = False
     merge = "all-split"
-
+    print("PARSE")
     orig = annotator.parse(orig)
     output = " ".join(["S"]+[token.text for token in orig]) + "\n"
 
     cor = cor.strip()
-
     if orig.text.strip() == cor:
+        print("IF")
         output = output + noop_edit(cor_id + "\n")
     else:
+        print("ELSE")
         cor = annotator.parse(cor)
         edits = annotator.annotate(orig, cor, lev, merge)
         for edit in edits:
@@ -269,7 +271,6 @@ def main(config_filename: str):
             hyp_m2 = []
             annotator = errant.load('cs')
             for source_sentence, tokenized_predicted_sentence in zip(source_sentences, tokenized_predicted_sentences):
-                print("Befora created m2...")
                 m2_sentence = create_m2(annotator, source_sentence, tokenized_predicted_sentence)
                 print("Created m2...")
                 hyp_m2.append(m2_sentence)

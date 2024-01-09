@@ -270,6 +270,7 @@ def main(config_filename: str):
             annotator = errant.load('cs')
             for source_sentence, tokenized_predicted_sentence in zip(source_sentences, tokenized_predicted_sentences):
                 m2_sentence = create_m2(annotator, source_sentence, tokenized_predicted_sentence)
+                print("Created m2...")
                 hyp_m2.append(m2_sentence)
             
             best_dict = Counter({"tp":0, "fp":0, "fn":0})
@@ -279,6 +280,7 @@ def main(config_filename: str):
                 # Simplify the edits into lists of lists
                 hyp_edits = simplify_edits(sent[0])
                 ref_edits = simplify_edits(sent[1])
+                print("Simplified edits...")
                 # Process the edits for detection/correction based on args
                 class Args:
                     def __init__(self) -> None:
@@ -286,8 +288,10 @@ def main(config_filename: str):
                 args = Args()
                 hyp_dict = process_edits(hyp_edits, args)
                 ref_dict = process_edits(ref_edits, args)
+                print("Processed edits...")
                 # Evaluate edits and get best TP, FP, FN hyp+ref combo.
                 count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, best_dict, sent_id, args)
+                print("Evaluated edits...")
                 best_dict += Counter(count_dict)
             
             tp = best_dict['tp']

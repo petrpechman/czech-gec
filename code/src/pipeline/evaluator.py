@@ -273,6 +273,7 @@ def main(config_filename: str):
                 hyp_m2.append(m2_sentence)
             
             best_dict = Counter({"tp":0, "fp":0, "fn":0})
+            best_cats = {}
             # Process each sentence
             sents = zip(hyp_m2, ref_m2)
             for sent_id, sent in enumerate(sents):
@@ -297,6 +298,7 @@ def main(config_filename: str):
                 count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, best_dict, sent_id, args)
                 print(cat_dict)
                 best_dict += Counter(count_dict)
+                best_cats = merge_dict(best_cats, cat_dict)
             
             tp = best_dict['tp']
             fp = best_dict['fp']

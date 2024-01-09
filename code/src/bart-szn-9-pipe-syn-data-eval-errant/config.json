@@ -45,7 +45,7 @@
 
 
 
-    "m2_data_dev": ["../../data/akces-gec-retag/dev/dev.all.m2", ["errant"]],
+    "m2_data_dev": ["../../data/akces-gec-retag/dev/dev_small.m2", ["errant"]],
     "m2_data_test": ["../../data/akces-gec-retag/test/test.all.m2", ["errant"]],
     "other_datasets": [
         ["../../data/geccc-split-retag/data/test-splits/natives-formal-test.m2", ["errant"]],

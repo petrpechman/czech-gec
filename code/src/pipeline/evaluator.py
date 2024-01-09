@@ -270,7 +270,6 @@ def main(config_filename: str):
             annotator = errant.load('cs')
             for source_sentence, tokenized_predicted_sentence in zip(source_sentences, tokenized_predicted_sentences):
                 m2_sentence = create_m2(annotator, source_sentence, tokenized_predicted_sentence)
-                print("Created m2...")
                 hyp_m2.append(m2_sentence)
             
             best_dict = Counter({"tp":0, "fp":0, "fn":0})
@@ -285,6 +284,12 @@ def main(config_filename: str):
                 class Args:
                     def __init__(self) -> None:
                         self.beta = BETA
+                        self.dt = None
+                        self.ds = None
+                        self.single = None
+                        self.multi = None
+                        self.filt = None
+                        self.cse = None
                 args = Args()
                 hyp_dict = process_edits(hyp_edits, args)
                 ref_dict = process_edits(ref_edits, args)

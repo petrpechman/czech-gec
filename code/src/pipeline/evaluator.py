@@ -357,7 +357,8 @@ def main(config_filename: str):
                     #     # print("Here should be delete")
                     #     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                     #     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
-                except Exception:
+                except Exception as e:
+                    print(e)
                     print("Something went wrong... Try again...")
 
         time.sleep(10)

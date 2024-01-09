@@ -269,6 +269,7 @@ def main(config_filename: str):
             hyp_m2 = []
             annotator = errant.load('cs')
             for source_sentence, tokenized_predicted_sentence in zip(source_sentences, tokenized_predicted_sentences):
+                print("Befora created m2...")
                 m2_sentence = create_m2(annotator, source_sentence, tokenized_predicted_sentence)
                 print("Created m2...")
                 hyp_m2.append(m2_sentence)

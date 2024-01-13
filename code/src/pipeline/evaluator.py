@@ -315,13 +315,13 @@ def main(config_filename: str):
             print("End of writing into files...")
             
 
-        print("Write errors...")
-        with file_writer.as_default():
-            text_lines = [k + ": " + str(best_cats[k]) + '\n' for k in best_cats.keys()]
-            text = "".join(text_lines)
-            print(text)
-            tf.summary.text("errors", text, step)
-        print("End of writing errors...")
+            print("Write errors...")
+            with file_writer.as_default():
+                text_lines = [k + ": " + str(best_cats[k]) + '\n' for k in best_cats.keys()]
+                text = "".join(text_lines)
+                print(text)
+                tf.summary.text("errors", text, step)
+            print("End of writing errors...")
 
         print("Write predictions...")
         with file_writer.as_default():

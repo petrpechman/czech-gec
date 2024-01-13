@@ -27,7 +27,6 @@ class MyBackupAndRestore(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if self.epoch_name:
-            self.manager._checkpoint_prefix = os.path.join(self._directory, f"ckpt-{epoch}/")
-        else:
-            self.manager.save()
+            self.manager._checkpoint_prefix = os.path.join(self._directory, f"opt-ckpt-{epoch}/")
+        self.manager.save()
         # save_path = checkpoint.save(checkpoint_directory)

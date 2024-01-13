@@ -217,13 +217,12 @@ def main(config_filename: str):
         save_freq="epoch")
     
     model_checkpoint_optimizer = MyBackupAndRestore(
-        os.path.join(MODEL_CHECKPOINT_PATH, 'opt-ckpt/'),
-        optimizer,
-        model,
-        True
+        MODEL_CHECKPOINT_PATH, optimizer, model,
+        epoch_name=True,
+        max_to_keep=None,
     )
 
-    mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
+    mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model, max_to_keep=1)
     status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
     print("STATUS:", status)
     initial_epoch = mybackup._ckpt_saved_epoch

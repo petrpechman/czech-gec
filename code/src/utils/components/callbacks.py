@@ -2,9 +2,11 @@ import os
 
 import tensorflow as tf
 
+from typing import Union
+
 # My Callback
 class MyBackupAndRestore(tf.keras.callbacks.Callback):
-    def __init__(self, backup_dir, optimizer, model, epoch_name: bool = False):
+    def __init__(self, backup_dir, optimizer, model, epoch_name: Union[str, None] = None, max_to_keep: Union[int, None] = None):
         super().__init__()
         self.epoch_name = epoch_name
         self._ckpt_saved_epoch = tf.Variable(
@@ -19,7 +21,7 @@ class MyBackupAndRestore(tf.keras.callbacks.Callback):
         self.manager = tf.train.CheckpointManager(
             self.checkpoint, 
             backup_dir, 
-            max_to_keep=1)
+            max_to_keep=max_to_keep)
 
     def on_epoch_begin(self, epoch, logs=None):
         self._ckpt_saved_epoch.assign(epoch + 1)
@@ -27,6 +29,6 @@ class MyBackupAndRestore(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if self.epoch_name:
-            self.manager._checkpoint_prefix = os.path.join(self.manager._directory, f"opt-ckpt-{epoch}/")
+            self.manager._checkpoint_prefix = os.path.join(self.manager._directory, f"{self.epoch_name}-{epoch}/")
         self.manager.save()
         # save_path = checkpoint.save(checkpoint_directory)

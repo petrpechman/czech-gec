@@ -359,6 +359,17 @@ def main(config_filename: str):
                     
                     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    
+                    # Delete model with optimizer:
+                    opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
+                    selected_files = []
+                    for f in os.listdir(opt_dir):
+                        if f.startswith(unevaluated_checkpoint):
+                            selected_files.append(f)
+
+                    for selected_file in selected_files:
+                        os.remove(os.path.join(opt_dir, selected_file))
+
                     # if BEST_CKPT_FILENAME and f1_test > BEST_CKPT_F1:
                     #     BEST_CKPT_NAME = unevaluated_checkpoint
                     #     BEST_CKPT_F1 = f1_test

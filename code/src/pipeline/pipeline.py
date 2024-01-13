@@ -226,6 +226,7 @@ def main(config_filename: str):
     status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
     print("STATUS:", status)
     initial_epoch = mybackup._ckpt_saved_epoch
+    model_checkpoint_optimizer._ckpt_saved_epoch = initial_epoch
     print("INITIAL EPOCH:", int(initial_epoch))
 
     profiler = tf.keras.callbacks.TensorBoard(

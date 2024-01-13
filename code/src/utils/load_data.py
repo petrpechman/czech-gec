@@ -55,7 +55,7 @@ def data_loader(filename, queue, start_position, end_position, gel: GenereteErro
         aspell_speller = aspell.Speller('lang', lang)
         morfodita = GenerateForms("../utils/MorphoDiTa/czech-morfflex2.0-220710.dict")
     
-    if error_generator is not None:
+    if error_generator:
         error_generator._init_annotator()
 
     # error_generator._init_annotator()

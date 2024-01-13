@@ -19,8 +19,8 @@ class MyBackupAndRestore(tf.keras.callbacks.Callback):
             ckpt_saved_epoch=self._ckpt_saved_epoch,
         )
         self.manager = tf.train.CheckpointManager(
-            self.checkpoint, 
-            backup_dir, 
+            checkpoint=self.checkpoint,
+            directory=backup_dir, 
             max_to_keep=max_to_keep)
 
     def on_epoch_begin(self, epoch, logs=None):
@@ -28,7 +28,7 @@ class MyBackupAndRestore(tf.keras.callbacks.Callback):
         self._current_epoch = epoch
 
     def on_epoch_end(self, epoch, logs=None):
-        if self.epoch_name:
-            self.manager._checkpoint_prefix = os.path.join(self.manager._directory, f"{self.epoch_name}-{epoch}/")
+        # if self.epoch_name:
+        #     self.manager._checkpoint_prefix = os.path.join(self.manager._directory, f"{self.epoch_name}-{epoch}/")
         self.manager.save()
         # save_path = checkpoint.save(checkpoint_directory)

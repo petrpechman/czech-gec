@@ -215,6 +215,12 @@ def main(config_filename: str):
         filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
         save_weights_only=True,
         save_freq="epoch")
+    
+    model_checkpoint_optimizer = MyBackupAndRestore(
+        os.path.join(MODEL_CHECKPOINT_PATH, 'opt-ckpt-{epoch}/'),
+        optimizer,
+        model,
+    )
 
     mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model)
     status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
@@ -233,6 +239,7 @@ def main(config_filename: str):
     callbacks = [
         model_checkpoint,
         mybackup,
+        model_checkpoint_optimizer,
         profiler,
         tensorboard_callback
     ]

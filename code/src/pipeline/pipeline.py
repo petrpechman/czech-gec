@@ -1,4 +1,3 @@
-
 import sys
 sys.path.append('..')
 
@@ -16,7 +15,6 @@ from utils import load_data
 from utils import dataset_utils
 from utils import introduce_errors
 from utils import create_errors
-# from utils import error_checker
 
 from utils.components.callbacks import MyBackupAndRestore
 from utils.components.losses import MaskedSparseCategoricalCrossEntropy
@@ -25,7 +23,6 @@ from multiprocessing import Process, Manager
 
 
 def main(config_filename: str):
-    # ec = error_checker.ErrorChecker('./typical_errors.tsv', 1)
 
     with open(config_filename) as json_file:
         config = json.load(json_file)
@@ -78,6 +75,9 @@ def main(config_filename: str):
     BACKUP_DIR =  config['backup_dir']
     COUNT_OUTPUT = config.get('count_output', None)
 
+    # mixture of datasets:
+    MIXTURE_DATASET_PATHS = config.get('mixture_dataset_paths', None)
+
     # input edits
     LABEL_PAD_VALUE = -100
     MODEL_TYPE = ""
@@ -104,10 +104,6 @@ def main(config_filename: str):
     manager = Manager()
     queue = manager.Queue(4 * NUM_PARALLEL)
     if not ERRORS_FROM_FILE:
-        char_level_params = [prob for prob in CHAR_ERR_DISTRIBUTION]
-        char_level_params.append(CHAR_ERR_PROB)
-        char_level_params.append(0.01)
-        char_level_params.append(characters)
         error_generator = create_errors.ErrorGenerator(
             errors_config, tokens, characters, 
             CHAR_ERR_DISTRIBUTION, CHAR_ERR_PROB, 0.01,
@@ -150,6 +146,51 @@ def main(config_filename: str):
 
     dataset = dataset.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    if MIXTURE_DATASET_PATHS:
+        ### Dataset akces:
+        num_parallel_akces = 2
+        manager_akces = Manager()
+        queue_akces = manager_akces.Queue(4 * num_parallel_akces)
+        gel_akces = None
+        error_generator_akces = None
+
+        process_akces = Process(
+                    target=load_data.data_generator, 
+                    args=(queue_akces, MIXTURE_DATASET_PATHS, num_parallel_akces, 
+                          gel_akces, tokenizer, MAX_LENGTH, 
+                          True, REVERTED_PIPELINE, error_generator_akces, LANG, 
+                          COUNT_OUTPUT, ))
+        process_akces.start()
+        dataset_akces = tf.data.Dataset.from_generator(
+            lambda: iter(queue_akces.get, None),
+            output_types={
+                        "input_ids": tf.int32,
+                        "attention_mask": tf.int32,
+                        "tokenized_target_line": tf.int32,
+                        "original_sentence": tf.string,
+                        "correct_sentence": tf.string,
+                    },
+            output_shapes={
+                        "input_ids": (None, ),
+                        "attention_mask": (None, ),
+                        "tokenized_target_line": (None, ),
+                        "original_sentence": (),
+                        "correct_sentence": (),
+                    })
+        dataset_akces = dataset_akces.map(lambda input_batch: dataset_utils.fix_format(input_batch, MODEL_TYPE), 
+                                          num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset_akces = dataset_akces.map(dataset_utils.split_features_and_labels, 
+                                          num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        ### Mixture:
+        r1 = 2
+        r2 = 1
+        b1 = dataset.ragged_batch(r1)
+        b2 = dataset_akces.ragged_batch(r2)
+        zipped = tf.data.Dataset.zip((b1, b2)).map(dataset_utils.merge_ragged_batches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = zipped.unbatch()
+        ###
+
     dataset = dataset.shuffle(SHUFFLE_BUFFER)
     dataset = dataset.bucket_by_sequence_length(
             element_length_func=lambda x, y: tf.shape(x['input_ids'])[0], # zde asi chyba

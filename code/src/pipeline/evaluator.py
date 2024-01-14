@@ -100,12 +100,12 @@ def main(config_filename: str):
     FILE_DEV_PREDICTIONS = 'predictions_dev.txt'
     FILE_TEST_PREDICTIONS = 'predictions_test.txt'
 
-    # BEST_CKPT_FILENAME = config.get("best_ckpt_filename", None)
-    # if BEST_CKPT_FILENAME:
-        # with open(BEST_CKPT_FILENAME) as json_file:
-            # best_ckpt = json.load(json_file)
-        # BEST_CKPT_NAME = best_ckpt['name']
-        # BEST_CKPT_F1 = best_ckpt['f1']
+    BEST_CKPT_FILENAME = config.get("best_ckpt_filename", None)
+    if BEST_CKPT_FILENAME:
+        with open(BEST_CKPT_FILENAME) as json_file:
+            best_ckpt = json.load(json_file)
+        BEST_CKPT_NAME = best_ckpt['name']
+        BEST_CKPT_FSCORE = best_ckpt['fscore']
 
     tf.random.set_seed(SEED)
     
@@ -357,34 +357,29 @@ def main(config_filename: str):
                         fscore = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, 
                                                     refs[i], eval_types[i])
                     
-                    print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
-                    
-                    # Delete model with optimizer:
-                    opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
-                    selected_files = []
-                    for f in os.listdir(opt_dir):
-                        if f.startswith(unevaluated_checkpoint):
-                            selected_files.append(f)
-
-                    for selected_file in selected_files:
-                        os.remove(os.path.join(opt_dir, selected_file))
-
-                    # if BEST_CKPT_FILENAME and f1_test > BEST_CKPT_F1:
-                    #     BEST_CKPT_NAME = unevaluated_checkpoint
-                    #     BEST_CKPT_F1 = f1_test
+                    if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
+                        BEST_CKPT_NAME = unevaluated_checkpoint
+                        BEST_CKPT_FSCORE = fscore_dev
                         
-                    #     json_object = json.dumps({
-                    #          "name": BEST_CKPT_NAME,
-                    #          "f1": BEST_CKPT_F1
-                    #     })
+                        json_object = json.dumps({
+                             "name": BEST_CKPT_NAME,
+                             "fscore": BEST_CKPT_FSCORE
+                        })
 
-                    #     with open(BEST_CKPT_FILENAME, "w") as outfile:
-                    #         outfile.write(json_object)
-                    # else:
-                    #     # print("Here should be delete")
-                    #     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    #     shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                        with open(BEST_CKPT_FILENAME, "w") as outfile:
+                            outfile.write(json_object)
+                    else:
+                        print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                        shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                        # Delete model with optimizer:
+                        opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
+                        selected_files = []
+                        for f in os.listdir(opt_dir):
+                            if f.startswith(unevaluated_checkpoint):
+                                selected_files.append(f)
+
+                        for selected_file in selected_files:
+                            os.remove(os.path.join(opt_dir, selected_file))
                 except Exception as e:
                     print(e)
                     print("Something went wrong... Try again...")

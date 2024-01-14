@@ -79,3 +79,13 @@ def _shift_right_t5(input_ids):
     with tf.control_dependencies([assert_gte0]):
         shifted_input_ids = tf.identity(shifted_input_ids)
     return shifted_input_ids
+
+def merge_ragged_batches(dato_a, dato_b):
+    x_a, y_a = dato_a
+    x_b, y_b = dato_b
+    x = dict()
+    for key in x_a.keys():
+        c = tf.concat([x_a[key], x_b[key]], axis=0)
+        x[key] = c
+    y = tf.concat([y_a, y_b], axis=0)
+    return x, y

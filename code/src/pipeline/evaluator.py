@@ -335,12 +335,28 @@ def main(config_filename: str):
 
         return f_score
 
+    last_evaluated = 'ckpt-0'
     while True:
         if os.path.isdir(MODEL_CHECKPOINT_PATH):
             unevaluated = [f for f in os.listdir(MODEL_CHECKPOINT_PATH) if f.startswith('ckpt')]
             numbers = np.array([int(u[5:]) for u in unevaluated])
             numbers = sorted(numbers)
             unevaluated = ["ckpt-" + str(number) for number in numbers]
+
+            last = unevaluated[-1]
+            if last_evaluated == last:
+                unevaluated = unevaluated[:-1] # Remove last
+            elif last_evaluated != "ckpt-0":
+                print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated)}")
+                shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated))
+                # Delete model with optimizer:
+                opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
+                selected_files = []
+                for f in os.listdir(opt_dir):
+                    if f.startswith(last_evaluated):
+                        selected_files.append(f)
+                for selected_file in selected_files:
+                    os.remove(os.path.join(opt_dir, selected_file))
 
             if BEST_CKPT_NAME in unevaluated:
                 unevaluated.remove(BEST_CKPT_NAME)
@@ -372,17 +388,20 @@ def main(config_filename: str):
                         with open(BEST_CKPT_FILENAME, "w") as outfile:
                             outfile.write(json_object)
                     else:
-                        print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                        shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
-                        # Delete model with optimizer:
-                        opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
-                        selected_files = []
-                        for f in os.listdir(opt_dir):
-                            if f.startswith(unevaluated_checkpoint):
-                                selected_files.append(f)
+                        if unevaluated_checkpoint == last:
+                            last_evaluated = last
+                        else:
+                            print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
+                            shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                            # Delete model with optimizer:
+                            opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
+                            selected_files = []
+                            for f in os.listdir(opt_dir):
+                                if f.startswith(unevaluated_checkpoint):
+                                    selected_files.append(f)
 
-                        for selected_file in selected_files:
-                            os.remove(os.path.join(opt_dir, selected_file))
+                            for selected_file in selected_files:
+                                os.remove(os.path.join(opt_dir, selected_file))
                 except Exception as e:
                     print(e)
                     print("Something went wrong... Try again...")

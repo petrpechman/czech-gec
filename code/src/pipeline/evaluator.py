@@ -341,6 +341,9 @@ def main(config_filename: str):
             numbers = np.array([int(u[5:]) for u in unevaluated])
             numbers = sorted(numbers)
             unevaluated = ["ckpt-" + str(number) for number in numbers]
+
+            if BEST_CKPT_NAME in unevaluated:
+                unevaluated.remove(BEST_CKPT_NAME)
             
             for unevaluated_checkpoint in unevaluated:
                 try:
@@ -357,7 +360,7 @@ def main(config_filename: str):
                         fscore = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, 
                                                     refs[i], eval_types[i])
                     
-                    if BEST_CKPT_FILENAME and fscore_dev >= BEST_CKPT_FSCORE:
+                    if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
                         BEST_CKPT_NAME = unevaluated_checkpoint
                         BEST_CKPT_FSCORE = fscore_dev
                         

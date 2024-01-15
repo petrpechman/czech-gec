@@ -60,5 +60,5 @@
     "errors_config": "./errors_config.json",
     "best_ckpt_filename": "./f_score_dev.json",
     
-    "mixture_dataset_paths": "../../data/akces-gec/train/train.tsv"
+    "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"]
 }

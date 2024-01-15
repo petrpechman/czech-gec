@@ -89,3 +89,10 @@ def merge_ragged_batches(dato_a, dato_b):
         x[key] = c
     y = tf.concat([y_a, y_b], axis=0)
     return x, y
+
+def retype(x, y):
+    x_new = dict()
+    for key in x.keys():
+        x_new[key] = x[key].to_tensor()
+    y = y.to_tensor()
+    return x_new, y

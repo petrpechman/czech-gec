@@ -343,6 +343,10 @@ def main(config_filename: str):
             numbers = sorted(numbers)
             unevaluated = ["ckpt-" + str(number) for number in numbers]
 
+            if len(unevaluated) == 0:
+                time.sleep(10)
+                continue
+
             last = unevaluated[-1]
             if last_evaluated == last:
                 unevaluated = unevaluated[:-1] # Remove last

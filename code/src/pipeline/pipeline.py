@@ -190,7 +190,8 @@ def main(config_filename: str):
         zipped = tf.data.Dataset.zip((b1, b2)).map(dataset_utils.merge_ragged_batches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         zipped = zipped.unbatch()
         zipped = zipped.batch(1)
-        dataset = zipped.map(dataset_utils.retype, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        zipped = zipped.map(dataset_utils.retype, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        dataset = zipped.unbatch()
         ###
 
     dataset = dataset.shuffle(SHUFFLE_BUFFER)

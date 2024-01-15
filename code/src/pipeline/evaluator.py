@@ -357,7 +357,7 @@ def main(config_filename: str):
                         fscore = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, 
                                                     refs[i], eval_types[i])
                     
-                    if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
+                    if BEST_CKPT_FILENAME and fscore_dev >= BEST_CKPT_FSCORE:
                         BEST_CKPT_NAME = unevaluated_checkpoint
                         BEST_CKPT_FSCORE = fscore_dev
                         

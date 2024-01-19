@@ -188,7 +188,7 @@ def main(config_filename: str):
         b1 = dataset.ragged_batch(r1)
         b2 = dataset_akces.ragged_batch(r2)
         zipped = tf.data.Dataset.zip((b1, b2)).map(dataset_utils.merge_ragged_batches, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        zipped = zipped.unbatch()
+        zipped = zipped.unbatch() # lze mozna nahradit s .rebatch(1)
         zipped = zipped.batch(1)
         zipped = zipped.map(dataset_utils.retype, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = zipped.unbatch()

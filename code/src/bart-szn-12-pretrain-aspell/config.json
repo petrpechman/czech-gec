@@ -2,11 +2,11 @@
     "seed": 42,
 
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
-    "num_parallel": 76,
+    "num_parallel": 44,
     "max_length": 128,
     "shuffle_buffer": 5000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [16, 16, 16, 16],
+    "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
     "errors_from_file": false,
 
     "model": "../../models/bart-tokenizer-data-jakub/",

@@ -24,6 +24,8 @@ from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 from collections import Counter
 from errant.commands.compare_m2 import simplify_edits, process_edits, evaluate_edits, merge_dict
 
+from distutils.dir_util import copy_tree
+
 def noop_edit(id: int = 0):
     result = "A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||" + str(id)
     return result
@@ -106,6 +108,7 @@ def main(config_filename: str):
             best_ckpt = json.load(json_file)
         BEST_CKPT_NAME = best_ckpt['name']
         BEST_CKPT_FSCORE = best_ckpt['fscore']
+    SAVE_EVERY = config.get('save_every', 0)
 
     tf.random.set_seed(SEED)
     
@@ -379,6 +382,12 @@ def main(config_filename: str):
                         file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
                         fscore = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, 
                                                     refs[i], eval_types[i])
+                        
+                    if SAVE_EVERY > 0 or int(last_evaluated[5:]) % SAVE_EVERY == 0:
+                        copy_tree(
+                            os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint),
+                            os.path.join(MODEL_CHECKPOINT_PATH, "saved-" + unevaluated_checkpoint)
+                        )
                     
                     if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
                         BEST_CKPT_NAME = unevaluated_checkpoint

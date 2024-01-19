@@ -58,5 +58,7 @@
 
     "max_eval_length": 512,
 
-    "best_ckpt_filename": "./f_score_dev.json"
+    "best_ckpt_filename": "./f_score_dev.json",
+
+    "save_every": 10
 }

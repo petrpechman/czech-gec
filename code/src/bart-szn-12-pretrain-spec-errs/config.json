@@ -56,5 +56,9 @@
     "verbose": false,
     "very_verbose": false,
 
-    "max_eval_length": 512
+    "max_eval_length": 512,
+    
+    "best_ckpt_filename": "./f_score_dev.json",
+    
+    "save_every": 10
 }

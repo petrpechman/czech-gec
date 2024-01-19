@@ -814,8 +814,8 @@ class ErrorAddDiacritics(Error):
     def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
         super().__init__(target_prob, absolute_prob, use_absolute_prob)
         self.czech_diacritics_dict = {
-            'a': ('á'), 'c': ('č'), 'd': ('ď'), 'e': ('é', 'ě'),'i': ('í'), 'n': ('ň'), 
-            'o': ('ó'),'r': ('ř'), 's': ('š'),'t': ('ť'), 'u': ('ů', 'ú'), 'y': ('ý'), 'z': ('ž')}
+            'a': ['á'], 'c': ['č'], 'd': ['ď'], 'e': ['é', 'ě'],'i': ['í'], 'n': ['ň'], 
+            'o': ['ó'],'r': ['ř'], 's': ['š'],'t': ['ť'], 'u': ['ů', 'ú'], 'y': ['ý'], 'z': ['ž']}
         self.czech_diacritizables_chars = [k for k in self.czech_diacritics_dict.keys()] + \
             [k.upper() for k in self.czech_diacritics_dict.keys()]
 

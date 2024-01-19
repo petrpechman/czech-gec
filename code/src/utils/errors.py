@@ -791,47 +791,79 @@ class ErrorCommaRemove(Error):
             edit.type = "CommaRemove"
         return edit
     
-class ErrorDiacritics(Error):
-    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
-        super().__init__(target_prob, absolute_prob, use_absolute_prob)
-        self.czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), 
-                                   ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
-                                   ('t', 'ť'), ('u', 'ů', 'ú'), ('y', 'ý'), ('z', 'ž')]
-        self.czech_diacritizables_chars = [char for sublist in self.czech_diacritics_tuples for char in sublist] + \
-              [char.upper() for sublist in self.czech_diacritics_tuples for char in sublist]
-
+class ErrorRemoveDiacritics(Error):
     def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
         edits = []
         for i, token in enumerate(parsed_sentence):
             word = token.text
-            indices = []
-            for j, c in enumerate(word):
-                if c in self.czech_diacritizables_chars:
-                    indices.append(j)
-            if len(indices) == 0:
-                continue
-            
-            index = np.random.choice(indices)
-            current_char = word[index]
-            
-            is_lower = current_char.islower()
-            current_char = current_char.lower()
-            char_diacr_group = [group for group in self.czech_diacritics_tuples if current_char in group][0]
-            new_char = np.random.choice(char_diacr_group)
-            if not is_lower:
-                new_char = new_char.upper()
-
-            o_toks = annotator.parse(word)
-            c_toks = annotator.parse(word[:index] + new_char + word[index+1:])
-            edit = Edit(o_toks, c_toks, [i, i+1, i, i+1], type="Diacritics")
+            if unidecode(word) != word:
+                o_toks = annotator.parse(word)
+                c_toks = annotator.parse(unidecode(word))
+            edit = Edit(o_toks, c_toks, [i, i+1, i, i+1], type="RemoveDiacritics")
             edits.append(edit)
         return edits
     
     def try_retag_edit(edit: Edit) -> Edit:
         if edit.o_start == edit.c_start and \
            edit.o_end == edit.c_end and \
+           edit.o_toks.text == unidecode(edit.c_toks.text):
+            edit.type = "RemoveDiacritics"
+        return edit
+    
+class ErrorAddDiacritics(Error):
+    def __init__(self, target_prob: float, absolute_prob: float = 0, use_absolute_prob: bool = False) -> None:
+        super().__init__(target_prob, absolute_prob, use_absolute_prob)
+        self.czech_diacritics_dict = {
+            'a': ('á'), 'c': ('č'), 'd': ('ď'), 'e': ('é', 'ě'),'i': ('í'), 'n': ('ň'), 
+            'o': ('ó'),'r': ('ř'), 's': ('š'),'t': ('ť'), 'u': ('ů', 'ú'), 'y': ('ý'), 'z': ('ž')}
+        self.czech_diacritizables_chars = [k for k in self.czech_diacritics_dict.keys()] + \
+            [k.upper() for k in self.czech_diacritics_dict.keys()]
+
+    def __call__(self, parsed_sentence, annotator: Annotator, aspell_speller = None) -> List[Edit]:
+        edits = []
+        for i, token in enumerate(parsed_sentence):
+            word = token.text
+            indices = []
+            count = 0
+            for j, c in enumerate(word):
+                if c in self.czech_diacritizables_chars:
+                    indices.append(j)
+                    count += 1
+            
+            if len(indices) == 0:
+                continue
+
+            numbers_of_changes = np.arange(count + 1)
+            probs = np.float_power(10, -numbers_of_changes)
+            probs = probs / np.sum(probs)
+
+            number_of_changes = np.random.choice(numbers_of_changes, 1, replace=True, p=probs)
+            if len(number_of_changes) == 0:
+                continue
+            indices_to_change = np.random.choice(indices, size=number_of_changes, replace=False)
+
+            new_word = []
+            for j, char in enumerate(word):
+                if j in indices_to_change:
+                    changed_char = np.random.choice(self.czech_diacritics_dict[char.lower()])
+                    if char.isupper():
+                        changed_char = changed_char.upper()
+                    char = changed_char
+                new_word.append(char)
+            new_word = "".join(new_word)
+
+            o_toks = annotator.parse(word)
+            c_toks = annotator.parse(new_word)
+            edit = Edit(o_toks, c_toks, [i, i+1, i, i+1], type="AddDiacritics")
+            edits.append(edit)
+        return edits
+    
+    def try_retag_edit(edit: Edit) -> Edit:
+        if edit.o_start == edit.c_start and \
+           edit.o_end == edit.c_end and \
+           edit.o_toks.text != unidecode(edit.c_toks.text) and \
            unidecode(edit.o_toks.text) == unidecode(edit.c_toks.text):
-            edit.type = "Diacritics"
+            edit.type = "AddDiacritics"
         return edit
 
 
@@ -858,7 +890,8 @@ ERRORS = {
     "PrepositionSZ": ErrorPrepositionSZ,
     "CommaAdd": ErrorCommaAdd,
     "CommaRemove": ErrorCommaRemove,
-    "Diacritics": ErrorDiacritics,
+    "RemoveDiacritics": ErrorRemoveDiacritics,
+    "AddDiacritics": ErrorAddDiacritics,
 }
 
 ### NO USED:

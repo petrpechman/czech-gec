@@ -799,8 +799,8 @@ class ErrorRemoveDiacritics(Error):
             if unidecode(word) != word:
                 o_toks = annotator.parse(word)
                 c_toks = annotator.parse(unidecode(word))
-            edit = Edit(o_toks, c_toks, [i, i+1, i, i+1], type="RemoveDiacritics")
-            edits.append(edit)
+                edit = Edit(o_toks, c_toks, [i, i+1, i, i+1], type="RemoveDiacritics")
+                edits.append(edit)
         return edits
     
     def try_retag_edit(edit: Edit) -> Edit:

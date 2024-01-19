@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
-    "num_parallel": 42,
+    "num_parallel": 76,
     "max_length": 128,
     "shuffle_buffer": 5000,
     "bucket_boundaries": [32, 64, 96],

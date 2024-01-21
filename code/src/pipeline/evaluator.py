@@ -383,7 +383,7 @@ def main(config_filename: str):
                         fscore = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, 
                                                     refs[i], eval_types[i])
                         
-                    if SAVE_EVERY > 0 or int(last_evaluated[5:]) % SAVE_EVERY == 0:
+                    if SAVE_EVERY > 0 and int(last_evaluated[5:]) % SAVE_EVERY == 0:
                         copy_tree(
                             os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint),
                             os.path.join(MODEL_CHECKPOINT_PATH, "saved-" + unevaluated_checkpoint)

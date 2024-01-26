@@ -77,6 +77,7 @@ def main(config_filename: str):
 
     # mixture of datasets:
     MIXTURE_DATASET_PATHS = config.get('mixture_dataset_paths', None)
+    RATIO_MIX = config.get('ratio_mix', [2, 1]) # first is main pipeline
 
     # input edits
     LABEL_PAD_VALUE = -100
@@ -183,8 +184,8 @@ def main(config_filename: str):
         dataset_akces = dataset_akces.map(dataset_utils.split_features_and_labels, 
                                           num_parallel_calls=tf.data.experimental.AUTOTUNE)
         ### Mixture:
-        r1 = 2
-        r2 = 1
+        r1 = RATIO_MIX[0] # 2
+        r2 = RATIO_MIX[1] # 1
         b1 = dataset.ragged_batch(r1)
         b2 = dataset_akces.ragged_batch(r2)
         zipped = tf.data.Dataset.zip((b1, b2)).map(dataset_utils.merge_ragged_batches, num_parallel_calls=tf.data.experimental.AUTOTUNE)

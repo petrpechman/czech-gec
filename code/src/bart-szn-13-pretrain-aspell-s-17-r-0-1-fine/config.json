@@ -63,5 +63,5 @@
     "save_every": 10,
 
     "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"],
-    "ratio_mix": [2, 1]
+    "ratio_mix": [0, 1]
 }

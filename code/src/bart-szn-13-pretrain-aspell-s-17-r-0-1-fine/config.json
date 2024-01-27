@@ -2,12 +2,12 @@
     "seed": 42,
 
     "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"],
-    "num_parallel": 44,
+    "num_parallel": 4,
     "max_length": 128,
     "shuffle_buffer": 5000,
     "bucket_boundaries": [32, 64, 96],
     "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
-    "errors_from_file": false,
+    "errors_from_file": true,
 
     "model": "../../models/bart-tokenizer-data-jakub/",
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",

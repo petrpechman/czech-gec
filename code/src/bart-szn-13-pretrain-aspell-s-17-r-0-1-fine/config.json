@@ -1,7 +1,7 @@
 {
     "seed": 42,
 
-    "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
+    "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"],
     "num_parallel": 44,
     "max_length": 128,
     "shuffle_buffer": 5000,
@@ -60,8 +60,5 @@
 
     "best_ckpt_filename": "./f_score_dev.json",
 
-    "save_every": 10,
-
-    "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"],
-    "ratio_mix": [0, 1]
+    "save_every": 10
 }

@@ -407,7 +407,7 @@ def main(config_filename: str):
                             print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
                             shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
                             # Delete model with optimizer:
-                            if int(unevaluated_checkpoint[5:]) % 10 == 0:
+                            if int(unevaluated_checkpoint[5:]) % 5 != 0:
                                 opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
                                 selected_files = []
                                 for f in os.listdir(opt_dir):

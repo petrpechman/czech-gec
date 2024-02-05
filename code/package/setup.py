@@ -18,7 +18,7 @@ setup(
     },
     entry_points="""
         [console_scripts]
-        retag=src.retag.cli:main_cli
+        retag=src.retag.retag:main_cli
     """,
     install_requires=[
         'setuptools',

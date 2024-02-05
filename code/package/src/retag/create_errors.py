@@ -6,9 +6,9 @@ import random
 import argparse
 import numpy as np
 
-from edit import Edit
-from errors import ERRORS
-from morphodita.generate_forms import GenerateForms
+from src.retag.edit import Edit
+from src.retag.errors import ERRORS
+from src.retag.morphodita.generate_forms import GenerateForms
 
 # from .edit import Edit
 # from .errors import ERRORS

@@ -1,6 +1,6 @@
 import numpy as np
 
-from edit import Edit
+from src.retag.edit import Edit
 # from .edit import Edit
 
 from typing import List

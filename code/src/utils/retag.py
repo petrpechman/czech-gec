@@ -1,10 +1,13 @@
 import errant
 import argparse
-from itertools import compress
 
-from edit import Edit
-from create_errors import ErrorGenerator
-from errors import ERRORS
+# from edit import Edit
+# from create_errors import ErrorGenerator
+# from errors import ERRORS
+
+from .edit import Edit
+from .create_errors import ErrorGenerator
+from .errors import ERRORS
 
 lang = 'cs'
 annotator = errant.load(lang)

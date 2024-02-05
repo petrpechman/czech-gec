@@ -20,6 +20,7 @@ from tensorflow.keras import mixed_precision
 
 from utils import dataset_utils
 from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
+from utils.retag import retag_edits
 
 from collections import Counter
 from errant.commands.compare_m2 import simplify_edits, process_edits, evaluate_edits, merge_dict
@@ -51,6 +52,14 @@ def create_m2(annotator, source_sentence, predicted_sentence):
             output = output + edit.to_m2(cor_id) + "\n"
     
     return output.strip()
+
+def retag(m2_sentence: str) -> str:
+    m2_lines = m2_sentence.split('\n')
+    edits = retag_edits(m2_lines)
+    m2_edits = [edit.to_m2() for edit in edits]
+    m2_edits.insert(0, m2_lines[0])
+    m2_sentence = "\n".join(m2_edits)
+    return m2_sentence
 
 def main(config_filename: str):
     with open(config_filename) as json_file:
@@ -273,8 +282,9 @@ def main(config_filename: str):
             annotator = errant.load('cs')
             for source_sentence, tokenized_predicted_sentence in zip(source_sentences, tokenized_predicted_sentences):
                 m2_sentence = create_m2(annotator, source_sentence, tokenized_predicted_sentence)
+                m2_sentence = retag(m2_sentence)
                 hyp_m2.append(m2_sentence)
-            
+                
             best_dict = Counter({"tp":0, "fp":0, "fn":0})
             best_cats = {}
             # Process each sentence

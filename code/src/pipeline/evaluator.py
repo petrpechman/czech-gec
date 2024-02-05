@@ -374,14 +374,15 @@ def main(config_filename: str):
             elif last_evaluated != "ckpt-0":
                 print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated)}")
                 shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated))
-                # Delete model with optimizer:
-                opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
-                selected_files = []
-                for f in os.listdir(opt_dir):
-                    if f.startswith(last_evaluated):
-                        selected_files.append(f)
-                for selected_file in selected_files:
-                    os.remove(os.path.join(opt_dir, selected_file))
+                if int(last_evaluated[5:]) % 5 != 0:
+                    # Delete model with optimizer:
+                    opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
+                    selected_files = []
+                    for f in os.listdir(opt_dir):
+                        if f.startswith(last_evaluated):
+                            selected_files.append(f)
+                    for selected_file in selected_files:
+                        os.remove(os.path.join(opt_dir, selected_file))
 
             if BEST_CKPT_NAME in unevaluated:
                 unevaluated.remove(BEST_CKPT_NAME)
@@ -401,11 +402,11 @@ def main(config_filename: str):
                         fscore = generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, 
                                                     refs[i], eval_types[i])
                         
-                    if SAVE_EVERY > 0 and int(last_evaluated[5:]) % SAVE_EVERY == 0:
-                        copy_tree(
-                            os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint),
-                            os.path.join(MODEL_CHECKPOINT_PATH, "saved-" + unevaluated_checkpoint)
-                        )
+                    # if SAVE_EVERY > 0 and int(last_evaluated[5:]) % SAVE_EVERY == 0:
+                    #     copy_tree(
+                    #         os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint),
+                    #         os.path.join(MODEL_CHECKPOINT_PATH, "saved-" + unevaluated_checkpoint)
+                    #     )
                     
                     if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
                         BEST_CKPT_NAME = unevaluated_checkpoint

@@ -48,6 +48,12 @@
 
     "m2_data_dev": "../../data/akces-gec/dev/dev.all.m2",
     "m2_data_test": "../../data/akces-gec/test/test.all.m2",
+
+    "other_datasets": [
+        ["../../data/akces-gec-retag/dev/dev-retag.all.m2", ["errant"]],
+        ["../../data/akces-gec-retag/test/test-retag.all.m2", ["errant"]]
+    ],
+
     "batch_size": 16,
     
     "max_unchanged_words": 2,

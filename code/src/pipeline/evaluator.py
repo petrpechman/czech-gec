@@ -337,8 +337,8 @@ def main(config_filename: str):
                     fn = v[2]
                     p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
                     r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
-                    f_score = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                    text_lines.append(k + ": " + f"p: {p}," + f" r: {r}," + f" f: {f_score}" + "\n")
+                    f = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+                    text_lines.append(k + ": " + f"p: {p}," + f" r: {r}," + f" f: {f}" + "\n\n")
                 text = "".join(text_lines)
                 print(text)
                 tf.summary.text("errors", text, step)

@@ -330,7 +330,15 @@ def main(config_filename: str):
 
             print("Write errors...")
             with file_writer.as_default():
-                text_lines = [k + ": " + str(best_cats[k]) + '\n' for k in best_cats.keys()]
+                text_lines = []
+                for k, v in best_cats.items():
+                    tp = v[0]
+                    fp = v[1]
+                    fn = v[2]
+                    p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
+                    r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
+                    f_score = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+                    text_lines.append(k + ": " + f"p: {p}," + f" r: {r}," + f" f: {f_score}" + "\n")
                 text = "".join(text_lines)
                 print(text)
                 tf.summary.text("errors", text, step)

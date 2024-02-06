@@ -18,7 +18,7 @@ from typing import Optional
 from itertools import compress
 from errant.annotator import Annotator
 
-
+from importlib import resources
 
 allowed_source_delete_tokens = [',', '.', '!', '?']
 czech_diacritics_tuples = [('a', 'á'), ('c', 'č'), ('d', 'ď'), ('e', 'é', 'ě'), ('i', 'í'), ('n', 'ň'), ('o', 'ó'), ('r', 'ř'), ('s', 'š'),
@@ -333,9 +333,9 @@ class ErrorGenerator:
             docs = [next_edit.c_toks]
         return docs
 
-def get_token_vocabulary(tsv_token_file):
+def get_token_vocabulary():
     tokens = []
-    with open(tsv_token_file) as reader:
+    with resources.open_text("src.retag.vocabularies", "vocabulary_cs.tsv") as reader:
         for line in reader:
             line = line.strip('\n')
             token, freq = line.split('\t')
@@ -354,10 +354,10 @@ def get_char_vocabulary(lang):
 
 def main(args):
     char_vocabulary = get_char_vocabulary(args.lang)
-    word_vocabulary = get_token_vocabulary("../../data/vocabluraries/vocabulary_cs.tsv")
+    word_vocabulary = get_token_vocabulary()
     aspell_speller = aspell.Speller('lang', args.lang)
-    morfodita = GenerateForms("./MorphoDiTa/czech-morfflex2.0-220710.dict")
-    with open("./defaul_errors.json") as f:
+    morfodita = GenerateForms("src.retag.morphodita.czech-morfflex2.0-220710.dict")
+    with open(args.error_config) as f:
         config = json.load(f)
     error_generator = ErrorGenerator(config, word_vocabulary, char_vocabulary,
                                      [0.2, 0.2, 0.2, 0.2, 0.2], 0.02, 0.01,
@@ -386,14 +386,22 @@ def main(args):
                     output_file.write(error_line + "\n")
 
 
-if __name__ == "__main__":
+def parse_args():
     parser = argparse.ArgumentParser(description="Create m2 file with errors.")
     parser.add_argument('-i', '--input', type=str)
     parser.add_argument('-f', '--format', type=str, default="m2")
     parser.add_argument('-o', '--output', type=str, default="output.m2")
     parser.add_argument('-l', '--lang', type=str)
+    parser.add_argument('-e', '--error-config', type=str, default="defaul_errors.json")
     
     parser.add_argument('-c', '--count', action='store_true')
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+def main_cli():
+    args = parse_args()
     main(args)
+
+
+if __name__ == "__main__":
+    main_cli()

@@ -15,11 +15,14 @@ setup(
     python_requires=">=3.9",
     package_data={
         'src.retag.morphodita': ["*.dict"],
+        'src.retag.vocabularies' : ["*.tsv"],
     },
+    include_package_data=True,
     entry_points="""
         [console_scripts]
         retag=src.retag.retag:main_cli
         m2_to_tsv=src.m2_to_tsv.main:main_cli
+        create_errors=src.retag.create_errors:main_cli
     """,
     install_requires=[
         'setuptools',

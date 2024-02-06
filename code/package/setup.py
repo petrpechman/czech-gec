@@ -19,6 +19,7 @@ setup(
     entry_points="""
         [console_scripts]
         retag=src.retag.retag:main_cli
+        m2_to_tsv=src.m2_to_tsv.main:main_cli
     """,
     install_requires=[
         'setuptools',

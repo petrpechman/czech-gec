@@ -159,9 +159,9 @@ class ErrorGenerator:
             turn_edits.append(turn_edit)
         return sentence, turn_edits
 
-    def get_m2_edits_text(self, sentence: str, aspell_speller) -> (str, List[str]):
+    def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None) -> (str, List[str]):
         parsed_sentence = self.annotator.parse(sentence)
-        error_edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller)
+        error_edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output)
         error_sentence, edits = self.turn_edits(parsed_sentence, error_edits)
         edits = self.sort_edits(edits)
         m2_edits = [edit.to_m2() for edit in edits]
@@ -373,7 +373,7 @@ def main(args):
             line = line.strip()
 
             if args.format == "m2":
-                error_sentence, m2_lines = error_generator.get_m2_edits_text(line, aspell_speller)
+                error_sentence, m2_lines = error_generator.get_m2_edits_text(line, aspell_speller, "counts.txt")
                 with open(output_path, "a+") as output_file:
                     output_file.write("S " + error_sentence + "\n")
                     for m2_line in m2_lines:

@@ -13,7 +13,7 @@
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",
     "from_config": true,
     "steps_per_epoch": 4096,
-    "epochs": 50,
+    "epochs": 99,
     "use_f16": true,
     
     "optimizer":{

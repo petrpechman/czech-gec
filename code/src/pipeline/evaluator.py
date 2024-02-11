@@ -344,6 +344,20 @@ def main(config_filename: str):
                 tf.summary.text("errors", text, step)
             print("End of writing errors...")
 
+            print("Write specific errors...")
+            with file_writer.as_default():
+                for k, v in best_cats.items():
+                    tp = v[0]
+                    fp = v[1]
+                    fn = v[2]
+                    p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
+                    r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
+                    f = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+                    tf.summary.scalar(f"precision_spec_err_{k}_P_{tp + fp}", p, step)
+                    tf.summary.scalar(f"recall_spec_err_{k}_P_{tp + fp}", r, step)
+                    tf.summary.scalar(f"f_score_spec_err_{k}_P_{tp + fp}", f, step)
+            print("End of writing specific errors...")
+
         print("Write predictions...")
         with file_writer.as_default():
             text = "  \n".join(tokenized_predicted_sentences[0:40])

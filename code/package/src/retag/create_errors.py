@@ -130,6 +130,18 @@ class ErrorGenerator:
         return sorted_edits.tolist()
 
     @staticmethod
+    def get_remove_mask_already(edits: List[Edit], already_edits: List[Edit]) -> List[bool]:
+        mask = []
+        for edit in edits:
+            overlaped = []
+            edit_range = (edit.o_start, edit.o_end)
+            for already_edit in already_edits:
+                already_edit_range = (already_edit.o_start, already_edit.o_end)
+                overlaped.append(not ErrorGenerator.is_overlap(already_edit_range, edit_range))
+            mask.append(any(overlaped))
+        return mask
+
+    @staticmethod
     def get_remove_mask(edits: List[Edit]) -> List[bool]:
         ranges = [(edit.o_start, edit.o_end) for edit in edits]
         removed = [not any([ErrorGenerator.is_overlap(current_range, r) if j < i else False for j, r in enumerate(ranges)]) for i, current_range in enumerate(ranges)]
@@ -159,10 +171,17 @@ class ErrorGenerator:
             turn_edits.append(turn_edit)
         return sentence, turn_edits
 
-    def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None) -> (str, List[str]):
+    def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None, already_edits: List[Edit] = None) -> (str, List[str]):
         parsed_sentence = self.annotator.parse(sentence)
         error_edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output)
         error_sentence, edits = self.turn_edits(parsed_sentence, error_edits)
+        if already_edits:
+            # print([(e.c_toks.text, e.o_start, e.o_end) for e in edits])
+            # print([(e.c_toks.text, e.o_start, e.o_end) for e in already_edits])
+            mask = ErrorGenerator.get_remove_mask_already(edits, already_edits)
+            edits = list(compress(edits, mask))
+            edits = edits + already_edits
+            # print([(e.c_toks.text, e.o_start, e.o_end) for e in edits])
         edits = self.sort_edits(edits)
         m2_edits = [edit.to_m2() for edit in edits]
         return error_sentence, m2_edits
@@ -351,6 +370,34 @@ def get_char_vocabulary(lang):
         allowed_chars += string.ascii_lowercase + string.ascii_uppercase + czech_chars_with_diacritics + czech_chars_with_diacritics_upper
         return list(allowed_chars)
 
+def simplify_edits(sentence, edits: list[str], annotator, selected_coder: int = 0) -> list[Edit]:
+    out_edits = []
+    for edit in edits:
+        # Preprocessing
+        edit = edit[2:].split("|||") # Ignore "A " then split.
+        span = edit[0].split()
+        start = int(span[0])
+        end = int(span[1])
+        cat = edit[1]
+        cor = edit[2]
+        coder = int(edit[-1])
+        if coder == selected_coder:
+            o_toks = sentence[start:end]
+            c_toks = annotator.parse(cor)
+            edit_indices = [start, end, start, start + len(c_toks)]
+            out_edit = Edit(o_toks, c_toks, edit_indices, cat, selected_coder)
+            out_edits.append(out_edit)
+    return out_edits
+
+def get_edits(line_edits: list[str], annotator) -> list[Edit]:
+    sentence = annotator.parse(line_edits[0][2:])
+    source_edits = line_edits[1:]
+    all_edits = []
+    for selected_coder in range(1):
+        edits = simplify_edits(sentence, source_edits, annotator, selected_coder)
+        edits = ErrorGenerator.sort_edits(edits, False)
+        all_edits = all_edits + edits
+    return all_edits
 
 def main(args):
     char_vocabulary = get_char_vocabulary(args.lang)
@@ -365,25 +412,40 @@ def main(args):
     error_generator._init_annotator()
     input_path = args.input
     output_path = args.output
-    with open(input_path, "r") as f:
-        while True:
-            line = f.readline()
-            if not line:
-                break
-            line = line.strip()
 
-            if args.format == "m2":
-                error_sentence, m2_lines = error_generator.get_m2_edits_text(line, aspell_speller, "counts.txt")
-                with open(output_path, "a+") as output_file:
-                    output_file.write("S " + error_sentence + "\n")
-                    for m2_line in m2_lines:
-                        output_file.write(m2_line + "\n")
-                    output_file.write("\n")
-            else:
-                error_line = error_generator.create_error_sentence(
-                    line, aspell_speller, False, False, morfodita, "counts.txt")
-                with open(output_path, "a+") as output_file:
-                    output_file.write(error_line + "\n")
+    if input_path[-3:] == ".m2" and args.format == "m2":
+        sentences = open(input_path).read().strip().split("\n\n")
+        for sentence in sentences:
+            lines = sentence.split('\n')
+            already_edits = get_edits(lines, error_generator.annotator)
+            line = lines[0][2:]
+            line = error_generator._use_edits(already_edits, error_generator.annotator.parse(line))
+            error_sentence, m2_lines = error_generator.get_m2_edits_text(line, aspell_speller, "counts.txt", already_edits)
+            with open(output_path, "a+") as output_file:
+                output_file.write("S " + error_sentence + "\n")
+                for m2_line in m2_lines:
+                    output_file.write(m2_line + "\n")
+                output_file.write("\n")
+    else:
+        with open(input_path, "r") as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                line = line.strip()
+
+                if args.format == "m2":
+                    error_sentence, m2_lines = error_generator.get_m2_edits_text(line, aspell_speller, "counts.txt")
+                    with open(output_path, "a+") as output_file:
+                        output_file.write("S " + error_sentence + "\n")
+                        for m2_line in m2_lines:
+                            output_file.write(m2_line + "\n")
+                        output_file.write("\n")
+                else:
+                    error_line = error_generator.create_error_sentence(
+                        line, aspell_speller, False, False, morfodita, "counts.txt")
+                    with open(output_path, "a+") as output_file:
+                        output_file.write(error_line + "\n")
 
 
 def parse_args():

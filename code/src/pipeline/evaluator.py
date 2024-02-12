@@ -353,9 +353,9 @@ def main(config_filename: str):
                     p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
                     r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
                     f = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                    tf.summary.scalar(f"precision_spec_err_{k}_P_{tp + fp}", p, step)
-                    tf.summary.scalar(f"recall_spec_err_{k}_P_{tp + fp}", r, step)
-                    tf.summary.scalar(f"f_score_spec_err_{k}_P_{tp + fp}", f, step)
+                    tf.summary.scalar(f"fix_precision_spec_err_{k}_P_{tp + fn}", p, step)
+                    tf.summary.scalar(f"fix_recall_spec_err_{k}_P_{tp + fn}", r, step)
+                    tf.summary.scalar(f"fix_f_score_spec_err_{k}_P_{tp + fn}", f, step)
             print("End of writing specific errors...")
 
         print("Write predictions...")

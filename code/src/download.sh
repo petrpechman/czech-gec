@@ -25,6 +25,8 @@ kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/
 if [ "$use_cp_again" = true ]; then
   kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/dev-retag.all ./tmp/checkpoint/dev-retag.all
   kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/test-retag.all ./tmp/checkpoint/test-retag.all
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/dev.all ./tmp/checkpoint/dev.all
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/test.all ./tmp/checkpoint/test.all
 fi
 
 

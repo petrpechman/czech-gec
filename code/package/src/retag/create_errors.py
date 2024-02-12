@@ -59,14 +59,14 @@ class ErrorGenerator:
             self.annotator = errant.load(lang)
 
     def get_edits(self, parsed_sentence, annotator: Annotator, aspell_speller,
-                  count_output: Optional[str] = None) -> List[Edit]:
+                  count_output: Optional[str] = None, already_edits: List[Edit] = None) -> List[Edit]:
         self.inner_iterator += 1
         self.total_tokens += len(parsed_sentence)
         edits_errors = []
         for error_instance in self.error_instances:
             edits = error_instance(parsed_sentence, annotator, aspell_speller)
             edits_errors = edits_errors + [(edit, error_instance) for edit in edits]
-        
+                
         if len(edits_errors) == 0:
             return []
 
@@ -74,8 +74,29 @@ class ErrorGenerator:
         random.shuffle(edits_errors)
         mask = self.get_remove_mask(list(zip(*edits_errors))[0])
         edits_errors = list(compress(edits_errors, mask))
-        
+
         selected_edits = []
+
+        ### ADDED already created edits into rejection sampling:
+        if already_edits is not None:
+            # Remove edits that overlap already_edits
+            current_edits = list(zip(*edits_errors))[0]
+            mask = ErrorGenerator.get_remove_mask_already(current_edits, already_edits)
+            edits_errors = list(compress(edits_errors, mask))
+        
+            for already_edit in already_edits:
+                for error_instance in self.error_instances:
+                    from errors import ErrorMeMne
+                    error_instance = ErrorMeMne()
+                    class_name = error_instance.__class__.__name__
+                    if class_name[:5] == already_edit.type:  # use retaged akces-gec
+                        if not error_instance.use_absolute_prob:
+                            selected_edits.append(edit)
+                            error_instance.num_errors += 1
+                            error_instance.num_possible_edits += 1
+                        break
+        ###
+
         ## Rejection Sampling:
         for edit, error_instance in edits_errors:
             if not error_instance.use_absolute_prob:
@@ -173,15 +194,9 @@ class ErrorGenerator:
 
     def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None, already_edits: List[Edit] = None) -> (str, List[str]):
         parsed_sentence = self.annotator.parse(sentence)
-        error_edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output)
+        error_edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output, already_edits)
         error_sentence, edits = self.turn_edits(parsed_sentence, error_edits)
-        if already_edits:
-            # print([(e.c_toks.text, e.o_start, e.o_end) for e in edits])
-            # print([(e.c_toks.text, e.o_start, e.o_end) for e in already_edits])
-            mask = ErrorGenerator.get_remove_mask_already(edits, already_edits)
-            edits = list(compress(edits, mask))
-            edits = edits + already_edits
-            # print([(e.c_toks.text, e.o_start, e.o_end) for e in edits])
+
         edits = self.sort_edits(edits)
         m2_edits = [edit.to_m2() for edit in edits]
         return error_sentence, m2_edits

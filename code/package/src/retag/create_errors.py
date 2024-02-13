@@ -14,6 +14,7 @@ from src.retag.morphodita.generate_forms import GenerateForms
 # from .errors import ERRORS
 
 from typing import List
+from typing import Tuple
 from typing import Optional
 from itertools import compress
 from errant.annotator import Annotator
@@ -59,7 +60,9 @@ class ErrorGenerator:
             self.annotator = errant.load(lang)
 
     def get_edits(self, parsed_sentence, annotator: Annotator, aspell_speller,
-                  count_output: Optional[str] = None, already_edits: List[Edit] = None) -> List[Edit]:
+                  count_output: Optional[str] = None, already_edits: List[Edit] = None) -> Tuple[List[Edit], List[bool]]:
+        # print([ (e.o_start, e.o_end, e.o_toks, e.c_toks) for e in already_edits])
+
         self.inner_iterator += 1
         self.total_tokens += len(parsed_sentence)
         edits_errors = []
@@ -68,7 +71,7 @@ class ErrorGenerator:
             edits_errors = edits_errors + [(edit, error_instance) for edit in edits]
                 
         if len(edits_errors) == 0:
-            return []
+            return [], []
 
         # Overlaping:
         random.shuffle(edits_errors)
@@ -76,6 +79,7 @@ class ErrorGenerator:
         edits_errors = list(compress(edits_errors, mask))
 
         selected_edits = []
+        is_new = []
 
         ### ADDED already created edits into rejection sampling:
         if already_edits is not None:
@@ -86,15 +90,15 @@ class ErrorGenerator:
         
             for already_edit in already_edits:
                 for error_instance in self.error_instances:
-                    from errors import ErrorMeMne
-                    error_instance = ErrorMeMne()
                     class_name = error_instance.__class__.__name__
-                    if class_name[:5] == already_edit.type:  # use retaged akces-gec
+                    if class_name[5:] == already_edit.type:  # use retaged akces-gec
                         if not error_instance.use_absolute_prob:
-                            selected_edits.append(edit)
                             error_instance.num_errors += 1
                             error_instance.num_possible_edits += 1
                         break
+                selected_edits.append(already_edit)
+                is_new.append(False)
+                
         ###
 
         ## Rejection Sampling:
@@ -104,6 +108,7 @@ class ErrorGenerator:
                 acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
                 if np.random.uniform(0, 1) < acceptance_prob:
                     selected_edits.append(edit)
+                    is_new.append(True)
                     error_instance.num_errors += 1
                 error_instance.num_possible_edits += 1
         ##
@@ -113,6 +118,7 @@ class ErrorGenerator:
             if error_instance.use_absolute_prob:
                 if np.random.uniform(0, 1) < error_instance.absolute_prob:
                     selected_edits.append(edit)
+                    is_new.append(True)
                     error_instance.num_errors += 1
                 error_instance.num_possible_edits += 1
         ##
@@ -134,8 +140,9 @@ class ErrorGenerator:
         ##
 
         # Sorting:
-        sorted_edits = self.sort_edits(selected_edits, True)
-        return sorted_edits
+        sorted_edits, is_new = self.sort_edits_with_already(selected_edits, True, is_new)
+        # print([ (e.o_start, e.o_end, e.o_toks, e.c_toks) for e in sorted_edits])
+        return sorted_edits, is_new
     
     @staticmethod
     def sort_edits(edits: List[Edit], reverse: bool = False) -> List[Edit]:
@@ -149,6 +156,25 @@ class ErrorGenerator:
         sorted_edits = sorted_edits[np.argsort(minus_start_indices)]
 
         return sorted_edits.tolist()
+    
+    @staticmethod
+    def sort_edits_with_already(edits: List[Edit], reverse: bool = False, is_new: List[bool] = None) -> Tuple[List[Edit], List[bool]]:
+        reverse_index = -1 if reverse else 1
+        minus_start_indices = [reverse_index * edit.o_end for edit in edits]
+        sorted_edits = np.array(edits)
+        sorted_edits = sorted_edits[np.argsort(minus_start_indices)]
+        if is_new is not None:
+            is_new = np.array(is_new)
+            is_new = is_new[np.argsort(minus_start_indices)]
+
+        minus_start_indices = [reverse_index * edit.o_start for edit in sorted_edits]
+        sorted_edits = np.array(sorted_edits)
+        sorted_edits = sorted_edits[np.argsort(minus_start_indices)]
+        if is_new is not None:
+            is_new = np.array(is_new)
+            is_new = is_new[np.argsort(minus_start_indices)]
+
+        return sorted_edits.tolist(), is_new.tolist()
 
     @staticmethod
     def get_remove_mask_already(edits: List[Edit], already_edits: List[Edit]) -> List[bool]:
@@ -184,8 +210,8 @@ class ErrorGenerator:
                 return True
         return False
     
-    def turn_edits(self, parsed_sentence, edits: List[Edit]) -> (str, List[Edit]):
-        sentence = self._use_edits(edits, parsed_sentence)
+    def turn_edits(self, parsed_sentence, edits: List[Edit], use_edits: List[bool] = None) -> Tuple[str, List[Edit]]:
+        sentence = self._use_edits(edits, parsed_sentence, use_edits)
         turn_edits = []
         for edit in edits:
             turn_edit = Edit(edit.c_toks, edit.o_toks, [edit.c_start, edit.c_end, edit.o_start, edit.o_end], type=edit.type)
@@ -194,8 +220,9 @@ class ErrorGenerator:
 
     def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None, already_edits: List[Edit] = None) -> (str, List[str]):
         parsed_sentence = self.annotator.parse(sentence)
-        error_edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output, already_edits)
-        error_sentence, edits = self.turn_edits(parsed_sentence, error_edits)
+        # print(sentence)
+        error_edits, is_new = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output, already_edits)
+        error_sentence, edits = self.turn_edits(parsed_sentence, error_edits, is_new)
 
         edits = self.sort_edits(edits)
         m2_edits = [edit.to_m2() for edit in edits]
@@ -333,7 +360,7 @@ class ErrorGenerator:
                               use_token_level: bool = False, use_char_level: bool = False, 
                               morfodita=None, count_output: Optional[str] = None) -> List[str]:
         parsed_sentence = self.annotator.parse(sentence)
-        edits = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output)
+        edits, _ = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output)
 
         sentence = self._use_edits(edits, parsed_sentence)
         
@@ -345,15 +372,34 @@ class ErrorGenerator:
 
         return sentence
     
-    def _use_edits(self, edits: List[Edit], parsed_sentence) -> str:
+    def _use_edits(self, edits: List[Edit], parsed_sentence, use_edits: List[bool] = None) -> str:
+        if not use_edits:
+            use_edits = [True] * len(edits)
+
         if len(edits) == 0:
             return parsed_sentence.text
-        docs = [edits[0].c_toks]
-        prev_edit = edits[0]
-        for edit in edits[1:]:
-            next_docs = self._merge(prev_edit, edit, parsed_sentence)
-            docs = next_docs + docs
-            prev_edit = edit
+        
+        docs = None
+        prev_edit = None
+        for i, edit in enumerate(edits):
+            if use_edits[i] == True:
+                if prev_edit is not None:
+                    next_docs = self._merge(prev_edit, edit, parsed_sentence)
+                    docs = next_docs + docs
+                else:
+                    docs = [edit.c_toks]
+                prev_edit = edit
+        
+        if docs is None:
+            return parsed_sentence.text
+        
+        # docs = [edits[0].c_toks]
+        # prev_edit = edits[0]
+        # for edit in edits[1:]:
+        #     next_docs = self._merge(prev_edit, edit, parsed_sentence)
+        #     docs = next_docs + docs
+        #     prev_edit = edit
+        
         subtexts = [doc.text for doc in docs]
 
         sentence = parsed_sentence[:edits[-1].o_start].text + " " + " ".join(subtexts) + " " + parsed_sentence[edits[0].o_end:].text
@@ -400,8 +446,11 @@ def simplify_edits(sentence, edits: list[str], annotator, selected_coder: int = 
             o_toks = sentence[start:end]
             c_toks = annotator.parse(cor)
             edit_indices = [start, end, start, start + len(c_toks)]
-            out_edit = Edit(o_toks, c_toks, edit_indices, cat, selected_coder)
-            out_edits.append(out_edit)
+            if c_toks.text == "-NONE-":
+                c_toks = annotator.parse("")
+            if start != -1 and end != -1:
+                out_edit = Edit(o_toks, c_toks, edit_indices, cat, selected_coder)
+                out_edits.append(out_edit)
     return out_edits
 
 def get_edits(line_edits: list[str], annotator) -> list[Edit]:
@@ -434,8 +483,12 @@ def main(args):
             lines = sentence.split('\n')
             already_edits = get_edits(lines, error_generator.annotator)
             line = lines[0][2:]
-            line = error_generator._use_edits(already_edits, error_generator.annotator.parse(line))
+            # print(line)
+            already_edits = error_generator.sort_edits(already_edits, True)
+            line_cor, already_edits = error_generator.turn_edits(error_generator.annotator.parse(line), already_edits)
+            # print(line_cor)
             error_sentence, m2_lines = error_generator.get_m2_edits_text(line, aspell_speller, "counts.txt", already_edits)
+            # print(error_sentence)
             with open(output_path, "a+") as output_file:
                 output_file.write("S " + error_sentence + "\n")
                 for m2_line in m2_lines:

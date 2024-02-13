@@ -335,10 +335,7 @@ def main(config_filename: str):
                     tp = v[0]
                     fp = v[1]
                     fn = v[2]
-                    p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
-                    r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
-                    f = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                    text_lines.append(k + ": " + f"p: {p}," + f" r: {r}," + f" f: {f}" + "\n\n")
+                    text_lines.append(k + ": " + f"tp: {tp}," + f" fp: {fp}," + f" fn: {fn}" + "\n\n")
                 text = "".join(text_lines)
                 print(text)
                 tf.summary.text("errors", text, step)
@@ -353,9 +350,9 @@ def main(config_filename: str):
                     p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
                     r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
                     f = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                    tf.summary.scalar(f"fix_precision_spec_err_{k}_P_{tp + fn}", p, step)
-                    tf.summary.scalar(f"fix_recall_spec_err_{k}_P_{tp + fn}", r, step)
-                    tf.summary.scalar(f"fix_f_score_spec_err_{k}_P_{tp + fn}", f, step)
+                    tf.summary.scalar(f"fix_precision_spec_err_{k}", p, step)
+                    tf.summary.scalar(f"fix_recall_spec_err_{k}", r, step)
+                    tf.summary.scalar(f"fix_f_score_spec_err_{k}", f, step)
             print("End of writing specific errors...")
 
         print("Write predictions...")

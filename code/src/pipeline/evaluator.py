@@ -23,9 +23,11 @@ from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 from utils.retag import retag_edits
 
 from collections import Counter
-from errant.commands.compare_m2 import simplify_edits, process_edits, evaluate_edits, merge_dict
+from errant.commands.compare_m2 import simplify_edits, process_edits, merge_dict
+from errant.commands.compare_m2 import compareEdits, computeFScore
+# from errant.commands.compare_m2 import evaluate_edits
 
-from distutils.dir_util import copy_tree
+from multiprocessing.pool import Pool
 
 def noop_edit(id: int = 0):
     result = "A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||" + str(id)
@@ -119,6 +121,8 @@ def main(config_filename: str):
         BEST_CKPT_FSCORE = best_ckpt['fscore']
     SAVE_EVERY = config.get('save_every', 0)
 
+    NUM_EVAL_PROCESSES = config.get('num_eval_processes', 4)
+
     tf.random.set_seed(SEED)
     
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
@@ -204,27 +208,49 @@ def main(config_filename: str):
         TP+FN (stat_gold), TP+FP (stat_proposed) for every batch.
         Finally it computes precision, recall and f score. 
         '''
-        total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0 
-        size = BATCH_SIZE
-        for i in range(0, len(tokenized_predicted_sentences), size):
-            # batch_multi_pre_rec_f1_part is created by petr pechman in fork from M2scorer
-            # (https://github.com/petrpechman/m2scorer/blob/cbf794b370be2fc77f98ee9531cf33001572b7ce/m2scorer/levenshtein.py#L866),
-            # it is almost same as batch_multi_pre_rec_f1
+        total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
+
+        def wrapper_func_m2scorer(tuple_items):
+            sentence, source_sentence, gold_edit = tuple_items
+            sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
             stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
-                tokenized_predicted_sentences[i:i+size], 
-                source_sentences[i:i+size], 
-                gold_edits[i:i+size],
+                sentence, 
+                source_sentences, 
+                gold_edit,
                 MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+            return stat_correct, stat_proposed, stat_gold
+
+        with Pool(processes=NUM_EVAL_PROCESSES * 2) as pool:
+            result_iterator = pool.imap(
+                wrapper_func_m2scorer, 
+                zip(tokenized_predicted_sentences, source_sentences, gold_edits)
+            )
+
+        for stat_correct, stat_proposed, stat_gold in result_iterator:
             total_stat_correct += stat_correct
             total_stat_proposed += stat_proposed
             total_stat_gold += stat_gold
-            p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
-            r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
-            f_score = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-            print(f"Step {i+1}")
-            print("Precision:\t", p)
-            print("Recall:\t", r)
-            print("F-Score:\t", f_score)
+
+        # size = BATCH_SIZE
+        # for i in range(0, len(tokenized_predicted_sentences), size):
+        #     # batch_multi_pre_rec_f1_part is created by petr pechman in fork from M2scorer
+        #     # (https://github.com/petrpechman/m2scorer/blob/cbf794b370be2fc77f98ee9531cf33001572b7ce/m2scorer/levenshtein.py#L866),
+        #     # it is almost same as batch_multi_pre_rec_f1
+        #     stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
+        #         tokenized_predicted_sentences[i:i+size], 
+        #         source_sentences[i:i+size], 
+        #         gold_edits[i:i+size],
+        #         MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+        #     total_stat_correct += stat_correct
+        #     total_stat_proposed += stat_proposed
+        #     total_stat_gold += stat_gold
+        #     p  = total_stat_correct / total_stat_proposed if total_stat_proposed > 0 else 0
+        #     r  = total_stat_correct / total_stat_gold if total_stat_gold > 0 else 0
+        #     f_score = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
+        #     print(f"Step {i+1}")
+        #     print("Precision:\t", p)
+        #     print("Recall:\t", r)
+        #     print("F-Score:\t", f_score)
         return total_stat_correct, total_stat_proposed, total_stat_gold
     
     def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, predictions_file,
@@ -284,33 +310,81 @@ def main(config_filename: str):
                 m2_sentence = create_m2(annotator, source_sentence, tokenized_predicted_sentence)
                 m2_sentence = retag(m2_sentence)
                 hyp_m2.append(m2_sentence)
-                
-            best_dict = Counter({"tp":0, "fp":0, "fn":0})
-            best_cats = {}
-            # Process each sentence
-            sents = zip(hyp_m2, ref_m2)
-            for sent_id, sent in enumerate(sents):
-                # Simplify the edits into lists of lists
+
+            class Args:
+                def __init__(self) -> None:
+                    self.beta = BETA
+                    self.dt = None
+                    self.ds = None
+                    self.single = None
+                    self.multi = None
+                    self.filt = None
+                    self.cse = None
+                    self.verbose = None
+            args = Args()
+
+            def evaluate_edits(hyp_dict, ref_dict, args):
+                best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
+                best_cat = {}
+                for hyp_id in hyp_dict.keys():
+                    for ref_id in ref_dict.keys():
+                        tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
+                        _, _, f = computeFScore(tp, fp, fn, args.beta)
+                        if     (f > best_f) or \
+                            (f == best_f and tp > best_tp) or \
+                            (f == best_f and tp == best_tp and fp < best_fp) or \
+                            (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
+                            best_tp, best_fp, best_fn = tp, fp, fn
+                            best_f = f
+                            best_cat = cat_dict
+                local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
+                return local_best_dict, best_cat
+
+            def wrapper_func_errant(sent):
                 hyp_edits = simplify_edits(sent[0])
                 ref_edits = simplify_edits(sent[1])
-                # Process the edits for detection/correction based on args
-                class Args:
-                    def __init__(self) -> None:
-                        self.beta = BETA
-                        self.dt = None
-                        self.ds = None
-                        self.single = None
-                        self.multi = None
-                        self.filt = None
-                        self.cse = None
-                        self.verbose = None
-                args = Args()
                 hyp_dict = process_edits(hyp_edits, args)
                 ref_dict = process_edits(ref_edits, args)
-                # Evaluate edits and get best TP, FP, FN hyp+ref combo.
-                count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, best_dict, sent_id, args)
+                count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
+                return count_dict, cat_dict
+
+            with Pool(processes=NUM_EVAL_PROCESSES * 2) as pool:
+                result_iterator = pool.imap(
+                    wrapper_func_errant, 
+                    zip(hyp_m2, ref_m2)
+                )
+
+            best_dict = Counter({"tp":0, "fp":0, "fn":0})
+            best_cats = {}
+
+            for count_dict, cat_dict in result_iterator:
                 best_dict += Counter(count_dict)
                 best_cats = merge_dict(best_cats, cat_dict)
+
+            # # Process each sentence
+            # sents = zip(hyp_m2, ref_m2)
+            # for sent_id, sent in enumerate(sents):
+            #     # Simplify the edits into lists of lists
+            #     hyp_edits = simplify_edits(sent[0])
+            #     ref_edits = simplify_edits(sent[1])
+            #     # Process the edits for detection/correction based on args
+            #     class Args:
+            #         def __init__(self) -> None:
+            #             self.beta = BETA
+            #             self.dt = None
+            #             self.ds = None
+            #             self.single = None
+            #             self.multi = None
+            #             self.filt = None
+            #             self.cse = None
+            #             self.verbose = None
+            #     args = Args()
+            #     hyp_dict = process_edits(hyp_edits, args)
+            #     ref_dict = process_edits(ref_edits, args)
+            #     # Evaluate edits and get best TP, FP, FN hyp+ref combo.
+            #     count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, best_dict, sent_id, args)
+            #     best_dict += Counter(count_dict)
+            #     best_cats = merge_dict(best_cats, cat_dict)
             
             tp = best_dict['tp']
             fp = best_dict['fp']
@@ -365,7 +439,7 @@ def main(config_filename: str):
                 file.write(sentence + "\n")
         print("End of writing predictions...")
 
-        return f_score
+        return f_score, best_cats
 
     last_evaluated = 'ckpt-0'
     while True:

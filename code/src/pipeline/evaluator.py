@@ -163,7 +163,6 @@ def main(config_filename: str):
             best_ckpt = json.load(json_file)
         BEST_CKPT_NAME = best_ckpt['name']
         BEST_CKPT_FSCORE = best_ckpt['fscore']
-    SAVE_EVERY = config.get('save_every', 0)
 
     NUM_EVAL_PROCESSES = config.get('num_eval_processes', 4)
 
@@ -292,10 +291,11 @@ def main(config_filename: str):
         model.load_weights(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint + "/")).expect_partial()
         ###
 
+        print(f"Eval: {unevaluated_checkpoint}")
+
         print("Generating...")
         predicted_sentences = []
         for i, batch in enumerate(dataset):
-            print(f"Generate {i+1}. batch.") 
             preds = model.generate(
                 batch['input_ids'], 
                 max_length=MAX_EVAL_LENGTH,
@@ -310,8 +310,6 @@ def main(config_filename: str):
         print("Udpipe tokenization...")
         tokenized_predicted_sentences = []
         for i, line in enumerate(predicted_sentences):
-            if i % BATCH_SIZE == 0:
-                print(f"Tokenize {i+BATCH_SIZE} sentences.")
             tokenization = udpipe_tokenizer.tokenize(line)
             sentence = " ".join([token.string for tokens_of_part in tokenization for token in tokens_of_part]) if len(tokenization) > 0 else ""
             tokenized_predicted_sentences.append(sentence)
@@ -430,7 +428,6 @@ def main(config_filename: str):
         print("Write predictions...")
         with file_writer.as_default():
             text = "  \n".join(tokenized_predicted_sentences[0:40])
-            print(text)
             tf.summary.text("predictions", text, step)
         with open(predictions_filepath, "w") as file:
             for sentence in tokenized_predicted_sentences:

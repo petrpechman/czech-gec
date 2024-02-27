@@ -253,17 +253,22 @@ def main(config_filename: str):
         '''
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
 
+        def init_worker(max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose):
+            global shared_data
+            shared_data = (max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
+
         def wrapper_func_m2scorer(tuple_items):
+            max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
             sentence, source_sentence, gold_edit = tuple_items
             sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
             stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
                 sentence, 
                 source_sentences, 
                 gold_edit,
-                MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE)
+                max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
             return stat_correct, stat_proposed, stat_gold
 
-        with Pool(processes=NUM_EVAL_PROCESSES * 2) as pool:
+        with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker, initargs=(MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE,)) as pool:
             result_iterator = pool.imap(
                 wrapper_func_m2scorer, 
                 zip(tokenized_predicted_sentences, source_sentences, gold_edits)
@@ -373,7 +378,12 @@ def main(config_filename: str):
                 local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
                 return local_best_dict, best_cat
 
+            def init_worker_errant(args):
+                global shared_data
+                shared_data = args
+
             def wrapper_func_errant(sent):
+                args = shared_data
                 hyp_edits = simplify_edits(sent[0])
                 ref_edits = simplify_edits(sent[1])
                 hyp_dict = process_edits(hyp_edits, args)
@@ -381,7 +391,7 @@ def main(config_filename: str):
                 count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
                 return count_dict, cat_dict
 
-            with Pool(processes=NUM_EVAL_PROCESSES * 2) as pool:
+            with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker_errant, initargs=(args,)) as pool:
                 result_iterator = pool.imap(
                     wrapper_func_errant, 
                     zip(hyp_m2, ref_m2)

@@ -48,25 +48,11 @@
     "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],
     "m2_data_test": ["../../data/akces-gec/test/test.all.m2", ["m2_scorer"]],
 
-    "dev_geccc_datasets": [
-        ["../../data/geccc-split/data/dev-splits/natives-formal-dev.m2", ["m2_scorer"]],
-        ["../../data/geccc-split/data/dev-splits/romani-dev.m2", ["m2_scorer"]],
-        ["../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2", ["m2_scorer"]],
-        ["../../data/geccc-split/data/dev-splits/second-learners-dev.m2", ["m2_scorer"]]
-    ],
-
     "test_geccc_datasets": [
         ["../../data/geccc-split/data/test-splits/natives-formal-test.m2", ["m2_scorer"]],
         ["../../data/geccc-split/data/test-splits/romani-test.m2", ["m2_scorer"]],
         ["../../data/geccc-split/data/test-splits/natives-web-informal-test.m2", ["m2_scorer"]],
         ["../../data/geccc-split/data/test-splits/second-learners-test.m2", ["m2_scorer"]]
-    ],
-    
-    "retag_dev_geccc_datasets": [
-        ["../../data/geccc-split-retag/dev/natives-formal-dev-retag.m2", ["errant"]],
-        ["../../data/geccc-split-retag/dev/romani-dev-retag.m2", ["errant"]],
-        ["../../data/geccc-split-retag/dev/natives-web-informal-dev-retag.m2", ["errant"]],
-        ["../../data/geccc-split-retag/dev/second-learners-dev-retag.m2", ["errant"]]
     ],
 
     "retag_test_geccc_datasets": [

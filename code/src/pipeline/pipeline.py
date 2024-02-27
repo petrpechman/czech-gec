@@ -257,6 +257,14 @@ def main(config_filename: str):
         if USE_F16 and MODEL_TYPE == "Bart-mine":
             model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
             model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+        if LR:
+            print("LEARNING RATE:")
+            print(LR)
+            optimizer.learning_rate = tf.Variable(LR)
+            optimizer._learning_rate = tf.Variable(LR)
+            print(optimizer.learning_rate)
+            print(optimizer._learning_rate)
+            print("--------------")
         ###
 
     ### Callbacks
@@ -295,14 +303,7 @@ def main(config_filename: str):
     ]
     ###
 
-    if LR:
-        print("LEARNING RATE:")
-        print(LR)
-        optimizer.learning_rate = tf.Variable(LR)
-        optimizer._learning_rate = tf.Variable(LR)
-        print(optimizer.learning_rate)
-        print(optimizer._learning_rate)
-        print("--------------")
+
 
     ### Train
     if STEPS_PER_EPOCH:

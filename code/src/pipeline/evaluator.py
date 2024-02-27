@@ -118,7 +118,6 @@ def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbo
     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
 
 def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
-    max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
     sentence, source_sentence, gold_edit = tuple_items
     sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
     stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(

@@ -113,6 +113,21 @@ def retag(m2_sentence: str) -> str:
     m2_sentence = "\n".join(m2_edits)
     return m2_sentence
 
+def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p):
+    global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose
+    max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
+
+def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
+    max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
+    sentence, source_sentence, gold_edit = tuple_items
+    sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
+    stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
+        sentence, 
+        source_sentence, 
+        gold_edit,
+        max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
+    return stat_correct, stat_proposed, stat_gold
+
 def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
@@ -259,20 +274,20 @@ def main(config_filename: str):
         '''
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
 
-        def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p):
-            global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose
-            max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
+        # def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p):
+        #     global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose
+        #     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
 
-        def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
-            max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
-            sentence, source_sentence, gold_edit = tuple_items
-            sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
-            stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
-                sentence, 
-                source_sentences, 
-                gold_edit,
-                max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
-            return stat_correct, stat_proposed, stat_gold
+        # def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
+        #     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
+        #     sentence, source_sentence, gold_edit = tuple_items
+        #     sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
+        #     stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
+        #         sentence, 
+        #         source_sentences, 
+        #         gold_edit,
+        #         max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
+        #     return stat_correct, stat_proposed, stat_gold
 
         with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker, initargs=(MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE,)) as pool:
             result_iterator = pool.imap(

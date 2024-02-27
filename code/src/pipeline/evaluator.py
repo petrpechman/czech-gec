@@ -379,7 +379,6 @@ def main(config_filename: str):
                     self.filt = None
                     self.cse = None
                     self.verbose = None
-            args = Args()
 
             def evaluate_edits(hyp_dict, ref_dict, args):
                 best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
@@ -398,12 +397,8 @@ def main(config_filename: str):
                 local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
                 return local_best_dict, best_cat
 
-            def init_worker_errant(args):
-                global shared_data
-                shared_data = args
-
             def wrapper_func_errant(sent):
-                args = shared_data
+                args = Args()
                 hyp_edits = simplify_edits(sent[0])
                 ref_edits = simplify_edits(sent[1])
                 hyp_dict = process_edits(hyp_edits, args)
@@ -411,7 +406,7 @@ def main(config_filename: str):
                 count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
                 return count_dict, cat_dict
 
-            with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker_errant, initargs=(args,)) as pool:
+            with Pool(processes=NUM_EVAL_PROCESSES * 2) as pool:
                 result_iterator = pool.imap(
                     wrapper_func_errant, 
                     zip(hyp_m2, ref_m2)

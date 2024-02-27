@@ -29,7 +29,7 @@ from errant.commands.compare_m2 import compareEdits, computeFScore
 
 from multiprocessing.pool import Pool
 
-os.environ["TOKENIZERS_PARALLELISM"] = True
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
 
 def write_evals(file_writer, 

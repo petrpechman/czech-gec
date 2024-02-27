@@ -30,11 +30,9 @@ from errant.commands.compare_m2 import compareEdits, computeFScore
 # from errant.commands.compare_m2 import evaluate_edits
 
 from multiprocessing.pool import Pool
-import multiprocessing
-multiprocessing.set_start_method("spawn", force=True) 
 
 
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def write_evals(file_writer, 
@@ -261,9 +259,9 @@ def main(config_filename: str):
         '''
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
 
-        def init_worker(max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose):
-            global shared_data
-            shared_data = (max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
+        def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p):
+            global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose
+            max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
 
         def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
             max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data

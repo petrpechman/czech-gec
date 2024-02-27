@@ -127,6 +127,47 @@ def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
         max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
     return stat_correct, stat_proposed, stat_gold
 
+class Args:
+    def __init__(self, beta) -> None:
+        self.beta = beta
+        self.dt = None
+        self.ds = None
+        self.single = None
+        self.multi = None
+        self.filt = None
+        self.cse = None
+        self.verbose = None
+
+def evaluate_edits(hyp_dict, ref_dict, args):
+                best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
+                best_cat = {}
+                for hyp_id in hyp_dict.keys():
+                    for ref_id in ref_dict.keys():
+                        tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
+                        _, _, f = computeFScore(tp, fp, fn, args.beta)
+                        if     (f > best_f) or \
+                            (f == best_f and tp > best_tp) or \
+                            (f == best_f and tp == best_tp and fp < best_fp) or \
+                            (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
+                            best_tp, best_fp, best_fn = tp, fp, fn
+                            best_f = f
+                            best_cat = cat_dict
+                local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
+                return local_best_dict, best_cat
+
+def init_worker_errant(beta_p):
+    global beta
+    beta = beta_p
+
+def wrapper_func_errant(sent):
+    args = Args(beta)
+    hyp_edits = simplify_edits(sent[0])
+    ref_edits = simplify_edits(sent[1])
+    hyp_dict = process_edits(hyp_edits, args)
+    ref_dict = process_edits(ref_edits, args)
+    count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
+    return count_dict, cat_dict
+
 def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
@@ -369,44 +410,45 @@ def main(config_filename: str):
                 m2_sentence = retag(m2_sentence)
                 hyp_m2.append(m2_sentence)
 
-            class Args:
-                def __init__(self) -> None:
-                    self.beta = BETA
-                    self.dt = None
-                    self.ds = None
-                    self.single = None
-                    self.multi = None
-                    self.filt = None
-                    self.cse = None
-                    self.verbose = None
+            # def evaluate_edits(hyp_dict, ref_dict, args):
+            #     best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
+            #     best_cat = {}
+            #     for hyp_id in hyp_dict.keys():
+            #         for ref_id in ref_dict.keys():
+            #             tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
+            #             _, _, f = computeFScore(tp, fp, fn, args.beta)
+            #             if     (f > best_f) or \
+            #                 (f == best_f and tp > best_tp) or \
+            #                 (f == best_f and tp == best_tp and fp < best_fp) or \
+            #                 (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
+            #                 best_tp, best_fp, best_fn = tp, fp, fn
+            #                 best_f = f
+            #                 best_cat = cat_dict
+            #     local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
+            #     return local_best_dict, best_cat
+            
+            # class Args:
+            #     def __init__(self) -> None:
+            #         self.beta = BETA
+            #         self.dt = None
+            #         self.ds = None
+            #         self.single = None
+            #         self.multi = None
+            #         self.filt = None
+            #         self.cse = None
+            #         self.verbose = None
 
-            def evaluate_edits(hyp_dict, ref_dict, args):
-                best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
-                best_cat = {}
-                for hyp_id in hyp_dict.keys():
-                    for ref_id in ref_dict.keys():
-                        tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
-                        _, _, f = computeFScore(tp, fp, fn, args.beta)
-                        if     (f > best_f) or \
-                            (f == best_f and tp > best_tp) or \
-                            (f == best_f and tp == best_tp and fp < best_fp) or \
-                            (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
-                            best_tp, best_fp, best_fn = tp, fp, fn
-                            best_f = f
-                            best_cat = cat_dict
-                local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
-                return local_best_dict, best_cat
+            # def wrapper_func_errant(sent):
+            #     args = Args()
+            #     hyp_edits = simplify_edits(sent[0])
+            #     ref_edits = simplify_edits(sent[1])
+            #     hyp_dict = process_edits(hyp_edits, args)
+            #     ref_dict = process_edits(ref_edits, args)
+            #     count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
+            #     return count_dict, cat_dict
 
-            def wrapper_func_errant(sent):
-                args = Args()
-                hyp_edits = simplify_edits(sent[0])
-                ref_edits = simplify_edits(sent[1])
-                hyp_dict = process_edits(hyp_edits, args)
-                ref_dict = process_edits(ref_edits, args)
-                count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
-                return count_dict, cat_dict
-
-            with Pool(processes=NUM_EVAL_PROCESSES * 2) as pool:
+            init_worker_errant
+            with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker_errant, initargs=(BETA,)) as pool:
                 result_iterator = pool.imap(
                     wrapper_func_errant, 
                     zip(hyp_m2, ref_m2)

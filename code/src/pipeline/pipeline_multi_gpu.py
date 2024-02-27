@@ -93,7 +93,7 @@ def main(config_filename: str):
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
     tokens = introduce_errors.get_token_vocabulary(TOKEN_FILE)
     characters = introduce_errors.get_char_vocabulary(LANG)
-    strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
+    strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"], cross_device_ops=tf.distribute.HierarchicalCopyAllReduce())
     num_div = strategy.num_replicas_in_sync
     print('Number of devices: %d' % num_div)
     bucket_batch_sizes = [bucket_batch_size * num_div for bucket_batch_size in BUCKET_BATCH_SIZES_PER_GPU]

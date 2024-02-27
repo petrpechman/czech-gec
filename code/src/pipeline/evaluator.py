@@ -38,46 +38,48 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 def write_evals(file_writer, 
                 m2scorer_tp, m2scorer_fp, m2scorer_fn, 
                 errant_tp, errant_fp, errant_fn,
-                best_cats, step, beta):
-    m2scorer_p  = (1.0 * m2scorer_tp) / (m2scorer_tp + m2scorer_fp) if (m2scorer_tp + m2scorer_fp) > 0 else 0
-    m2scorer_r  = (1.0 * m2scorer_tp) / (m2scorer_tp + m2scorer_fn) if (m2scorer_tp + m2scorer_fn) > 0 else 0
-    m2scorer_f_score = (1.0+beta*beta) * m2scorer_p * m2scorer_r / (beta*beta*m2scorer_p+m2scorer_r) if (m2scorer_p+m2scorer_r) > 0 else 0
-    
-    errant_p  = (1.0 * errant_tp) / (errant_tp + errant_fp) if (errant_tp + errant_fp) > 0 else 0
-    errant_r  = (1.0 * errant_tp) / (errant_tp + errant_fn)  if (errant_tp + errant_fn) > 0 else 0
-    errant_f_score = (1.0+beta*beta) * errant_p * errant_r / (beta*beta*errant_p+errant_r) if (errant_p+errant_r) > 0 else 0
+                best_cats, step, beta, eval_type):
+    if 'm2_scorer' in eval_type:
+        m2scorer_p  = (1.0 * m2scorer_tp) / (m2scorer_tp + m2scorer_fp) if (m2scorer_tp + m2scorer_fp) > 0 else 0
+        m2scorer_r  = (1.0 * m2scorer_tp) / (m2scorer_tp + m2scorer_fn) if (m2scorer_tp + m2scorer_fn) > 0 else 0
+        m2scorer_f_score = (1.0+beta*beta) * m2scorer_p * m2scorer_r / (beta*beta*m2scorer_p+m2scorer_r) if (m2scorer_p+m2scorer_r) > 0 else 0
 
-    print("Write into files...")
-    with file_writer.as_default():
-        tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step)
-        tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step)
-        tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step)
-    print("End of writing into files...")
+        print("Write into files...")
+        with file_writer.as_default():
+            tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step)
+            tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step)
+            tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step)
+        print("End of writing into files...")
 
-    print("Write into files...")
-    with file_writer.as_default():
-        tf.summary.scalar('epoch_errant_precision', errant_p, step)
-        tf.summary.scalar('epoch_errant_recall', errant_r, step)
-        tf.summary.scalar('epoch_errant_f_score', errant_f_score, step)
-    print("End of writing into files...")
+    if 'errant' in eval_type:
+        errant_p  = (1.0 * errant_tp) / (errant_tp + errant_fp) if (errant_tp + errant_fp) > 0 else 0
+        errant_r  = (1.0 * errant_tp) / (errant_tp + errant_fn)  if (errant_tp + errant_fn) > 0 else 0
+        errant_f_score = (1.0+beta*beta) * errant_p * errant_r / (beta*beta*errant_p+errant_r) if (errant_p+errant_r) > 0 else 0
 
-    print("Write specific errors...")
-    with file_writer.as_default():
-        text_lines = []
-        for k, v in best_cats.items():
-            tp = v[0]
-            fp = v[1]
-            fn = v[2]
-            text_lines.append(k + ": " + f"tp: {tp}," + f" fp: {fp}," + f" fn: {fn}" + "\n\n")
-            p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
-            r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
-            f = (1.0+beta*beta) * p * r / (beta*beta*p+r) if (p+r) > 0 else 0
-            tf.summary.scalar(f"fix_precision_spec_err_{k}", p, step)
-            tf.summary.scalar(f"fix_recall_spec_err_{k}", r, step)
-            tf.summary.scalar(f"fix_f_score_spec_err_{k}", f, step)
-        text = "".join(text_lines)
-        tf.summary.text("errors", text, step)
-    print("End of writing specific errors...")
+        print("Write into files...")
+        with file_writer.as_default():
+            tf.summary.scalar('epoch_errant_precision', errant_p, step)
+            tf.summary.scalar('epoch_errant_recall', errant_r, step)
+            tf.summary.scalar('epoch_errant_f_score', errant_f_score, step)
+        print("End of writing into files...")
+
+        print("Write specific errors...")
+        with file_writer.as_default():
+            text_lines = []
+            for k, v in best_cats.items():
+                tp = v[0]
+                fp = v[1]
+                fn = v[2]
+                text_lines.append(k + ": " + f"tp: {tp}," + f" fp: {fp}," + f" fn: {fn}" + "\n\n")
+                p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
+                r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
+                f = (1.0+beta*beta) * p * r / (beta*beta*p+r) if (p+r) > 0 else 0
+                tf.summary.scalar(f"fix_precision_spec_err_{k}", p, step)
+                tf.summary.scalar(f"fix_recall_spec_err_{k}", r, step)
+                tf.summary.scalar(f"fix_f_score_spec_err_{k}", f, step)
+            text = "".join(text_lines)
+            tf.summary.text("errors", text, step)
+        print("End of writing specific errors...")
 
 def noop_edit(id: int = 0):
     result = "A -1 -1|||noop|||-NONE-|||REQUIRED|||-NONE-|||" + str(id)
@@ -187,7 +189,11 @@ def main(config_filename: str):
 
     M2_DATA_TEST = config['m2_data_test']
     if not isinstance(M2_DATA_TEST, str):
-        M2_DATA_TEST, EVAL_TYPE_TEST = M2_DATA_TEST  
+        M2_DATA_TEST, EVAL_TYPE_TEST = M2_DATA_TEST
+    DEV_GECCC_DATASETS = config.get('dev_geccc_datasets', [])
+    TEST_GECCC_DATASETS = config.get('test_geccc_datasets', [])
+    RETAG_DEV_GECCC_DATASETS = config.get('retag_dev_geccc_datasets', [])
+    RETAG_TEST_GECCC_DATASETS = config.get('retag_test_geccc_datasets', [])
     OTHER_DATASETS = config.get('other_datasets', [])
     BATCH_SIZE = config['batch_size']
     
@@ -282,6 +288,31 @@ def main(config_filename: str):
     dev_dataset = get_dataset_pipeline(dev_source_sentences)
     test_dataset = get_dataset_pipeline(test_source_sentences)
     ###
+    # GECCC_DATASETS:
+    def prepare_datasets(list_datasets):
+        datasets = []
+        refs = []
+        eval_types = []
+        for dataset in list_datasets:
+            if not isinstance(dataset, str):
+                dataset, eval_type = dataset
+            else:
+                eval_type = ['m2_scorer'] 
+            source_sentences, gold_edits = load_annotation(dataset)
+            if 'errant' in eval_type:
+                ref_m2 = open(dataset).read().strip().split("\n\n")
+                refs.append(ref_m2)
+            else:
+                refs.append(None)
+            eval_types.append(eval_type)
+            datasets.append((source_sentences, gold_edits, dataset))
+        return datasets, refs, eval_types
+
+    dev_geccc_datasets, dev_geccc_refs, dev_geccc_eval_types = prepare_datasets(DEV_GECCC_DATASETS)
+    test_geccc_datasets, test_geccc_refs, test_geccc_eval_types = prepare_datasets(TEST_GECCC_DATASETS)
+    retag_dev_geccc_datasets, retag_dev_geccc_refs, retag_dev_geccc_eval_types = prepare_datasets(RETAG_DEV_GECCC_DATASETS)
+    retag_test_geccc_datasets, retag_test_geccc_refs, retag_test_geccc_eval_types = prepare_datasets(RETAG_TEST_GECCC_DATASETS)
+    ###
     
     ### Prepare right model:
     if USE_F16:
@@ -314,21 +345,6 @@ def main(config_filename: str):
         '''
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
 
-        # def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p):
-        #     global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose
-        #     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
-
-        # def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
-        #     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
-        #     sentence, source_sentence, gold_edit = tuple_items
-        #     sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
-        #     stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
-        #         sentence, 
-        #         source_sentences, 
-        #         gold_edit,
-        #         max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
-        #     return stat_correct, stat_proposed, stat_gold
-
         with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker, initargs=(MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE,)) as pool:
             result_iterator = pool.imap(
                 wrapper_func_m2scorer, 
@@ -347,8 +363,8 @@ def main(config_filename: str):
     def generate_and_score(unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, predictions_file,
                            ref_m2, eval_type) -> float:
         m2scorer_f_score  = 0
-        m2scorer_tp, m2scorer_fp, m2scorer_fn = None, None, None
-        errant_tp, errant_fp, errant_fn = None, None, None
+        m2scorer_tp, m2scorer_fp, m2scorer_fn = 0, 0, 0
+        errant_tp, errant_fp, errant_fn = 0, 0, 0
         best_cats = None
 
         step = int(unevaluated_checkpoint[5:])
@@ -410,44 +426,6 @@ def main(config_filename: str):
                 m2_sentence = retag(m2_sentence)
                 hyp_m2.append(m2_sentence)
 
-            # def evaluate_edits(hyp_dict, ref_dict, args):
-            #     best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
-            #     best_cat = {}
-            #     for hyp_id in hyp_dict.keys():
-            #         for ref_id in ref_dict.keys():
-            #             tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
-            #             _, _, f = computeFScore(tp, fp, fn, args.beta)
-            #             if     (f > best_f) or \
-            #                 (f == best_f and tp > best_tp) or \
-            #                 (f == best_f and tp == best_tp and fp < best_fp) or \
-            #                 (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
-            #                 best_tp, best_fp, best_fn = tp, fp, fn
-            #                 best_f = f
-            #                 best_cat = cat_dict
-            #     local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
-            #     return local_best_dict, best_cat
-            
-            # class Args:
-            #     def __init__(self) -> None:
-            #         self.beta = BETA
-            #         self.dt = None
-            #         self.ds = None
-            #         self.single = None
-            #         self.multi = None
-            #         self.filt = None
-            #         self.cse = None
-            #         self.verbose = None
-
-            # def wrapper_func_errant(sent):
-            #     args = Args()
-            #     hyp_edits = simplify_edits(sent[0])
-            #     ref_edits = simplify_edits(sent[1])
-            #     hyp_dict = process_edits(hyp_edits, args)
-            #     ref_dict = process_edits(ref_edits, args)
-            #     count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
-            #     return count_dict, cat_dict
-
-            init_worker_errant
             with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker_errant, initargs=(BETA,)) as pool:
                 result_iterator = pool.imap(
                     wrapper_func_errant, 
@@ -543,36 +521,56 @@ def main(config_filename: str):
                     fscore_dev, _, _, _, _, _, _, _ = generate_and_score(unevaluated_checkpoint, dev_dataset, dev_source_sentences, dev_gold_edits, OUTPUT_DIR_DEV,
                                                                          FILE_DEV_PREDICTIONS, dev_ref_m2, EVAL_TYPE_DEV)
                     fscore_test, _, _, _, _, _, _, _ = generate_and_score(unevaluated_checkpoint, test_dataset, test_source_sentences, test_gold_edits, OUTPUT_DIR_TEST,
-                                                                          FILE_TEST_PREDICTIONS, test_ref_m2, EVAL_TYPE_TEST)
+                                                                          FILE_TEST_PREDICTIONS, test_ref_m2, EVAL_TYPE_TEST)  
                     
-                    geccc_m2scorer_tp, geccc_m2scorer_fp, geccc_m2scorer_fn = 0, 0, 0
-                    geccc_errant_tp, geccc_errant_fp, geccc_errant_fn = 0, 0, 0
-                    geccc_best_cats = {}
+                    ### GECCC:
+                    def eval_splitted_dataset(datasets, refs, eval_types, unevaluated_checkpoint, filename_results: str):
+                        if len(datasets) == 0:
+                            return
+                        total_m2scorer_tp, total_m2scorer_fp, total_m2scorer_fn = 0, 0, 0
+                        total_errant_tp, total_errant_fp, total_errant_fn = 0, 0, 0
+                        total_best_cats = {}
+                        for i, dataset_zip in enumerate(datasets):
+                            source_sentences, gold_edits, dataset_path = dataset_zip
+                            dataset = get_dataset_pipeline(source_sentences)
+                            output_dir = os.path.splitext(os.path.basename(dataset_path))[0]
+                            file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
+                            m2scorer_f_score, m2scorer_tp, m2scorer_fp, m2scorer_fn, errant_tp, errant_fp, errant_fn, best_cats = generate_and_score(
+                                unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i])
+
+                            total_m2scorer_tp += m2scorer_tp
+                            total_m2scorer_fp += m2scorer_fp
+                            total_m2scorer_fn += m2scorer_fn
+
+                            total_errant_tp += errant_tp
+                            total_errant_fp += errant_fp
+                            total_errant_fn += errant_fn
+
+                            if best_cats is not None:
+                                total_best_cats = merge_dict(total_best_cats, best_cats)
+
+                        result_dir = os.path.join(MODEL_CHECKPOINT_PATH, filename_results)
+                        file_writer = tf.summary.create_file_writer(result_dir)
+                        step = int(unevaluated_checkpoint[5:])
+                        write_evals(file_writer, 
+                                    total_m2scorer_tp, total_m2scorer_fp, total_m2scorer_fn, 
+                                    total_errant_tp, total_errant_fp, total_errant_fn, 
+                                    total_best_cats, step, BETA, eval_types[i])
+
+                    eval_splitted_dataset(dev_geccc_datasets, dev_geccc_refs, dev_geccc_eval_types, unevaluated_checkpoint, "dev_total_geccc")
+                    eval_splitted_dataset(test_geccc_datasets, test_geccc_refs, test_geccc_eval_types, unevaluated_checkpoint, "test_total_geccc")
+
+                    eval_splitted_dataset(retag_dev_geccc_datasets, retag_dev_geccc_refs, retag_dev_geccc_eval_types, unevaluated_checkpoint, "retag_dev_total_geccc")
+                    eval_splitted_dataset(retag_test_geccc_datasets, retag_test_geccc_refs, retag_test_geccc_eval_types, unevaluated_checkpoint, "retag_test_total_geccc")
+                    ###
+
                     for i, dataset_zip in enumerate(datasets):
                         source_sentences, gold_edits, dataset_path = dataset_zip
                         dataset = get_dataset_pipeline(source_sentences)
                         output_dir = os.path.splitext(os.path.basename(dataset_path))[0]
                         file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
-                        m2scorer_f_score, m2scorer_tp, m2scorer_fp, m2scorer_fn, errant_tp, errant_fp, errant_fn, best_cats = generate_and_score(
+                        m2scorer_f_score, _, _, _, _, _, _, _  = generate_and_score(
                             unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i])
-                        
-                        geccc_m2scorer_tp += m2scorer_tp
-                        geccc_m2scorer_fp += m2scorer_fp
-                        geccc_m2scorer_fn += m2scorer_fn
-
-                        geccc_errant_tp += errant_tp
-                        geccc_errant_fp += errant_fp
-                        geccc_errant_fn += errant_fn
-
-                        geccc_best_cats = merge_dict(geccc_best_cats, best_cats)
-                    
-                    geccc_result_dir = os.path.join(MODEL_CHECKPOINT_PATH, "complete_geccc")
-                    geccc_file_writer = tf.summary.create_file_writer(geccc_result_dir)
-                    step = int(unevaluated_checkpoint[5:])
-                    write_evals(geccc_file_writer, 
-                                geccc_m2scorer_tp, geccc_errant_fp, geccc_errant_fn, 
-                                geccc_errant_tp, geccc_errant_fp, geccc_errant_fn, 
-                                geccc_best_cats, step, BETA)
                     
                     if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
                         BEST_CKPT_NAME = unevaluated_checkpoint

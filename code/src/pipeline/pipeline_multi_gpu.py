@@ -204,7 +204,7 @@ def main(config_filename: str):
     dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-    dataset = strategy.experimental_distribute_dataset(dataset)
+    # dataset = strategy.experimental_distribute_dataset(dataset)
 
     if USE_F16:
         policy = mixed_precision.Policy('mixed_float16')

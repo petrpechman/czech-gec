@@ -82,7 +82,7 @@ def main(config_filename: str):
     # input edits
     LABEL_PAD_VALUE = -100
     MODEL_TYPE = ""
-    if MODEL in ["google/mt5-small", "google/mt5-base"]:
+    if MODEL in ["google/mt5-small", "google/mt5-base", "google/mt5-large"]:
         MODEL_TYPE = "T5"
     else:
         MODEL_TYPE = "Bart-mine"
@@ -258,6 +258,7 @@ def main(config_filename: str):
         if USE_F16 and MODEL_TYPE == "Bart-mine":
             model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
             model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+
         if LR:
             print("LEARNING RATE:")
             print(LR)

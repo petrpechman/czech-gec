@@ -8,6 +8,8 @@ import errant
 import numpy as np
 import tensorflow as tf
 
+from typing import Tuple
+
 from transformers import TFAutoModelForSeq2SeqLM
 from transformers import AutoTokenizer
 from transformers import AutoConfig
@@ -28,6 +30,9 @@ from errant.commands.compare_m2 import compareEdits, computeFScore
 # from errant.commands.compare_m2 import evaluate_edits
 
 from multiprocessing.pool import Pool
+import multiprocessing
+multiprocessing.set_start_method("spawn", force=True) 
+
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -260,7 +265,7 @@ def main(config_filename: str):
             global shared_data
             shared_data = (max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
 
-        def wrapper_func_m2scorer(tuple_items):
+        def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
             max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = shared_data
             sentence, source_sentence, gold_edit = tuple_items
             sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]

@@ -205,12 +205,12 @@ def main(config_filename: str):
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     # dataset = strategy.experimental_distribute_dataset(dataset)
-
-    if USE_F16:
-        policy = mixed_precision.Policy('mixed_float16')
-        mixed_precision.set_global_policy(policy)
-
     with strategy.scope():
+        if USE_F16:
+            policy = mixed_precision.Policy('mixed_float16')
+            mixed_precision.set_global_policy(policy)
+
+    
         ### Optimizer:
         if OPTIMIZER_NAME == 'Adam':
             optimizer = tf.keras.optimizers.Adam(**OPTIMIZER_PARAMS)
@@ -257,55 +257,55 @@ def main(config_filename: str):
             model.compile(optimizer=optimizer)
         ###
 
-    ### Callbacks
-    model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
-        save_weights_only=True,
-        save_freq="epoch")
-    
-    model_checkpoint_optimizer = MyBackupAndRestore(
-        os.path.join(MODEL_CHECKPOINT_PATH, "optimizer"), optimizer, model,
-        epoch_name="opt-ckpt",
-        max_to_keep=None,
-    )
+        ### Callbacks
+        model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
+            filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
+            save_weights_only=True,
+            save_freq="epoch")
 
-    mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model, max_to_keep=1)
-    status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
-    status_optimizer = model_checkpoint_optimizer.checkpoint.restore(mybackup.manager.latest_checkpoint)
-    print("STATUS:", status)
-    initial_epoch = mybackup._ckpt_saved_epoch
-    print("INITIAL EPOCH:", int(initial_epoch))
+        model_checkpoint_optimizer = MyBackupAndRestore(
+            os.path.join(MODEL_CHECKPOINT_PATH, "optimizer"), optimizer, model,
+            epoch_name="opt-ckpt",
+            max_to_keep=None,
+        )
 
-    profiler = tf.keras.callbacks.TensorBoard(
-        log_dir=LOG_FILE, 
-        profile_batch=PROFILE_BATCH)
+        mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model, max_to_keep=1)
+        status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
+        status_optimizer = model_checkpoint_optimizer.checkpoint.restore(mybackup.manager.latest_checkpoint)
+        print("STATUS:", status)
+        initial_epoch = mybackup._ckpt_saved_epoch
+        print("INITIAL EPOCH:", int(initial_epoch))
 
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=LOG_FILE, 
-        histogram_freq=1)
+        profiler = tf.keras.callbacks.TensorBoard(
+            log_dir=LOG_FILE, 
+            profile_batch=PROFILE_BATCH)
 
-    callbacks = [
-        model_checkpoint,
-        mybackup,
-        model_checkpoint_optimizer,
-        profiler,
-        tensorboard_callback
-    ]
-    ###
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(
+            log_dir=LOG_FILE, 
+            histogram_freq=1)
 
-    if LR:
-        print("LEARNING RATE:")
-        print(LR)
-        optimizer.learning_rate = tf.Variable(LR)
-        optimizer._learning_rate = tf.Variable(LR)
-        print(optimizer.learning_rate)
-        print(optimizer._learning_rate)
-        print("--------------")
+        callbacks = [
+            model_checkpoint,
+            mybackup,
+            model_checkpoint_optimizer,
+            profiler,
+            tensorboard_callback
+        ]
+        ###
 
-    ### Train
-    if USE_F16 and MODEL_TYPE == "Bart-mine":
-        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
+        if LR:
+            print("LEARNING RATE:")
+            print(LR)
+            optimizer.learning_rate = tf.Variable(LR)
+            optimizer._learning_rate = tf.Variable(LR)
+            print(optimizer.learning_rate)
+            print(optimizer._learning_rate)
+            print("--------------")
+
+        ### Train
+        if USE_F16 and MODEL_TYPE == "Bart-mine":
+            model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
+            model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
     if STEPS_PER_EPOCH:
         model.fit(

@@ -268,6 +268,8 @@ def main(config_filename: str):
                 wrapper_func_m2scorer, 
                 zip(tokenized_predicted_sentences, source_sentences, gold_edits)
             )
+            pool.close()
+            pool.join()
 
         for stat_correct, stat_proposed, stat_gold in result_iterator:
             total_stat_correct += stat_correct
@@ -384,6 +386,8 @@ def main(config_filename: str):
                     wrapper_func_errant, 
                     zip(hyp_m2, ref_m2)
                 )
+                pool.close()
+                pool.join()
 
             best_dict = Counter({"tp":0, "fp":0, "fn":0})
             best_cats = {}

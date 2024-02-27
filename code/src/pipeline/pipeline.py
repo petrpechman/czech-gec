@@ -97,6 +97,7 @@ def main(config_filename: str):
     num_div = strategy.num_replicas_in_sync
     print('Number of devices: %d' % num_div)
     bucket_batch_sizes = [bucket_batch_size * num_div for bucket_batch_size in BUCKET_BATCH_SIZES_PER_GPU]
+    print("Bucket batch size: ", bucket_batch_sizes)
     if REVERTED_PIPELINE:
         print('It is used REVERTED_PIPELINE.')
     ###

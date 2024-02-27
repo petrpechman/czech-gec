@@ -272,9 +272,7 @@ def main(config_filename: str):
         mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model, max_to_keep=1)
         status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
         status_optimizer = model_checkpoint_optimizer.checkpoint.restore(mybackup.manager.latest_checkpoint)
-        print("STATUS:", status)
-        initial_epoch = mybackup._ckpt_saved_epoch
-        print("INITIAL EPOCH:", int(initial_epoch))
+        
 
         profiler = tf.keras.callbacks.TensorBoard(
             log_dir=LOG_FILE, 
@@ -307,6 +305,7 @@ def main(config_filename: str):
             model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
             model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
+    initial_epoch = mybackup._ckpt_saved_epoch
     if STEPS_PER_EPOCH:
         model.fit(
             dataset, 

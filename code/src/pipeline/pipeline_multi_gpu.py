@@ -305,7 +305,7 @@ def main(config_filename: str):
             model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
             model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
-    initial_epoch = mybackup._ckpt_saved_epoch
+    initial_epoch = "0"
     if STEPS_PER_EPOCH:
         model.fit(
             dataset, 

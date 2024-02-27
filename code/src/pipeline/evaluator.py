@@ -29,6 +29,8 @@ from errant.commands.compare_m2 import compareEdits, computeFScore
 
 from multiprocessing.pool import Pool
 
+os.getenv["TOKENIZERS_PARALLELISM"] = True
+
 def write_evals(file_writer, 
                 m2scorer_tp, m2scorer_fp, m2scorer_fn, 
                 errant_tp, errant_fp, errant_fn,

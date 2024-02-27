@@ -305,8 +305,6 @@ def main(config_filename: str):
     ]
     ###
 
-
-
     ### Train
     if STEPS_PER_EPOCH:
         model.fit(

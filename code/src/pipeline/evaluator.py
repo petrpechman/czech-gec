@@ -345,10 +345,22 @@ def main(config_filename: str):
         '''
         total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
 
+        # SORT:
+        lenlist = [len(s) for s in tokenized_predicted_sentences]
+        sortedindex = np.argsort(lenlist)[::-1]
+        sort_tokenized_predicted_sentences = ['nothing'] * len(tokenized_predicted_sentences)
+        sort_source_sentences = ['nothing'] * len(tokenized_predicted_sentences)
+        sort_gold_edits = ['nothing'] * len(tokenized_predicted_sentences)
+        for i in range(len(tokenized_predicted_sentences)):    
+            sort_tokenized_predicted_sentences[i] = tokenized_predicted_sentences[sortedindex[i]]
+            sort_source_sentences[i] = source_sentences[sortedindex[i]]
+            sort_gold_edits[i] = gold_edits[sortedindex[i]]
+        #
+
         with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker, initargs=(MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE,)) as pool:
             result_iterator = pool.imap(
                 wrapper_func_m2scorer, 
-                zip(tokenized_predicted_sentences, source_sentences, gold_edits)
+                zip(sort_tokenized_predicted_sentences, sort_source_sentences, sort_gold_edits)
             )
             pool.close()
             pool.join()
@@ -426,10 +438,20 @@ def main(config_filename: str):
                 m2_sentence = retag(m2_sentence)
                 hyp_m2.append(m2_sentence)
 
+            # SORT:
+            lenlist = [len(s) for s in tokenized_predicted_sentences]
+            sortedindex = np.argsort(lenlist)[::-1]
+            sort_hyp_m2 = ['nothing'] * len(tokenized_predicted_sentences)
+            sort_ref_m2 = ['nothing'] * len(tokenized_predicted_sentences)
+            for i in range(len(tokenized_predicted_sentences)):    
+                sort_hyp_m2[i] = hyp_m2[sortedindex[i]]
+                sort_ref_m2[i] = ref_m2[sortedindex[i]]
+            #
+                
             with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker_errant, initargs=(BETA,)) as pool:
                 result_iterator = pool.imap(
                     wrapper_func_errant, 
-                    zip(hyp_m2, ref_m2)
+                    zip(sort_hyp_m2, sort_ref_m2)
                 )
                 pool.close()
                 pool.join()
@@ -467,9 +489,10 @@ def main(config_filename: str):
                     p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
                     r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
                     f = (1.0+BETA*BETA) * p * r / (BETA*BETA*p+r) if (p+r) > 0 else 0
-                    tf.summary.scalar(f"fix_precision_spec_err_{k}", p, step)
-                    tf.summary.scalar(f"fix_recall_spec_err_{k}", r, step)
-                    tf.summary.scalar(f"fix_f_score_spec_err_{k}", f, step)
+                    description = f"gold_p: {tp+fn}, tp: {tp}, fp: {fp}, fn: {fn}"
+                    tf.summary.scalar(f"precision_spec_err_{k}", p, step, description=description)
+                    tf.summary.scalar(f"recall_spec_err_{k}", r, step, description=description)
+                    tf.summary.scalar(f"f_score_spec_err_{k}", f, step, description=description)
                 text = "".join(text_lines)
                 tf.summary.text("errors", text, step)
             print("End of writing specific errors...")
@@ -556,22 +579,23 @@ def main(config_filename: str):
                                     total_m2scorer_tp, total_m2scorer_fp, total_m2scorer_fn, 
                                     total_errant_tp, total_errant_fp, total_errant_fn, 
                                     total_best_cats, step, BETA, eval_types[i])
-
-                    eval_splitted_dataset(dev_geccc_datasets, dev_geccc_refs, dev_geccc_eval_types, unevaluated_checkpoint, "dev_total_geccc")
-                    eval_splitted_dataset(test_geccc_datasets, test_geccc_refs, test_geccc_eval_types, unevaluated_checkpoint, "test_total_geccc")
-
-                    eval_splitted_dataset(retag_dev_geccc_datasets, retag_dev_geccc_refs, retag_dev_geccc_eval_types, unevaluated_checkpoint, "retag_dev_total_geccc")
-                    eval_splitted_dataset(retag_test_geccc_datasets, retag_test_geccc_refs, retag_test_geccc_eval_types, unevaluated_checkpoint, "retag_test_total_geccc")
-                    ###
-
-                    for i, dataset_zip in enumerate(datasets):
-                        source_sentences, gold_edits, dataset_path = dataset_zip
-                        dataset = get_dataset_pipeline(source_sentences)
-                        output_dir = os.path.splitext(os.path.basename(dataset_path))[0]
-                        file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
-                        m2scorer_f_score, _, _, _, _, _, _, _  = generate_and_score(
-                            unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i])
                     
+                    if int(unevaluated_checkpoint[5:]) % 10 == 0:
+                        eval_splitted_dataset(dev_geccc_datasets, dev_geccc_refs, dev_geccc_eval_types, unevaluated_checkpoint, "dev_total_geccc")
+                        eval_splitted_dataset(test_geccc_datasets, test_geccc_refs, test_geccc_eval_types, unevaluated_checkpoint, "test_total_geccc")
+
+                        eval_splitted_dataset(retag_dev_geccc_datasets, retag_dev_geccc_refs, retag_dev_geccc_eval_types, unevaluated_checkpoint, "retag_dev_total_geccc")
+                        eval_splitted_dataset(retag_test_geccc_datasets, retag_test_geccc_refs, retag_test_geccc_eval_types, unevaluated_checkpoint, "retag_test_total_geccc")
+
+                        for i, dataset_zip in enumerate(datasets):
+                            source_sentences, gold_edits, dataset_path = dataset_zip
+                            dataset = get_dataset_pipeline(source_sentences)
+                            output_dir = os.path.splitext(os.path.basename(dataset_path))[0]
+                            file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
+                            m2scorer_f_score, _, _, _, _, _, _, _  = generate_and_score(
+                                unevaluated_checkpoint, dataset, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i])
+                    
+
                     if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
                         BEST_CKPT_NAME = unevaluated_checkpoint
                         BEST_CKPT_FSCORE = fscore_dev

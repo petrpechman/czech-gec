@@ -28,6 +28,8 @@ czech_diacritizables_chars = [char for sublist in czech_diacritics_tuples for ch
                                                                                                   czech_diacritics_tuples for char in
                                                                                                   sublist]
 
+random.seed(42)
+
 # MAIN:
 class ErrorGenerator:
     def __init__(self, config: dict, 

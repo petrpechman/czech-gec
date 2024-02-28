@@ -95,9 +95,9 @@ class ErrorGenerator:
                     class_name = error_instance.__class__.__name__
                     if class_name[5:] == already_edit.type:  # use retaged akces-gec
                         if not error_instance.use_absolute_prob:
-                            error_instance.num_errors += 1
-                            error_instance.num_possible_edits += 1
-                            # ...
+                            # error_instance.num_errors += 1
+                            # error_instance.num_possible_edits += 1
+                            ...
                         break
                 selected_edits.append(already_edit)
                 is_new.append(False)
@@ -109,7 +109,7 @@ class ErrorGenerator:
             if not error_instance.use_absolute_prob:
                 # gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
                 # acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
-                P = 80
+                P = 200
                 acceptance_prob = (((1.0 * error_instance.target_prob) * (self.total_tokens + P)) - (error_instance.num_errors * 1.0)) / P
 
                 # rel_prob = (error_instance.num_errors * 1.0) / error_instance.num_possible_edits if error_instance.num_possible_edits > 0 else 1.0

@@ -74,9 +74,10 @@ def write_evals(file_writer,
                 p  = (1.0 * tp) / (tp + fp) if (tp + fp) > 0 else 0
                 r  = (1.0 * tp) / (tp + fn)  if (tp + fn) > 0 else 0
                 f = (1.0+beta*beta) * p * r / (beta*beta*p+r) if (p+r) > 0 else 0
-                tf.summary.scalar(f"fix_precision_spec_err_{k}", p, step)
-                tf.summary.scalar(f"fix_recall_spec_err_{k}", r, step)
-                tf.summary.scalar(f"fix_f_score_spec_err_{k}", f, step)
+                description = f"gold_p: {tp+fn}, tp: {tp}, fp: {fp}, fn: {fn}"
+                tf.summary.scalar(f"precision_spec_err_{k}", p, step, description=description)
+                tf.summary.scalar(f"recall_spec_err_{k}", r, step, description=description)
+                tf.summary.scalar(f"f_score_spec_err_{k}", f, step, description=description)
             text = "".join(text_lines)
             tf.summary.text("errors", text, step)
         print("End of writing specific errors...")

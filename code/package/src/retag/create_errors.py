@@ -93,9 +93,9 @@ class ErrorGenerator:
                     class_name = error_instance.__class__.__name__
                     if class_name[5:] == already_edit.type:  # use retaged akces-gec
                         if not error_instance.use_absolute_prob:
-                            # error_instance.num_errors += 1
-                            # error_instance.num_possible_edits += 1
-                            ...
+                            error_instance.num_errors += 1
+                            error_instance.num_possible_edits += 1
+                            # ...
                         break
                 selected_edits.append(already_edit)
                 is_new.append(False)

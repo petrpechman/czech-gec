@@ -93,7 +93,7 @@ class ErrorGenerator:
                     class_name = error_instance.__class__.__name__
                     if class_name[5:] == already_edit.type:  # use retaged akces-gec
                         if not error_instance.use_absolute_prob:
-                            error_instance.num_errors += 1
+                            # error_instance.num_errors += 1
                             error_instance.num_possible_edits += 1
                         break
                 selected_edits.append(already_edit)
@@ -104,8 +104,15 @@ class ErrorGenerator:
         ## Rejection Sampling:
         for edit, error_instance in edits_errors:
             if not error_instance.use_absolute_prob:
-                gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
-                acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
+                # gen_prob = error_instance.num_possible_edits / self.total_tokens if self.total_tokens > 0 else 0.5
+                # acceptance_prob = error_instance.target_prob / (gen_prob + 1e-10)
+                P = 80
+                acceptance_prob = (((1.0 * error_instance.target_prob) * (self.total_tokens + P)) - (error_instance.num_errors * 1.0)) / P
+
+                # rel_prob = (error_instance.num_errors * 1.0) / error_instance.num_possible_edits if error_instance.num_possible_edits > 0 else 1.0
+                # opt = (error_instance.target_prob * 1.0) / ((error_instance.num_possible_edits * 1.0) / self.total_tokens) if error_instance.num_possible_edits > 0 else 1.0
+                # quality = rel_prob / opt
+                # acceptance_prob = error_instance.target_prob / (quality + 1e-10)
                 if np.random.uniform(0, 1) < acceptance_prob:
                     selected_edits.append(edit)
                     is_new.append(True)
@@ -218,7 +225,7 @@ class ErrorGenerator:
             turn_edits.append(turn_edit)
         return sentence, turn_edits
 
-    def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None, already_edits: List[Edit] = None) -> (str, List[str]):
+    def get_m2_edits_text(self, sentence: str, aspell_speller, count_output: Optional[str] = None, already_edits: List[Edit] = None) -> Tuple[str, List[str]]:
         parsed_sentence = self.annotator.parse(sentence)
         # print(sentence)
         error_edits, is_new = self.get_edits(parsed_sentence, self.annotator, aspell_speller, count_output, already_edits)

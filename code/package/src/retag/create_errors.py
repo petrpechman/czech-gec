@@ -463,12 +463,22 @@ def simplify_edits(sentence, edits: list[str], annotator, selected_coder: int = 
 def get_edits(line_edits: list[str], annotator) -> list[Edit]:
     sentence = annotator.parse(line_edits[0][2:])
     source_edits = line_edits[1:]
-    all_edits = []
-    for selected_coder in range(1):
+    # all_edits = []
+    possible_edits = []
+    
+    for selected_coder in range(5):
         edits = simplify_edits(sentence, source_edits, annotator, selected_coder)
+        if len(edits) == 0:
+            continue
         edits = ErrorGenerator.sort_edits(edits, False)
-        all_edits = all_edits + edits
-    return all_edits
+        possible_edits.append(edits)
+        # all_edits = all_edits + edits
+    
+    if len(possible_edits) == 0:
+        return []
+    
+    res_edits = random.choice(possible_edits)
+    return res_edits
 
 def main(args):
     char_vocabulary = get_char_vocabulary(args.lang)

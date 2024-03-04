@@ -142,21 +142,21 @@ class Args:
         self.verbose = None
 
 def evaluate_edits(hyp_dict, ref_dict, args):
-                best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
-                best_cat = {}
-                for hyp_id in hyp_dict.keys():
-                    for ref_id in ref_dict.keys():
-                        tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
-                        _, _, f = computeFScore(tp, fp, fn, args.beta)
-                        if     (f > best_f) or \
-                            (f == best_f and tp > best_tp) or \
-                            (f == best_f and tp == best_tp and fp < best_fp) or \
-                            (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
-                            best_tp, best_fp, best_fn = tp, fp, fn
-                            best_f = f
-                            best_cat = cat_dict
-                local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
-                return local_best_dict, best_cat
+    best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
+    best_cat = {}
+    for hyp_id in hyp_dict.keys():
+        for ref_id in ref_dict.keys():
+            tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
+            _, _, f = computeFScore(tp, fp, fn, args.beta)
+            if     (f > best_f) or \
+                (f == best_f and tp > best_tp) or \
+                (f == best_f and tp == best_tp and fp < best_fp) or \
+                (f == best_f and tp == best_tp and fp == best_fp and fn < best_fn):
+                best_tp, best_fp, best_fn = tp, fp, fn
+                best_f = f
+                best_cat = cat_dict
+    local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
+    return local_best_dict, best_cat
 
 def init_worker_errant(beta_p):
     global beta

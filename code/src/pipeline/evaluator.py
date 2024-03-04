@@ -233,6 +233,7 @@ def main(config_filename: str):
         BEST_CKPT_FSCORE = best_ckpt['fscore']
 
     NUM_EVAL_PROCESSES = config.get('num_eval_processes', 4)
+    EVAL_GECCC_EVERY = config.get('eval_geccc_every', 10)
 
     tf.random.set_seed(SEED)
     
@@ -581,7 +582,7 @@ def main(config_filename: str):
                                     total_errant_tp, total_errant_fp, total_errant_fn, 
                                     total_best_cats, step, BETA, eval_types[i])
                     
-                    if int(unevaluated_checkpoint[5:]) % 10 == 0:
+                    if int(unevaluated_checkpoint[5:]) % EVAL_GECCC_EVERY == 0:
                         eval_splitted_dataset(dev_geccc_datasets, dev_geccc_refs, dev_geccc_eval_types, unevaluated_checkpoint, "dev_total_geccc")
                         eval_splitted_dataset(test_geccc_datasets, test_geccc_refs, test_geccc_eval_types, unevaluated_checkpoint, "test_total_geccc")
 

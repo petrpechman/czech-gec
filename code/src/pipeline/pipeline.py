@@ -260,13 +260,8 @@ def main(config_filename: str):
             model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
 
         if LR:
-            print("LEARNING RATE:")
-            print(LR)
             optimizer.learning_rate = tf.Variable(LR)
             optimizer._learning_rate = tf.Variable(LR)
-            print(optimizer.learning_rate)
-            print(optimizer._learning_rate)
-            print("--------------")
         ###
 
     ### Callbacks
@@ -304,6 +299,11 @@ def main(config_filename: str):
         tensorboard_callback
     ]
     ###
+
+    print("LEARNING RATE:")
+    print(optimizer.learning_rate)
+    print(optimizer._learning_rate)
+    print("--------------")
 
     ### Train
     if STEPS_PER_EPOCH:

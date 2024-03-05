@@ -21,7 +21,7 @@
         "params":{
             "learning_rate": 5e-5,
             "weight_decay": 0.01,
-            "epsilon": 1e-6,
+            "epsilon": 1e-5,
             "global_clipnorm": 1.0
         }
     },

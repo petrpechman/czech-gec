@@ -300,6 +300,11 @@ def main(config_filename: str):
             optimizer.learning_rate = tf.Variable(LR)
             optimizer._learning_rate = tf.Variable(LR)
 
+        print("LEARNING RATE:")
+        print(optimizer.learning_rate)
+        print(optimizer._learning_rate)
+        print("--------------")
+
     ### Train
     if STEPS_PER_EPOCH:
         model.fit(

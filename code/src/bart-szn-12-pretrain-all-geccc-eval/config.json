@@ -80,5 +80,6 @@
     
     "best_ckpt_filename": "./f_score_dev.json",
     
-    "num_eval_processes": 16
+    "num_eval_processes": 16,
+    "eval_geccc_every": 1
 }

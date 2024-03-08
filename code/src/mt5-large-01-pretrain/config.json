@@ -2,17 +2,17 @@
     "seed": 42,
 
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
-    "num_parallel": 40,
-    "max_length": 128,
+    "num_parallel": 20,
+    "max_length": 64,
     "shuffle_buffer": 5000,
-    "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [1, 1, 1, 1],
+    "bucket_boundaries": [16, 32, 48],
+    "bucket_batch_sizes_per_gpu": [6, 6, 6, 6],
     "errors_from_file": false,
 
     "model": "google/mt5-large",
     "tokenizer": "google/mt5-large",
     "from_config": false,
-    "steps_per_epoch": 160,
+    "steps_per_epoch": 128000,
     "epochs": 100000,
     "use_f16": true,
 

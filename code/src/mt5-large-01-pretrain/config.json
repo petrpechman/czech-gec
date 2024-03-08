@@ -3,10 +3,10 @@
 
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
     "num_parallel": 20,
-    "max_length": 64,
+    "max_length": 96,
     "shuffle_buffer": 5000,
-    "bucket_boundaries": [16, 32, 48],
-    "bucket_batch_sizes_per_gpu": [6, 6, 6, 6],
+    "bucket_boundaries": [24, 48, 72],
+    "bucket_batch_sizes_per_gpu": [12, 12, 12, 12],
     "errors_from_file": false,
 
     "model": "google/mt5-large",

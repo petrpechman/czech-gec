@@ -310,18 +310,21 @@ def main(config_filename: str):
         print(optimizer._learning_rate)
         print("--------------")
 
-    ### Train
-    if STEPS_PER_EPOCH:
-        model.fit(
-            dataset, 
-            initial_epoch=int(initial_epoch),
-            callbacks=callbacks, 
-            epochs=EPOCHS, 
-            steps_per_epoch=STEPS_PER_EPOCH)
-    else:
-        model.fit(
-            dataset,
-            initial_epoch=int(initial_epoch),
-            callbacks=callbacks, 
-            epochs=EPOCHS)
-    ###
+    try:
+        ### Train
+        if STEPS_PER_EPOCH:
+            model.fit(
+                dataset, 
+                initial_epoch=int(initial_epoch),
+                callbacks=callbacks, 
+                epochs=EPOCHS, 
+                steps_per_epoch=STEPS_PER_EPOCH)
+        else:
+            model.fit(
+                dataset,
+                initial_epoch=int(initial_epoch),
+                callbacks=callbacks, 
+                epochs=EPOCHS)
+        ###
+    finally:
+        process_akces.join()

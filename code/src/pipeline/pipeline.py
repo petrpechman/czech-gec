@@ -206,7 +206,11 @@ def main(config_filename: str):
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     if USE_F16:
-        policy = mixed_precision.Policy('mixed_float16')
+        if MODEL_TYPE == "T5":
+            policy = mixed_precision.Policy('mixed_bfloat16')
+        else:
+            policy = mixed_precision.Policy('mixed_float16')    
+        # policy = mixed_precision.Policy('mixed_float16')
         mixed_precision.set_global_policy(policy)
 
     with strategy.scope():

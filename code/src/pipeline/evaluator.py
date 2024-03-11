@@ -29,6 +29,7 @@ from errant.commands.compare_m2 import simplify_edits, process_edits, merge_dict
 from errant.commands.compare_m2 import compareEdits, computeFScore
 # from errant.commands.compare_m2 import evaluate_edits
 
+import multiprocessing
 from multiprocessing.pool import Pool
 
 
@@ -141,13 +142,13 @@ class Args:
         self.cse = None
         self.verbose = None
 
-def evaluate_edits(hyp_dict, ref_dict, args):
+def evaluate_edits(hyp_dict, ref_dict, args, best):
     best_tp, best_fp, best_fn, best_f = 0, 0, 0, -1
     best_cat = {}
     for hyp_id in hyp_dict.keys():
         for ref_id in ref_dict.keys():
             tp, fp, fn, cat_dict = compareEdits(hyp_dict[hyp_id], ref_dict[ref_id])
-            _, _, f = computeFScore(tp, fp, fn, args.beta)
+            _, _, f = computeFScore(tp+best["tp"], fp+best["fp"], fn+best["fn"], args.beta)
             if     (f > best_f) or \
                 (f == best_f and tp > best_tp) or \
                 (f == best_f and tp == best_tp and fp < best_fp) or \
@@ -158,9 +159,16 @@ def evaluate_edits(hyp_dict, ref_dict, args):
     local_best_dict = {"tp":best_tp, "fp":best_fp, "fn":best_fn}
     return local_best_dict, best_cat
 
+def join_dicts(dict1: dict, dict2: dict) -> dict:
+    for key, value in dict2.items():
+        if key in dict1:
+            dict1[key] = dict1[key] + dict2[key]
+    return dict1
+
 def init_worker_errant(beta_p):
-    global beta
+    global beta, global_errant_best_dict
     beta = beta_p
+    global_errant_best_dict = multiprocessing.Array('i', {"tp": 0, "fp": 0, "fn": 0})
 
 def wrapper_func_errant(sent):
     args = Args(beta)
@@ -168,7 +176,14 @@ def wrapper_func_errant(sent):
     ref_edits = simplify_edits(sent[1])
     hyp_dict = process_edits(hyp_edits, args)
     ref_dict = process_edits(ref_edits, args)
-    count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args)
+    errant_best_dict = {"tp": 0, "fp": 0, "fn": 0}
+    with global_errant_best_dict.get_lock():
+        errant_best_dict["tp"] = global_errant_best_dict["tp"]
+        errant_best_dict["fp"] = global_errant_best_dict["fp"]
+        errant_best_dict["fn"] = global_errant_best_dict["fn"]
+    count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args, errant_best_dict)
+    with global_errant_best_dict.get_lock():
+        global_errant_best_dict = join_dicts(global_errant_best_dict, count_dict)
     return count_dict, cat_dict
 
 def main(config_filename: str):

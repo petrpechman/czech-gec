@@ -2,7 +2,7 @@
     "seed": 42,
 
     "data_paths": ["../../data/tokenized/news-2019-cs-tokenized.txt"],
-    "num_parallel": 44,
+    "num_parallel": 84,
     "max_length": 128,
     "shuffle_buffer": 5000,
     "bucket_boundaries": [32, 64, 96],
@@ -12,7 +12,7 @@
     "model": "../../models/bart-tokenizer-data-jakub/",
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",
     "from_config": true,
-    "steps_per_epoch": 128000,
+    "steps_per_epoch": 64000,
     "epochs": 100000,
     "use_f16": true,
     

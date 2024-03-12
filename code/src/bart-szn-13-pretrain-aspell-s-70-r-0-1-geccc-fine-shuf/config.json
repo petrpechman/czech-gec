@@ -1,7 +1,7 @@
 {
     "seed": 42,
 
-    "data_paths": ["../../data/geccc/data/train/train.tsv"],
+    "data_paths": ["../../data/other/example.tsv"],
     "num_parallel": 4,
     "max_length": 128,
     "shuffle_buffer": 60000,

@@ -196,122 +196,16 @@ def main(config_filename: str):
         dataset = zipped.unbatch()
         ###
 
-    dataset = dataset.shuffle(SHUFFLE_BUFFER)
-    dataset = dataset.bucket_by_sequence_length(
-            element_length_func=lambda x, y: tf.shape(x['input_ids'])[0], # zde asi chyba
-            bucket_boundaries=BUCKET_BOUNDARIES,
-            bucket_batch_sizes=bucket_batch_sizes
-    )
-    dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
-    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    # dataset = dataset.shuffle(SHUFFLE_BUFFER)
+    # dataset = dataset.bucket_by_sequence_length(
+    #         element_length_func=lambda x, y: tf.shape(x['input_ids'])[0], # zde asi chyba
+    #         bucket_boundaries=BUCKET_BOUNDARIES,
+    #         bucket_batch_sizes=bucket_batch_sizes
+    # )
+    # dataset = dataset.map(lambda x, y: dataset_utils.change_value(x, y, 0, LABEL_PAD_VALUE, MODEL_TYPE))
+    # dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-    if USE_F16:
-        policy = mixed_precision.Policy('mixed_float16')
-        mixed_precision.set_global_policy(policy)
-
-    with strategy.scope():
-        ### Optimizer:
-        if OPTIMIZER_NAME == 'Adam':
-            optimizer = tf.keras.optimizers.Adam(**OPTIMIZER_PARAMS)
-        elif OPTIMIZER_NAME == 'AdamW':
-            optimizer = tf.keras.optimizers.experimental.AdamW(**OPTIMIZER_PARAMS)
-        elif OPTIMIZER_NAME == 'Adafactor':
-            optimizer = tf.keras.optimizers.experimental.Adafactor(**OPTIMIZER_PARAMS)
-        elif OPTIMIZER_NAME == 'AdaptiveAdam':
-            class LRSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
-                def __init__(self, warmup_steps, d_model):
-                    self.warmup_steps = tf.cast(warmup_steps, tf.float32)
-                    self.d_model = tf.cast(d_model, tf.float32)
-
-                def __call__(self, step):
-                    step = tf.cast(step, tf.float32)
-                    lr = (1.0/tf.math.sqrt(self.d_model)) * tf.math.minimum(1.0 / tf.math.sqrt(step), (1.0 / tf.math.sqrt(self.warmup_steps)) * ((1.0 * step) / self.warmup_steps))
-                    return lr
-            learning_rate = LRSchedule(OPTIMIZER_PARAMS['warmup_steps'], MAX_LENGTH)
-            del OPTIMIZER_PARAMS['warmup_steps']
-            optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, **OPTIMIZER_PARAMS)
-        elif OPTIMIZER_NAME == 'CosineDecay':
-            cosine_decay_scheduler = tf.keras.optimizers.schedules.CosineDecay(**OPTIMIZER_PARAMS)
-            optimizer = tf.keras.optimizers.experimental.Adafactor(learning_rate=cosine_decay_scheduler)
-        ###
-
-        ### Loss:
-        loss = None   
-        if LOSS == "SCC":
-            loss = MaskedSparseCategoricalCrossEntropy()
-        ###
-
-        ### Model
-        if FROM_CONFIG:
-            # means from scratch
-            config = AutoConfig.from_pretrained(MODEL)
-            model = TFAutoModelForSeq2SeqLM.from_config(config)
-        else:
-            print("Use pretrained model...")
-            model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
-
-        if loss:
-            model.compile(optimizer=optimizer, loss=loss)
-        else:
-            model.compile(optimizer=optimizer)
-
-        if LR:
-            optimizer.learning_rate = tf.Variable(LR)
-            optimizer._learning_rate = tf.Variable(LR)
-        ###
-
-    ### Callbacks
-    model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(MODEL_CHECKPOINT_PATH, 'ckpt-{epoch}/'),
-        save_weights_only=True,
-        save_freq="epoch")
+    for d in dataset:
+        break
+    print(d)
     
-    model_checkpoint_optimizer = MyBackupAndRestore(
-        os.path.join(MODEL_CHECKPOINT_PATH, "optimizer"), optimizer, model,
-        epoch_name="opt-ckpt",
-        max_to_keep=None,
-    )
-
-    mybackup = MyBackupAndRestore(BACKUP_DIR, optimizer, model, max_to_keep=1)
-    status = mybackup.checkpoint.restore(mybackup.manager.latest_checkpoint)
-    status_optimizer = model_checkpoint_optimizer.checkpoint.restore(mybackup.manager.latest_checkpoint)
-    print("STATUS:", status)
-    initial_epoch = mybackup._ckpt_saved_epoch
-    print("INITIAL EPOCH:", int(initial_epoch))
-
-    profiler = tf.keras.callbacks.TensorBoard(
-        log_dir=LOG_FILE, 
-        profile_batch=PROFILE_BATCH)
-
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=LOG_FILE, 
-        histogram_freq=1)
-
-    callbacks = [
-        model_checkpoint,
-        mybackup,
-        model_checkpoint_optimizer,
-        profiler,
-        tensorboard_callback
-    ]
-    ###
-    
-    if USE_F16 and MODEL_TYPE == "Bart-mine":
-        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
-
-    ### Train
-    if STEPS_PER_EPOCH:
-        model.fit(
-            dataset, 
-            initial_epoch=int(initial_epoch),
-            callbacks=callbacks, 
-            epochs=EPOCHS, 
-            steps_per_epoch=STEPS_PER_EPOCH)
-    else:
-        model.fit(
-            dataset,
-            initial_epoch=int(initial_epoch),
-            callbacks=callbacks, 
-            epochs=EPOCHS)
-    ###

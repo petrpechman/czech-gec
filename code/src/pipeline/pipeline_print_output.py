@@ -208,7 +208,8 @@ def main(config_filename: str):
 
     for d in dataset:
         break
-    print(d)
 
-    time.sleep(30)
+    while True:
+        print(d)
+        time.sleep(2)
     

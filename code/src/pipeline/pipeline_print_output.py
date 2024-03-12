@@ -21,6 +21,7 @@ from utils.components.losses import MaskedSparseCategoricalCrossEntropy
 
 from multiprocessing import Process, Manager
 
+import time
 
 def main(config_filename: str):
 
@@ -208,4 +209,6 @@ def main(config_filename: str):
     for d in dataset:
         break
     print(d)
+
+    time.sleep(30)
     

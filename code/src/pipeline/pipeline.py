@@ -70,7 +70,7 @@ def main(config_filename: str):
 
     # logs
     LOG_FILE = config['log_file']
-    PROFILE_BATCH = config['profile_batch']
+    PROFILE_BATCH = config.get('profile_batch', None)
     MODEL_CHECKPOINT_PATH = config['model_checkpoint_path']
     BACKUP_DIR =  config['backup_dir']
     COUNT_OUTPUT = config.get('count_output', None)
@@ -279,9 +279,11 @@ def main(config_filename: str):
     initial_epoch = mybackup._ckpt_saved_epoch
     print("INITIAL EPOCH:", int(initial_epoch))
 
-    profiler = tf.keras.callbacks.TensorBoard(
-        log_dir=LOG_FILE, 
-        profile_batch=PROFILE_BATCH)
+    profiler = None
+    if PROFILE_BATCH:
+        profiler = tf.keras.callbacks.TensorBoard(
+            log_dir=LOG_FILE, 
+            profile_batch=PROFILE_BATCH)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=LOG_FILE, 
@@ -294,6 +296,8 @@ def main(config_filename: str):
         profiler,
         tensorboard_callback
     ]
+
+    callbacks = [callback for callback in callbacks if callback is not None]
     ###
 
     with strategy.scope():

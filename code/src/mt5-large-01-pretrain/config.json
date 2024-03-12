@@ -2,10 +2,10 @@
     "seed": 42,
 
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
-    "num_parallel": 20,
-    "max_length": 96,
+    "num_parallel": 10,
+    "max_length": 80,
     "shuffle_buffer": 5000,
-    "bucket_boundaries": [24, 48, 72],
+    "bucket_boundaries": [20, 40, 60],
     "bucket_batch_sizes_per_gpu": [6, 6, 6, 6],
     "errors_from_file": false,
 

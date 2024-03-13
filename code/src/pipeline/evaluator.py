@@ -166,9 +166,12 @@ def join_dicts(dict1: dict, dict2: dict) -> dict:
     return dict1
 
 def init_worker_errant(beta_p):
-    global beta, global_errant_best_dict
+    global beta, global_errant_tp, global_errant_fp, global_errant_fn
     beta = beta_p
-    global_errant_best_dict = multiprocessing.Array('i', {"tp": 0, "fp": 0, "fn": 0})
+    global_errant_tp = multiprocessing.Value('i', 0)
+    global_errant_fp = multiprocessing.Value('i', 0)
+    global_errant_fn = multiprocessing.Value('i', 0)
+    # global_errant_best_dict = multiprocessing.Array('i', {"tp": 0, "fp": 0, "fn": 0})
 
 def wrapper_func_errant(sent):
     args = Args(beta)
@@ -177,15 +180,19 @@ def wrapper_func_errant(sent):
     hyp_dict = process_edits(hyp_edits, args)
     ref_dict = process_edits(ref_edits, args)
     errant_best_dict = {"tp": 0, "fp": 0, "fn": 0}
-    with global_errant_best_dict.get_lock():
-        errant_best_dict["tp"] = global_errant_best_dict["tp"]
-        errant_best_dict["fp"] = global_errant_best_dict["fp"]
-        errant_best_dict["fn"] = global_errant_best_dict["fn"]
+    # with global_errant_best_dict.get_lock():
+    with global_errant_tp.get_lock(), global_errant_fp.get_lock(), global_errant_fn.get_lock():
+        errant_best_dict["tp"] = global_errant_tp.value
+        errant_best_dict["fp"] = global_errant_fp.value
+        errant_best_dict["fn"] = global_errant_fn.value
         print("Loading: ", errant_best_dict)
     count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args, errant_best_dict)
-    with global_errant_best_dict.get_lock():
-        global_errant_best_dict = join_dicts(global_errant_best_dict, count_dict)
-        print("Saving: ", global_errant_best_dict)
+    with global_errant_tp.get_lock(), global_errant_fp.get_lock(), global_errant_fn.get_lock():
+        global_errant_tp.value = global_errant_tp.value + count_dict['tp']
+        global_errant_fp.value = global_errant_fp.value + count_dict['fp']
+        global_errant_fn.value = global_errant_fn.value + count_dict['fn']
+        # global_errant_best_dict = join_dicts(global_errant_best_dict, count_dict)
+        print(f"Saving: TP:{global_errant_tp.value}, FP:{global_errant_fp.value}, FN:{global_errant_fn.value}")
     return count_dict, cat_dict
 
 def main(config_filename: str):

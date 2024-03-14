@@ -1,0 +1,31 @@
+Struktura:
+- Overleaf - LaTex
+- AJ
+---
+- Abstract - da se dopsat
+- Introduction -> motivace (neco je v zadani)
+- Related work - co je to za problem, co existuje - pravidlove, neuronkove systemy, dva datasety na cestinu (geccc, akces), metriky na vyhodnoceni, rozebrani problematiky
+  - akces vs geccc
+  - proc f pool?
+  - porovnani s jinymi jazyky
+  - neni potreba psat, co je transformer
+- Moje cast:
+   - pretraining vs finetuning
+     - cim delsi pretraining, tim lepsi nasledujici finetuning
+   - proc je 0:1 nejlepsi - rozebrat pomery -> tabulky, grafy
+   - porovnani, korpusy cistych textu -> rozdily
+      - syn - done
+      - news - dodelat
+      - cesky common crawl
+         - evaluace na geccc(i split) a akces
+   - prozkoumat, jak se to chova na specifickych chybach
+      - jak ktere domene pomaha pridani specifickych chyb
+        - dat si pozor na zastoupeni chyb (zvedla fscore -> ale bylo jich x)
+        - fscore * pocet_chyb(fp+tp - gold) = vazene_skore
+        - vzit podle vazeneho skore (najit treba 5 nejlepsich)
+      - projit to
+      - pripadne model, ktery umi chyby prumerne a na specifickou chybu např. me/mne je dobry
+   - udelat experiment, kdy budeme finetunovat na kazde domene zvlast a ukazeme, jak se to na te kokrentni domene zlepsi (a na ostatnich "zhorsi")
+   - reverse pipelina - zminka
+   - jeslti se vyplaci celkove delat takoveto male modely? jestli se neda udelat pomoci chat-gpt (gpt-4) - evaluace na m2
+- Conclusion

@@ -4,9 +4,9 @@
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
     "num_parallel": 10,
     "max_length": 80,
-    "shuffle_buffer": 5000,
+    "shuffle_buffer": 10,
     "bucket_boundaries": [20, 40, 60],
-    "bucket_batch_sizes_per_gpu": [6, 6, 6, 6],
+    "bucket_batch_sizes_per_gpu": [1, 1, 1, 1],
     "errors_from_file": false,
 
     "model": "google/mt5-large",
@@ -35,13 +35,11 @@
 
     
     "log_file": "./tmp/logs",
-    "profile_batch": [2000, 2500],
     "model_checkpoint_path": "./tmp/checkpoint/",
     "backup_dir": "./tmp/backup",
     
     "count_output": "./counts.txt",
     "errors_config": "./errors_config.json",
-
 
     "m2_data_dev": "../../data/akces-gec/dev/dev.all.m2",
     "m2_data_test": "../../data/akces-gec/test/test.all.m2",
@@ -55,5 +53,7 @@
 
     "max_eval_length": 512,
     
-    "best_ckpt_filename": "./f_score_dev.json"
+    "best_ckpt_filename": "./f_score_dev.json",
+
+    "num_eval_processes": 8
 }

@@ -185,14 +185,14 @@ def wrapper_func_errant(sent):
         errant_best_dict["tp"] = global_errant_tp.value
         errant_best_dict["fp"] = global_errant_fp.value
         errant_best_dict["fn"] = global_errant_fn.value
-        print("Loading: ", errant_best_dict)
+        # print("Loading: ", errant_best_dict)
     count_dict, cat_dict = evaluate_edits(hyp_dict, ref_dict, args, errant_best_dict)
     with global_errant_tp.get_lock(), global_errant_fp.get_lock(), global_errant_fn.get_lock():
         global_errant_tp.value = global_errant_tp.value + count_dict['tp']
         global_errant_fp.value = global_errant_fp.value + count_dict['fp']
         global_errant_fn.value = global_errant_fn.value + count_dict['fn']
         # global_errant_best_dict = join_dicts(global_errant_best_dict, count_dict)
-        print(f"Saving: TP:{global_errant_tp.value}, FP:{global_errant_fp.value}, FN:{global_errant_fn.value}")
+        # print(f"Saving: TP:{global_errant_tp.value}, FP:{global_errant_fp.value}, FN:{global_errant_fn.value}")
     return count_dict, cat_dict
 
 def main(config_filename: str):

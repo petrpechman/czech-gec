@@ -4,15 +4,15 @@
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
     "num_parallel": 40,
     "max_length": 128,
-    "shuffle_buffer": 5000,
+    "shuffle_buffer": 50,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [8, 8, 8, 8],
+    "bucket_batch_sizes_per_gpu": [24, 24, 24, 24],
     "errors_from_file": false,
 
     "model": "google/mt5-base",
     "tokenizer": "google/mt5-base",
     "from_config": false,
-    "steps_per_epoch": 128000,
+    "steps_per_epoch": 128,
     "epochs": 100000,
     "use_f16": true,
 

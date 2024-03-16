@@ -12,7 +12,7 @@
     "model": "google/mt5-base",
     "tokenizer": "google/mt5-base",
     "from_config": false,
-    "steps_per_epoch": 128,
+    "steps_per_epoch": 128000,
     "epochs": 100000,
     "use_f16": true,
 

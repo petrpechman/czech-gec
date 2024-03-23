@@ -1,8 +1,8 @@
 {
     "seed": 42,
 
-    "data_paths": ["../../data/natives/shuf_train.tsv"],
-    "num_parallel": 4,
+    "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
+    "num_parallel": 20,
     "max_length": 128,
     "shuffle_buffer": 60000,
     "bucket_boundaries": [32, 64, 96],

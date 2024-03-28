@@ -1,7 +1,7 @@
 {
     "seed": 42,
 
-    "data_paths": ["../../data/natives/natives_web_informal.tsv"],
+    "data_paths": ["../../data/natives/natives_formal.tsv"],
     "num_parallel": 4,
     "max_length": 128,
     "shuffle_buffer": 60000,
@@ -12,8 +12,8 @@
     "model": "../../models/bart-tokenizer-data-jakub/",
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",
     "from_config": true,
-    "steps_per_epoch": 8192,
-    "epochs": 141,
+    "steps_per_epoch": 32,
+    "epochs": 156,
     "use_f16": true,
     
     "optimizer":{
@@ -61,6 +61,20 @@
         ["../../data/geccc-split-retag/test/romani-test-retag.m2", ["errant"]],
         ["../../data/geccc-split-retag/test/natives-web-informal-test-retag.m2", ["errant"]],
         ["../../data/geccc-split-retag/test/second-learners-test-retag.m2", ["errant"]]
+    ],
+
+    "dev_geccc_datasets": [
+        ["../../data/geccc-split/data/dev-splits/natives-formal-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/romani-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/second-learners-dev.m2", ["m2_scorer"]]
+    ],
+
+    "retag_dev_geccc_datasets": [
+        ["../../data/geccc-split-retag/dev/natives-formal-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/romani-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/natives-web-informal-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/second-learners-dev-retag.m2", ["errant"]]
     ],
 
     "other_datasets": [

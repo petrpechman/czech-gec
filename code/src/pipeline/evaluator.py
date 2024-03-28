@@ -609,8 +609,8 @@ def main(config_filename: str):
                                     total_best_cats, step, BETA, eval_types[i])
                     
                     evaluate_every_two = False
-                    if FIRST_CHECKPOINT and (int(unevaluated_checkpoint[5:]) - 12) < FIRST_CHECKPOINT:
-                        if int(unevaluated_checkpoint[5:]) % 2 == 0:
+                    if FIRST_CHECKPOINT and (int(unevaluated_checkpoint[5:]) - 16) < FIRST_CHECKPOINT:
+                        if int(unevaluated_checkpoint[5:]) % 1 == 0:
                             evaluate_every_two = True
 
                     if evaluate_every_two or (int(unevaluated_checkpoint[5:]) % EVAL_GECCC_EVERY == 0):

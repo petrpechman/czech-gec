@@ -39,8 +39,8 @@ def main():
     print("Sizes:")
     print(f"NF: {nf_size}")
     print(f"NWI: {nwi_size}")
-    print(f"SL: {sl_size}")
     print(f"ROMANI: {romani_size}")
+    print(f"SL: {sl_size}")
 
     total = nf_size + nwi_size + romani_size + sl_size
 
@@ -88,3 +88,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# Example: python create_oversampled_datasets.py --nf ../../../data/natives/natives_formal.tsv --nwi ../../../data/natives/natives_web_informal.tsv --romani ../../../data/natives/romani.tsv --sl ../../../data/natives/second_learners.tsv -p 0.5 -t 20000

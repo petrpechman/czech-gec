@@ -610,8 +610,9 @@ def main(config_filename: str):
                     
                     evaluate_every_two = False
                     if FIRST_CHECKPOINT and (int(unevaluated_checkpoint[5:]) - 16) < FIRST_CHECKPOINT:
-                        if int(unevaluated_checkpoint[5:]) % 1 == 0:
-                            evaluate_every_two = True
+                        evaluate_every_two = True
+                        # if int(unevaluated_checkpoint[5:]) % 1 == 0:
+                        #     evaluate_every_two = True
 
                     if evaluate_every_two or (int(unevaluated_checkpoint[5:]) % EVAL_GECCC_EVERY == 0):
                         eval_splitted_dataset(dev_geccc_datasets, dev_geccc_refs, dev_geccc_eval_types, unevaluated_checkpoint, "dev_total_geccc")

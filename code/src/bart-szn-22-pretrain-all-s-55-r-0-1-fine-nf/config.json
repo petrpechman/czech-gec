@@ -92,7 +92,7 @@
 
     "max_eval_length": 512,
 
-    "first_checkpoint": 40,
+    "first_checkpoint": 55,
     
     "best_ckpt_filename": "./f_score_dev.json",
     

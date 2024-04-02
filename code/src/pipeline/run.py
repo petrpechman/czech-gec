@@ -10,7 +10,7 @@ import evaluator_pred
 import evaluator_files
 
 def main(config_filename: str, eval: bool, generate: bool = False, create: bool = False, print_flag: bool = False,
-         part2: bool = False, part1: bool = False):
+         part1: bool = False, part2: bool = False):
     if (eval and generate) or (eval and create) or (create and generate):
         print("It is not possible to use eval, generate or create together...")
 

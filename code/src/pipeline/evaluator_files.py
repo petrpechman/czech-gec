@@ -594,6 +594,18 @@ def main(config_filename: str):
                             file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
                             m2scorer_f_score, _, _, _, _, _, _, _  = generate_and_score(
                                 unevaluated_checkpoint, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i])
+                            
+                    if BEST_CKPT_FILENAME and fscore_dev > BEST_CKPT_FSCORE:
+                        BEST_CKPT_NAME = unevaluated_checkpoint
+                        BEST_CKPT_FSCORE = fscore_dev
+                        
+                        json_object = json.dumps({
+                             "name": BEST_CKPT_NAME,
+                             "fscore": BEST_CKPT_FSCORE
+                        })
+
+                        with open(BEST_CKPT_FILENAME, "w") as outfile:
+                            outfile.write(json_object)
 
                 except Exception as e:
                     print(e)

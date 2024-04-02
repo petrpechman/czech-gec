@@ -415,6 +415,7 @@ def main(config_filename: str):
         if os.path.isfile(predictions_filepath) == False:
             return m2scorer_f_score, m2scorer_tp, m2scorer_fp, m2scorer_fn, errant_tp, errant_fp, errant_fn, best_cats
         
+        print("Eval: ", predictions_filepath)
         print("Load data...")
         with open(predictions_filepath, 'r') as file:
             tokenized_predicted_sentences = file.readlines()

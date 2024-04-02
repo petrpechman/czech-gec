@@ -1,7 +1,7 @@
 {
     "seed": 42,
 
-    "data_paths": ["../../data/oversampled/geccc_os_0.5_120000_.tsv"],
+    "data_paths": ["../../data/oversampled/geccc_os_1.00_120000_.tsv"],
     "num_parallel": 4,
     "max_length": 128,
     "shuffle_buffer": 60000,

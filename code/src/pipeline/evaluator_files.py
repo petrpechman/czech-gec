@@ -3,25 +3,17 @@ sys.path.append('..')
 
 import os
 import time
-import shutil
 import errant
 import numpy as np
 import tensorflow as tf
 
 from typing import Tuple
 
-from transformers import TFAutoModelForSeq2SeqLM
-from transformers import AutoTokenizer
-from transformers import AutoConfig
 import json
 
 from m2scorer.levenshtein import batch_multi_pre_rec_f1_part
 from m2scorer.m2scorer import load_annotation
 
-from tensorflow.keras import mixed_precision
-
-from utils import dataset_utils
-from utils.udpipe_tokenizer.udpipe_tokenizer import UDPipeTokenizer
 from utils.retag import retag_edits
 
 from collections import Counter
@@ -262,31 +254,7 @@ def main(config_filename: str):
     FIRST_CHECKPOINT = config.get('first_checkpoint', None)
 
     tf.random.set_seed(SEED)
-    
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
-    
-    ### Dataset loadings:
-    def get_tokenized_sentences(line):
-        # only tokenize line
-        line = line.decode('utf-8')
-        tokenized = tokenizer(line, max_length=MAX_EVAL_LENGTH, truncation=True, return_tensors="tf")
-        return tokenized['input_ids'], tokenized['attention_mask']
-
-    def tokenize_line(line):
-        # wrapper for tokenize_line
-        input_ids, attention_mask = tf.numpy_function(get_tokenized_sentences, inp=[line], Tout=[tf.int32, tf.int32])
-        dato = {'input_ids': input_ids[0],
-                'attention_mask': attention_mask[0]}
-        return dato
-    
-    def get_dataset_pipeline(source_sentences) -> tf.data.Dataset:
-        dataset = tf.data.Dataset.from_tensor_slices((source_sentences))
-        dataset = dataset.map(tokenize_line, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        dataset = dataset.map(dataset_utils.split_features_and_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        dataset = dataset.padded_batch(BATCH_SIZE, padded_shapes={'input_ids': [None], 'attention_mask': [None]})
-        dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        return dataset
-    
+  
     dev_source_sentences, dev_gold_edits = load_annotation(M2_DATA_DEV)
     test_source_sentences, test_gold_edits = load_annotation(M2_DATA_TEST)
 
@@ -313,8 +281,6 @@ def main(config_filename: str):
         eval_types.append(eval_type)
         datasets.append((source_sentences, gold_edits, dataset))
 
-    dev_dataset = get_dataset_pipeline(dev_source_sentences)
-    test_dataset = get_dataset_pipeline(test_source_sentences)
     ###
     # GECCC_DATASETS:
     def prepare_datasets(list_datasets):
@@ -341,29 +307,6 @@ def main(config_filename: str):
     retag_dev_geccc_datasets, retag_dev_geccc_refs, retag_dev_geccc_eval_types = prepare_datasets(RETAG_DEV_GECCC_DATASETS)
     retag_test_geccc_datasets, retag_test_geccc_refs, retag_test_geccc_eval_types = prepare_datasets(RETAG_TEST_GECCC_DATASETS)
     ###
-    
-    ### Prepare right model:
-    if USE_F16:
-        policy = mixed_precision.Policy('mixed_float16')
-        mixed_precision.set_global_policy(policy)
-    
-    strategy = tf.distribute.MirroredStrategy()
-    print('Number of devices: %d' % strategy.num_replicas_in_sync)
-
-    with strategy.scope():
-        if FROM_CONFIG:
-            config = AutoConfig.from_pretrained(MODEL)
-            model = TFAutoModelForSeq2SeqLM.from_config(config)
-        else:
-            model = TFAutoModelForSeq2SeqLM.from_pretrained(MODEL)
-
-    if USE_F16:
-        model.model.encoder.embed_scale = tf.cast(model.model.encoder.embed_scale, tf.float16)
-        model.model.decoder.embed_scale = tf.cast(model.model.decoder.embed_scale, tf.float16)
-    ###
-
-    # prepare udpipe tokenizer
-    udpipe_tokenizer = UDPipeTokenizer("cs")
 
     def compute_metrics_m2scorer(tokenized_predicted_sentences, source_sentences, gold_edits):
         '''

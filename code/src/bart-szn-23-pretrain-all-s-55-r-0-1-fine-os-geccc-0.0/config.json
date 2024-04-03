@@ -82,7 +82,7 @@
         ["../../data/akces-gec-retag/test/test-retag.all.m2", ["errant"]]
     ],
 
-    "batch_size": 32,
+    "batch_size": 16,
     
     "max_unchanged_words": 2,
     "beta": 0.5,

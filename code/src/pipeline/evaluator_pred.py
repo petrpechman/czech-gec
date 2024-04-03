@@ -252,6 +252,7 @@ def main(config_filename: str):
             numbers = np.array([int(u[5:]) for u in unevaluated])
             numbers = sorted(numbers)
             unevaluated = ["ckpt-" + str(number) for number in numbers]
+            print(unevaluated)
 
             if len(unevaluated) == 0:
                 time.sleep(10)

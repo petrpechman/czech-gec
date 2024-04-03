@@ -2,6 +2,7 @@ import sys
 sys.path.append('..')
 
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import time
 import shutil
 import errant

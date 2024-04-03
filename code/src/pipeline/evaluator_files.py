@@ -533,9 +533,6 @@ def main(config_filename: str):
             if len(unevaluated) == 0:
                 time.sleep(10)
                 continue
-
-            if BEST_CKPT_NAME in unevaluated:
-                unevaluated.remove(BEST_CKPT_NAME)
             
             for unevaluated_checkpoint in unevaluated:
                 try:

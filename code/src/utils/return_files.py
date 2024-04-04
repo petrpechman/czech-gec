@@ -9,4 +9,4 @@ for filename in filenames:
     number = filename.split('-')[-1]
     last_index = filename.rfind('-')
     new_name = number + '-' + filename[:last_index]
-    print(new_name)
+    os.rename(filename, new_name)

@@ -126,7 +126,7 @@ def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
         for char in sentence:
             if char in specific_chars:
                 specific_chars[char] += 1
-        limit = 20
+        limit = 12
         if any([v > limit for v in specific_chars.values()]):
             print("skip line: ", sentence)
             return 0, 0 ,0
@@ -356,7 +356,7 @@ def main(config_filename: str):
 
         return total_stat_correct, total_stat_proposed, total_stat_gold
     
-    def generate_and_score(unevaluated_checkpoint, source_sentences, gold_edits, output_dir, predictions_file, ref_m2, eval_type) -> float:
+    def generate_and_score(unevaluated_checkpoint, source_sentences, gold_edits, output_dir, predictions_file, ref_m2, eval_type, rename_file=True) -> float:
         m2scorer_f_score = 0
         m2scorer_tp, m2scorer_fp, m2scorer_fn = 0, 0, 0
         errant_tp, errant_fp, errant_fn = 0, 0, 0
@@ -469,7 +469,8 @@ def main(config_filename: str):
         with file_writer.as_default():
             text = "  \n".join(tokenized_predicted_sentences[0:40])
             tf.summary.text("predictions", text, step)
-        os.rename(predictions_filepath, predictions_filepath_new)
+        if rename_file:
+            os.rename(predictions_filepath, predictions_filepath_new)
         print("End of writing predictions...")
 
         return m2scorer_f_score, m2scorer_tp, m2scorer_fp, m2scorer_fn, errant_tp, errant_fp, errant_fn, best_cats
@@ -518,7 +519,7 @@ def main(config_filename: str):
                             output_dir = os.path.splitext(os.path.basename(dataset_path))[0]
                             file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
                             m2scorer_f_score, m2scorer_tp, m2scorer_fp, m2scorer_fn, errant_tp, errant_fp, errant_fn, best_cats = generate_and_score(
-                                unevaluated_checkpoint, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i])
+                                unevaluated_checkpoint, source_sentences, gold_edits, output_dir, file_predictions, refs[i], eval_types[i], False)
 
                             total_m2scorer_tp += m2scorer_tp
                             total_m2scorer_fp += m2scorer_fp
@@ -538,6 +539,15 @@ def main(config_filename: str):
                                     total_m2scorer_tp, total_m2scorer_fp, total_m2scorer_fn, 
                                     total_errant_tp, total_errant_fp, total_errant_fn, 
                                     total_best_cats, step, BETA, eval_types[i])
+                        
+                        for i, dataset_zip in enumerate(datasets):
+                            _, _, dataset_path = dataset_zip
+                            step = int(unevaluated_checkpoint[5:])
+                            file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
+                            predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, str(step) + "-" + file_predictions)
+                            predictions_filepath_new = os.path.join(MODEL_CHECKPOINT_PATH, file_predictions + "-" + str(step))
+                            os.rename(predictions_filepath, predictions_filepath_new)
+                        
                     
                     evaluate_every_two = False
                     if FIRST_CHECKPOINT and (int(unevaluated_checkpoint[5:]) - 16) < FIRST_CHECKPOINT:

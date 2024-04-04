@@ -8,5 +8,5 @@ filenames = [filename for filename in filenames if filename.split('-')[-1].isdig
 for filename in filenames:
     number = filename.split('-')[-1]
     last_index = filename.rfind('-')
-    new_name = number + '-' + filename[:last_index+1]
+    new_name = number + '-' + filename[:last_index]
     print(new_name)

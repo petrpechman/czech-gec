@@ -507,6 +507,7 @@ def main(config_filename: str):
 
                         for i, dataset_zip in enumerate(datasets):
                             _, _, dataset_path = dataset_zip
+                            step = int(unevaluated_checkpoint[5:])
                             file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
                             predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, str(step) + "-" + file_predictions)
                             if os.path.isfile(predictions_filepath) == False:

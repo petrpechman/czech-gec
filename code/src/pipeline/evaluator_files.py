@@ -109,12 +109,27 @@ def retag(m2_sentence: str) -> str:
     m2_sentence = "\n".join(m2_edits)
     return m2_sentence
 
-def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p):
-    global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose
+def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p, skip_lines):
+    global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, g_skip_lines, g_skip_used
     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
+    g_skip_lines = skip_lines
+    g_skip_used = multiprocessing.Value('i', False)
 
 def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
     sentence, source_sentence, gold_edit = tuple_items
+    if g_skip_lines:
+        if not g_skip_used.value:
+            with g_skip_used.get_lock():
+                g_skip_used.value = True
+        specific_chars = {'.': 0, '!': 0, '?': 0, '$': 0, '*': 0}
+        for char in sentence:
+            if char in specific_chars:
+                specific_chars[char] += 1
+        limit = 20
+        if any([v > limit for v in specific_chars.values()]):
+            print("skip line: ", sentence)
+            return 0, 0 ,0
+
     sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
     stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
         sentence, 
@@ -190,13 +205,10 @@ def wrapper_func_errant(sent):
 def main(config_filename: str):
     with open(config_filename) as json_file:
         config = json.load(json_file)
-    ### Params:
-    num_beams = 4
-    min_length = 0
-    length_penalty = 1.0
-    ###
     
     SEED = config['seed']
+    
+    SKIP_LINES = True
 
     # data loading
     EVAL_TYPE_DEV, EVAL_TYPE_TEST = ['m2_scorer'], ['m2_scorer']
@@ -328,7 +340,7 @@ def main(config_filename: str):
             sort_gold_edits[i] = gold_edits[sortedindex[i]]
         #
 
-        with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker, initargs=(MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE,)) as pool:
+        with Pool(processes=NUM_EVAL_PROCESSES * 2, initializer=init_worker, initargs=(MAX_UNCHANGED_WORDS, BETA, IGNORE_WHITESPACE_CASING, VERBOSE, VERY_VERBOSE, SKIP_LINES,)) as pool:
             result_iterator = pool.imap(
                 wrapper_func_m2scorer, 
                 zip(sort_tokenized_predicted_sentences, sort_source_sentences, sort_gold_edits)
@@ -381,9 +393,9 @@ def main(config_filename: str):
 
             print("Write into files...")
             with file_writer.as_default():
-                tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step)
-                tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step)
-                tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step)
+                tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step, description=str(g_skip_used.value))
+                tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step, description=str(g_skip_used.value))
+                tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step, description=str(g_skip_used.value))
             print("End of writing into files...")
         if 'errant' in eval_type:
             hyp_m2 = []
@@ -491,6 +503,14 @@ def main(config_filename: str):
                         total_m2scorer_tp, total_m2scorer_fp, total_m2scorer_fn = 0, 0, 0
                         total_errant_tp, total_errant_fp, total_errant_fn = 0, 0, 0
                         total_best_cats = {}
+
+                        for i, dataset_zip in enumerate(datasets):
+                            _, _, dataset_path = dataset_zip
+                            file_predictions = os.path.splitext(os.path.basename(dataset_path))[0] + "_prediction.txt"
+                            predictions_filepath = os.path.join(MODEL_CHECKPOINT_PATH, str(step) + "-" + file_predictions)
+                            if os.path.isfile(predictions_filepath) == False:
+                                return
+
                         for i, dataset_zip in enumerate(datasets):
                             source_sentences, gold_edits, dataset_path = dataset_zip
                             output_dir = os.path.splitext(os.path.basename(dataset_path))[0]

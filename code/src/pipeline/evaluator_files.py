@@ -109,19 +109,14 @@ def retag(m2_sentence: str) -> str:
     m2_sentence = "\n".join(m2_edits)
     return m2_sentence
 
-g_skip_used = multiprocessing.Value('i', False)
 def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p, skip_lines):
-    global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, g_skip_lines, g_skip_used
+    global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, g_skip_lines
     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p
     g_skip_lines = skip_lines
-    g_skip_used = multiprocessing.Value('i', False)
 
 def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
     sentence, source_sentence, gold_edit = tuple_items
     if g_skip_lines:
-        if not g_skip_used.value:
-            with g_skip_used.get_lock():
-                g_skip_used.value = True
         specific_chars = {'.': 0, '!': 0, '?': 0, '$': 0, '*': 0}
         for char in sentence:
             if char in specific_chars:
@@ -129,7 +124,7 @@ def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
         limit = 12
         if any([v > limit for v in specific_chars.values()]):
             print("skip line: ", sentence)
-            return 0, 0 ,0
+            return 0, 0, 0, True
 
     sentence, source_sentence, gold_edit = [sentence], [source_sentence], [gold_edit]
     stat_correct, stat_proposed, stat_gold = batch_multi_pre_rec_f1_part(
@@ -137,7 +132,7 @@ def wrapper_func_m2scorer(tuple_items) -> Tuple[int, int, int]:
         source_sentence, 
         gold_edit,
         max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose)
-    return stat_correct, stat_proposed, stat_gold
+    return stat_correct, stat_proposed, stat_gold, False
 
 class Args:
     def __init__(self, beta) -> None:
@@ -327,7 +322,7 @@ def main(config_filename: str):
         TP+FN (stat_gold), TP+FP (stat_proposed) for every batch.
         Finally it computes precision, recall and f score. 
         '''
-        total_stat_correct, total_stat_proposed, total_stat_gold = 0, 0, 0
+        total_stat_correct, total_stat_proposed, total_stat_gold, total_skipped = 0, 0, 0, False
 
         # SORT:
         lenlist = [len(s) for s in tokenized_predicted_sentences]
@@ -349,12 +344,14 @@ def main(config_filename: str):
             pool.close()
             pool.join()
 
-        for stat_correct, stat_proposed, stat_gold in result_iterator:
+        for stat_correct, stat_proposed, stat_gold, skipped in result_iterator:
             total_stat_correct += stat_correct
             total_stat_proposed += stat_proposed
             total_stat_gold += stat_gold
+            if skipped == True:
+                total_skipped = True
 
-        return total_stat_correct, total_stat_proposed, total_stat_gold
+        return total_stat_correct, total_stat_proposed, total_stat_gold, total_skipped
     
     def generate_and_score(unevaluated_checkpoint, source_sentences, gold_edits, output_dir, predictions_file, ref_m2, eval_type, rename_file=True) -> float:
         m2scorer_f_score = 0
@@ -382,7 +379,7 @@ def main(config_filename: str):
         file_writer = tf.summary.create_file_writer(result_dir)
         if 'm2_scorer' in eval_type:
             print("Compute metrics m2 scorer...")
-            total_stat_correct, total_stat_proposed, total_stat_gold = compute_metrics_m2scorer(tokenized_predicted_sentences, source_sentences, gold_edits)
+            total_stat_correct, total_stat_proposed, total_stat_gold, total_skipped = compute_metrics_m2scorer(tokenized_predicted_sentences, source_sentences, gold_edits)
             m2scorer_tp = total_stat_correct
             m2scorer_fp = total_stat_proposed - m2scorer_tp
             m2scorer_fn = total_stat_gold - m2scorer_tp
@@ -394,7 +391,7 @@ def main(config_filename: str):
 
             print("Write into files...")
             with file_writer.as_default():
-                if g_skip_used.value == False:
+                if total_skipped == False:
                     description="No skips"
                 else:
                     description="Skip"

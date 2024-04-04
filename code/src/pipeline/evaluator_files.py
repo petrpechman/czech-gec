@@ -109,6 +109,7 @@ def retag(m2_sentence: str) -> str:
     m2_sentence = "\n".join(m2_edits)
     return m2_sentence
 
+g_skip_used = multiprocessing.Value('i', False)
 def init_worker(max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p, skip_lines):
     global max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose, g_skip_lines, g_skip_used
     max_unchanged_words, beta, ignore_whitespace_casing, verbose, very_verbose = max_unchanged_words_p, beta_p, ignore_whitespace_casing_p, verbose_p, very_verbose_p

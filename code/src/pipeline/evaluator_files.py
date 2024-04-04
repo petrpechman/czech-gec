@@ -394,9 +394,13 @@ def main(config_filename: str):
 
             print("Write into files...")
             with file_writer.as_default():
-                tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step, description=str(g_skip_used.value))
-                tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step, description=str(g_skip_used.value))
-                tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step, description=str(g_skip_used.value))
+                if g_skip_used.value == False:
+                    description="No skips"
+                else:
+                    description="Skip"
+                tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step, description=description)
+                tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step, description=description)
+                tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step, description=description)
             print("End of writing into files...")
         if 'errant' in eval_type:
             hyp_m2 = []

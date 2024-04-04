@@ -62,6 +62,35 @@ config_big = BartConfig(
                 forced_eos_token_id=2,
             )
 
+config_small = BartConfig(
+                vocab_size=32_000,
+                max_position_embeddings=256,
+                encoder_layers=2,
+                encoder_ffn_dim=1024,
+                encoder_attention_heads=4,
+                decoder_layers=2,
+                decoder_ffn_dim=1024,
+                decoder_attention_heads=4,
+                encoder_layerdrop=0.0,
+                decoder_layerdrop=0.0,
+                activation_function="relu",
+                d_model=256,
+                dropout=0.1,
+                attention_dropout=0.0,
+                activation_dropout=0.0,
+                init_std=0.02,
+                classifier_dropout=0.0,
+                scale_embedding=True,
+                use_cache=True,
+                num_labels=3,
+                pad_token_id=0,
+                bos_token_id=1,
+                eos_token_id=2,
+                is_encoder_decoder=True,
+                decoder_start_token_id=1,
+                forced_eos_token_id=2,
+            )
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="../../../models/transformer/")

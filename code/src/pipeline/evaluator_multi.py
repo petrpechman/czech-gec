@@ -560,7 +560,8 @@ def main(dirs: List[str]):
                 unevaluated = unevaluated[:-1] # Remove last
             elif last_evaluated != "ckpt-0":
                 print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated)}")
-                shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated))
+                # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated))
+                os.rename(os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated), os.path.join(MODEL_CHECKPOINT_PATH, 'saved-' + last_evaluated))
                 if int(last_evaluated[5:]) % 5 != 0:
                     # Delete model with optimizer:
                     opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")
@@ -643,7 +644,8 @@ def main(dirs: List[str]):
                             last_evaluated = last
                         else:
                             print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                            shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                            # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                            os.rename(os.path.join(MODEL_CHECKPOINT_PATH, last_evaluated), os.path.join(MODEL_CHECKPOINT_PATH, 'saved-' + last_evaluated))
                             # Delete model with optimizer:
                             if int(unevaluated_checkpoint[5:]) % 5 != 0:
                                 opt_dir = os.path.join(MODEL_CHECKPOINT_PATH, "optimizer")

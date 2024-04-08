@@ -393,8 +393,10 @@ def main(config_filename: str):
             with file_writer.as_default():
                 if total_skipped == False:
                     description="No skips"
+                    tf.summary.text('skip', "No skips", step)
                 else:
                     description="Skip"
+                    tf.summary.text("skip", "Skips", step)
                 tf.summary.scalar('epoch_m2scorer_precision', m2scorer_p, step, description=description)
                 tf.summary.scalar('epoch_m2scorer_recall', m2scorer_r, step, description=description)
                 tf.summary.scalar('epoch_m2scorer_f_score', m2scorer_f_score, step, description=description)

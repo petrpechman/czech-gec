@@ -11,7 +11,7 @@ import evaluator_files
 import evaluator_multi
 
 def main(config_filename: str, eval: bool, generate: bool = False, create: bool = False, print_flag: bool = False,
-         part1: bool = False, part2: bool = False, multi: bool = False):
+         part1: bool = False, part2: bool = False, multi_eval: bool = False):
     if (eval and generate) or (eval and create) or (create and generate):
         print("It is not possible to use eval, generate or create together...")
 
@@ -22,7 +22,7 @@ def main(config_filename: str, eval: bool, generate: bool = False, create: bool 
         print("USE CREATE...")
         create_dataset.main(config_filename)
     elif eval:
-        if multi:
+        if multi_eval:
             dirs = config_filename.split(',')
             evaluator_multi.main(dirs)
         elif part1:
@@ -43,11 +43,11 @@ if __name__ == '__main__':
     parser.add_argument("--eval", action=argparse.BooleanOptionalAction, help="Run evaluation.")
     parser.add_argument("--part1", action=argparse.BooleanOptionalAction, help="")
     parser.add_argument("--part2", action=argparse.BooleanOptionalAction, help="")
-    parser.add_argument("--multi", action=argparse.BooleanOptionalAction, help="")
+    parser.add_argument("--multi_eval", action=argparse.BooleanOptionalAction, help="")
     parser.add_argument("--generate", action=argparse.BooleanOptionalAction, help="Generate by reverted pipeline.")
     parser.add_argument("--create", action=argparse.BooleanOptionalAction, help="Create dataset.")
     parser.add_argument("--print", action=argparse.BooleanOptionalAction, help="Print dataset.")
     args = parser.parse_args()
 
     print(args.eval)
-    main(args.config, args.eval, args.generate, args.create, args.print, args.part1, args.part2, args.multi)
+    main(args.config, args.eval, args.generate, args.create, args.print, args.part1, args.part2, args.multi_eval)

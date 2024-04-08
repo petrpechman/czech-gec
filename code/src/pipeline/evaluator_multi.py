@@ -197,7 +197,7 @@ def wrapper_func_errant(sent):
 
 def main(dirs: List[str]):
     dir_index = -1
-    main_dir = os.getcwd()
+    main_dir = os.path.split(os.getcwd())[0]
     print('Main dir: ', main_dir)
     while True:
         dir_index += 1

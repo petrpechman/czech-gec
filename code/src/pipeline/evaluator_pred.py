@@ -293,7 +293,8 @@ def main(config_filename: str):
 
 
                     print(f"Delete: {os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint)}")
-                    shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    # shutil.rmtree(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint))
+                    os.rename(os.path.join(MODEL_CHECKPOINT_PATH, unevaluated_checkpoint), os.path.join(MODEL_CHECKPOINT_PATH, 'saved-' + unevaluated_checkpoint))
 
                 except Exception as e:
                     print(e)

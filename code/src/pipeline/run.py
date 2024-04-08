@@ -24,8 +24,8 @@ def main(config_filename: str, eval: bool, generate: bool = False, create: bool 
     elif eval:
         if multi:
             dirs = config_filename.split(',')
-            evaluator_multi.main()
-        if part1:
+            evaluator_multi.main(dirs)
+        elif part1:
             evaluator_pred.main(config_filename)
         elif part2:
             evaluator_files.main(config_filename)

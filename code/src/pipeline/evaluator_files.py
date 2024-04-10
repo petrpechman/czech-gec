@@ -204,7 +204,7 @@ def main(config_filename: str):
     
     SEED = config['seed']
     
-    SKIP_LINES = True
+    SKIP_LINES = config.get('skip_lines', True)
 
     # data loading
     EVAL_TYPE_DEV, EVAL_TYPE_TEST = ['m2_scorer'], ['m2_scorer']

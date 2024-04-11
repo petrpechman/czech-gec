@@ -90,7 +90,7 @@
     "verbose": false,
     "very_verbose": false,
 
-    "max_eval_length": 128,
+    "max_eval_length": 256,
 
     "first_checkpoint": 55,
     

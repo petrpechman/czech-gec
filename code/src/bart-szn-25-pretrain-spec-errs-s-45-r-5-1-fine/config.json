@@ -12,7 +12,7 @@
     "model": "../../models/bart-tokenizer-data-jakub/",
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",
     "from_config": true,
-    "steps_per_epoch": 520,
+    "steps_per_epoch": 330,
     "epochs": 146,
     "use_f16": true,
     
@@ -42,7 +42,7 @@
     "model_checkpoint_path": "./tmp/checkpoint/",
     "backup_dir": "./tmp/backup",
     
-    "count_output": null,
+    "count_output": "./counts.txt",
     "errors_config": "./errors_config.json",
 
     "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],
@@ -81,8 +81,8 @@
 
     "best_ckpt_filename": "./f_score_dev.json",
 
-    "mixture_dataset_paths": ["../../data/geccc/data/train/train.tsv"],
-    "ratio_mix": [2, 1],
+    "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"],
+    "ratio_mix": [5, 1],
 
     "num_eval_processes": 16
 }

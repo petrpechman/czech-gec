@@ -1,13 +1,13 @@
 {
     "seed": 42,
 
-    "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
-    "num_parallel": 16,
+    "data_paths": ["../../data/geccc/data/train/train.tsv"],
+    "num_parallel": 4,
     "max_length": 128,
     "shuffle_buffer": 60000,
     "bucket_boundaries": [32, 64, 96],
     "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
-    "errors_from_file": false,
+    "errors_from_file": true,
 
     "model": "../../models/bart-tokenizer-data-jakub/",
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",
@@ -42,7 +42,7 @@
     "model_checkpoint_path": "./tmp/checkpoint/",
     "backup_dir": "./tmp/backup",
     
-    "count_output": null,
+    "count_output": "./counts.txt",
     "errors_config": "./errors_config.json",
 
     "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],
@@ -80,9 +80,6 @@
     "first_checkpoint": 45,
 
     "best_ckpt_filename": "./f_score_dev.json",
-
-    "mixture_dataset_paths": ["../../data/geccc/data/train/train.tsv"],
-    "ratio_mix": [2, 1],
 
     "num_eval_processes": 16
 }

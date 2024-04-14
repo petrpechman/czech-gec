@@ -12,7 +12,7 @@
     "model": "../../models/bart-tokenizer-data-jakub/",
     "tokenizer": "../../models/bart-tokenizer-data-jakub/",
     "from_config": true,
-    "steps_per_epoch": 330,
+    "steps_per_epoch": 520,
     "epochs": 146,
     "use_f16": true,
     
@@ -81,7 +81,7 @@
 
     "best_ckpt_filename": "./f_score_dev.json",
 
-    "mixture_dataset_paths": ["../../data/akces-gec/train/train.tsv"],
+    "mixture_dataset_paths": ["../../data/geccc/data/train/train.tsv"],
     "ratio_mix": [5, 1],
 
     "num_eval_processes": 16

@@ -42,7 +42,7 @@
     "model_checkpoint_path": "./tmp/checkpoint/",
     "backup_dir": "./tmp/backup",
     
-    "count_output": null,
+    "count_output": "./counts.txt",
     "errors_config": "./errors_config.json",
 
     "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],

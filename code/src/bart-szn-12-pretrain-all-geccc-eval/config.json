@@ -1,4 +1,5 @@
 {
+    "skip_lines": false,
     "seed": 42,
 
     "data_paths": ["../../data/syn/syn_v4_tokenized_cleaned.txt"],
@@ -63,12 +64,26 @@
         ["../../data/geccc-split-retag/test/second-learners-test-retag.m2", ["errant"]]
     ],
 
+    "dev_geccc_datasets": [
+        ["../../data/geccc-split/data/dev-splits/natives-formal-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/romani-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/second-learners-dev.m2", ["m2_scorer"]]
+    ],
+
+    "retag_dev_geccc_datasets": [
+        ["../../data/geccc-split-retag/dev/natives-formal-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/romani-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/natives-web-informal-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/second-learners-dev-retag.m2", ["errant"]]
+    ],
+
     "other_datasets": [
         ["../../data/akces-gec-retag/dev/dev-retag.all.m2", ["errant"]],
         ["../../data/akces-gec-retag/test/test-retag.all.m2", ["errant"]]
     ],
 
-    "batch_size": 16,
+    "batch_size": 128,
     
     "max_unchanged_words": 2,
     "beta": 0.5,
@@ -76,10 +91,11 @@
     "verbose": false,
     "very_verbose": false,
 
-    "max_eval_length": 512,
+    "max_eval_length": 128,
+
+    "first_checkpoint": 45,
     
     "best_ckpt_filename": "./f_score_dev.json",
     
-    "num_eval_processes": 16,
-    "eval_geccc_every": 1
+    "num_eval_processes": 16
 }

@@ -9,9 +9,10 @@ import pipeline_print_output
 import evaluator_pred
 import evaluator_files
 import evaluator_multi
+import evaluator_pred_opt
 
 def main(config_filename: str, eval: bool, generate: bool = False, create: bool = False, print_flag: bool = False,
-         part1: bool = False, part2: bool = False, multi_eval: bool = False):
+         part1: bool = False, part2: bool = False, multi_eval: bool = False, opt: bool = False):
     if (eval and generate) or (eval and create) or (create and generate):
         print("It is not possible to use eval, generate or create together...")
 
@@ -29,6 +30,8 @@ def main(config_filename: str, eval: bool, generate: bool = False, create: bool 
             evaluator_pred.main(config_filename)
         elif part2:
             evaluator_files.main(config_filename)
+        elif opt:
+            evaluator_pred_opt.main(config_filename)
         else:
             evaluator.main(config_filename)
     else:
@@ -47,7 +50,8 @@ if __name__ == '__main__':
     parser.add_argument("--generate", action=argparse.BooleanOptionalAction, help="Generate by reverted pipeline.")
     parser.add_argument("--create", action=argparse.BooleanOptionalAction, help="Create dataset.")
     parser.add_argument("--print", action=argparse.BooleanOptionalAction, help="Print dataset.")
+    parser.add_argument("--opt", action=argparse.BooleanOptionalAction, help="Eval with optimizer.")
     args = parser.parse_args()
 
     print(args.eval)
-    main(args.config, args.eval, args.generate, args.create, args.print, args.part1, args.part2, args.multi_eval)
+    main(args.config, args.eval, args.generate, args.create, args.print, args.part1, args.part2, args.multi_eval, args.opt)

@@ -1,0 +1,100 @@
+{
+    "seed": 42,
+
+    "data_paths": ["../../data/akces-gec/train/train.tsv"],
+    "num_parallel": 4,
+    "max_length": 128,
+    "shuffle_buffer": 60000,
+    "bucket_boundaries": [32, 64, 96],
+    "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
+    "errors_from_file": true,
+
+    "model": "../../models/bart-tokenizer-data-jakub/",
+    "tokenizer": "../../models/bart-tokenizer-data-jakub/",
+    "from_config": true,
+    "steps_per_epoch": 330,
+    "epochs": 151,
+    "use_f16": true,
+    
+    "optimizer":{
+        "name": "AdamW",
+        "params":{
+            "learning_rate": 5e-6,
+            "weight_decay": 0.01,
+            "epsilon": 1e-6,
+            "global_clipnorm": 1.0
+        }
+    },
+
+    "loss": "SCC",
+
+    "lang": "cs",
+    "token_file": "../../data/syn/syn2010_tokens.tsv",
+    "token_err_distribution": [0.5, 0.2, 0.1, 0.05, 0.1, 0.05],
+    "derinet_dist": 2,
+    "char_err_distribution": [0.2, 0.2, 0.2, 0.2, 0.2],
+    "token_err_prob": 0.15,   
+    "char_err_prob": 0.02,
+
+    
+    "log_file": "./tmp/logs",
+    "profile_batch": [2000, 2500],
+    "model_checkpoint_path": "./tmp/checkpoint/",
+    "backup_dir": "./tmp/backup",
+    
+    "count_output": "./counts.txt",
+    "errors_config": "./errors_config.json",
+    
+
+    "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],
+    "m2_data_test": ["../../data/akces-gec/test/test.all.m2", ["m2_scorer"]],
+
+    "test_geccc_datasets": [
+        ["../../data/geccc-split/data/test-splits/natives-formal-test.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/test-splits/romani-test.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/test-splits/natives-web-informal-test.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/test-splits/second-learners-test.m2", ["m2_scorer"]]
+    ],
+
+    "retag_test_geccc_datasets": [
+        ["../../data/geccc-split-retag/test/natives-formal-test-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/test/romani-test-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/test/natives-web-informal-test-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/test/second-learners-test-retag.m2", ["errant"]]
+    ],
+
+    "dev_geccc_datasets": [
+        ["../../data/geccc-split/data/dev-splits/natives-formal-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/romani-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/natives-web-informal-dev.m2", ["m2_scorer"]],
+        ["../../data/geccc-split/data/dev-splits/second-learners-dev.m2", ["m2_scorer"]]
+    ],
+
+    "retag_dev_geccc_datasets": [
+        ["../../data/geccc-split-retag/dev/natives-formal-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/romani-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/natives-web-informal-dev-retag.m2", ["errant"]],
+        ["../../data/geccc-split-retag/dev/second-learners-dev-retag.m2", ["errant"]]
+    ],
+
+    "other_datasets": [
+        ["../../data/akces-gec-retag/dev/dev-retag.all.m2", ["errant"]],
+        ["../../data/akces-gec-retag/test/test-retag.all.m2", ["errant"]]
+    ],
+
+    "batch_size": 128,
+    
+    "max_unchanged_words": 2,
+    "beta": 0.5,
+    "ignore_whitespace_casing": false,
+    "verbose": false,
+    "very_verbose": false,
+
+    "max_eval_length": 128,
+
+    "first_checkpoint": 50,
+
+    "best_ckpt_filename": "./f_score_dev.json",
+
+    "num_eval_processes": 16
+}

@@ -273,8 +273,8 @@ def main(config_filename: str):
                             generate_and_score(unevaluated_checkpoint, dataset, file_predictions)
 
                     evaluate_every_two = False
-                    if FIRST_CHECKPOINT and (int(unevaluated_checkpoint[5:]) - 10) < FIRST_CHECKPOINT:
-                        evaluate_every_two = True
+                    # if FIRST_CHECKPOINT and (int(unevaluated_checkpoint[5:]) - 10) < FIRST_CHECKPOINT:
+                    #     evaluate_every_two = True
                         # if int(unevaluated_checkpoint[5:]) % 1 == 0:
                         #     evaluate_every_two = True
 

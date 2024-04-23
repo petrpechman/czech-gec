@@ -46,7 +46,7 @@
     "errors_config": "./errors_config.json",
 
 
-        "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],
+    "m2_data_dev": ["../../data/akces-gec/dev/dev.all.m2", ["m2_scorer"]],
     "m2_data_test": ["../../data/akces-gec/test/test.all.m2", ["m2_scorer"]],
 
     "test_geccc_datasets": [
@@ -82,7 +82,7 @@
         ["../../data/akces-gec-retag/test/test-retag.all.m2", ["errant"]]
     ],
 
-    "batch_size": 64,
+    "batch_size": 32,
     
     "max_unchanged_words": 2,
     "beta": 0.5,

@@ -9,8 +9,8 @@
     "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
     "errors_from_file": true,
 
-    "model": "../../models/bart-tokenizer-data-jakub/",
-    "tokenizer": "../../models/bart-tokenizer-data-jakub/",
+    "model": "../../models/transformer_large/",
+    "tokenizer": "../../models/transformer_large/",
     "from_config": true,
     "steps_per_epoch": 938,
     "epochs": 154,

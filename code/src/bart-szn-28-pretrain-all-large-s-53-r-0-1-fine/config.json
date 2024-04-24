@@ -6,13 +6,13 @@
     "max_length": 128,
     "shuffle_buffer": 60000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [32, 32, 32, 32],
+    "bucket_batch_sizes_per_gpu": [64, 64, 64, 64],
     "errors_from_file": true,
 
     "model": "../../models/transformer_large/",
     "tokenizer": "../../models/transformer_large/",
     "from_config": true,
-    "steps_per_epoch": 1320,
+    "steps_per_epoch": 660,
     "epochs": 154,
     "use_f16": true,
     
@@ -82,7 +82,7 @@
         ["../../data/akces-gec-retag/test/test-retag.all.m2", ["errant"]]
     ],
 
-    "batch_size": 32,
+    "batch_size": 64,
     
     "max_unchanged_words": 2,
     "beta": 0.5,

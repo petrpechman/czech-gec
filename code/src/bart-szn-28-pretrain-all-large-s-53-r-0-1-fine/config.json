@@ -6,13 +6,13 @@
     "max_length": 128,
     "shuffle_buffer": 60000,
     "bucket_boundaries": [32, 64, 96],
-    "bucket_batch_sizes_per_gpu": [128, 128, 128, 128],
+    "bucket_batch_sizes_per_gpu": [32, 32, 32, 32],
     "errors_from_file": true,
 
     "model": "../../models/transformer_large/",
     "tokenizer": "../../models/transformer_large/",
     "from_config": true,
-    "steps_per_epoch": 330,
+    "steps_per_epoch": 1320,
     "epochs": 154,
     "use_f16": true,
     

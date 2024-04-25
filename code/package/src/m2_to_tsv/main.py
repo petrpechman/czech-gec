@@ -18,7 +18,7 @@ def main(args):
 		offset = 0
 
 		coders = set()
-		for e in edits:
+		for edit in edits:
 			edit = edit.split("|||")
 			if edit[1] in skip: continue # Ignore certain edits
 			coder = int(edit[-1])

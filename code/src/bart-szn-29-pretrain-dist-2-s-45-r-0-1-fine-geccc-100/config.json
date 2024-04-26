@@ -56,12 +56,11 @@
     ],
 
     "retag_test_geccc_datasets": [
-        ["../../data/geccc-new-100/dev/natives_formal_dev_new100.m2", ["errant"]],
-        ["../../data/geccc-new-100/dev/natives_web_informal_dev_new100.m2", ["errant"]],
-        ["../../data/geccc-new-100/dev/romani_dev_new100.m2", ["errant"]],
-        ["../../data/geccc-new-100/dev/second_learners_dev_new100.m2", ["errant"]]
+        ["../../data/geccc-new-100/dev/natives_formal_dev_new100_retag.m2", ["errant"]],
+        ["../../data/geccc-new-100/dev/natives_web_informal_dev_new100_retag.m2", ["errant"]],
+        ["../../data/geccc-new-100/dev/romani_dev_new100_retag.m2", ["errant"]],
+        ["../../data/geccc-new-100/dev/second_learners_dev_new100_retag.m2", ["errant"]]
     ],
-
 
 
 

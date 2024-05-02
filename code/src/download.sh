@@ -1,7 +1,7 @@
 #!/bin/bash
 
 last_dir=$(pwd | sed 's|.*/||')
-sleep_pod="sleep-pod-5bf578fd5b-pxw2v"
+sleep_pod="sleep-pod-5bf578fd5b-787tl"
 use_cp_again=false
 
 while getopts ":c" opt; do
@@ -50,6 +50,20 @@ if [ "$use_cp_again" = true ]; then
   kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/second-learners-test ./tmp/checkpoint/second-learners-test
   kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/test-retag.all ./tmp/checkpoint/test-retag.all
   kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/test_total_geccc ./tmp/checkpoint/test_total_geccc
+
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/natives_formal_dev_new100_retag ./tmp/checkpoint/natives_formal_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/natives_web_informal_dev_new100_retag ./tmp/checkpoint/natives_web_informal_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/romani_dev_new100_retag ./tmp/checkpoint/romani_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/second_learners_dev_new100_retag ./tmp/checkpoint/second_learners_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/natives_formal_dev_new100_retag ./tmp/checkpoint/natives_formal_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/natives_web_informal_dev_new100_retag ./tmp/checkpoint/natives_web_informal_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/romani_dev_new100_retag ./tmp/checkpoint/romani_dev_new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/second_learners_dev_new100_retag ./tmp/checkpoint/second_learners_dev_new100_retag
+
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/dev.new100 ./tmp/checkpoint/dev.new100
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/test.new100 ./tmp/checkpoint/test.new100
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/dev.new100_retag ./tmp/checkpoint/dev.new100_retag
+  kubectl cp ${sleep_pod}:/pechmanp/czech-gec/code/src/${last_dir}/tmp/checkpoint/test.new100_retag ./tmp/checkpoint/test.new100_retag
 fi
 
 
